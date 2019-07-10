@@ -16,7 +16,8 @@ public class ConnectorLine : MonoBehaviour
         StartPoint = gameObject.transform.parent.gameObject;
         snapStartPoint =  StartPoint.GetComponentInParent<SnapToGrid>() ?? StartPoint.GetComponent<SnapToGrid>();
 
-        Instantiate(point, this.gameObject.transform);
+        GameObject item = Instantiate(point, this.gameObject.transform);
+        item.name = point.name;
 
         EndPoint = this.transform.GetChild(0).gameObject;
         EndPoint.GetComponent<LinePoint>().thisLine = this.gameObject;

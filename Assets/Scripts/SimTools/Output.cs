@@ -16,7 +16,8 @@ public class Output : MonoBehaviour
         }
         if (!MainManager.IsSimMode)
         {
-            Instantiate(connector, gameObject.transform);
+            GameObject item = Instantiate(connector, gameObject.transform);
+            item.name = connector.name;
         }
     }
 }

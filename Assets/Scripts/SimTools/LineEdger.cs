@@ -8,11 +8,6 @@ public class LineEdger : MonoBehaviour
     public GameObject pointStart;
     public GameObject pointEnd;
     
-    // Start is called before the first frame update
-    void Awake()
-    {
-
-    }
 
     void Update()
     {

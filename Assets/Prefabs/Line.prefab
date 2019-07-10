@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3135433702707597911}
   m_Layer: 0
   m_Name: Line
-  m_TagString: Untagged
+  m_TagString: Line
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -58,6 +58,7 @@ SpriteRenderer:
   m_ProbeAnchor: {fileID: 0}
   m_LightProbeVolumeOverride: {fileID: 0}
   m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
@@ -106,4 +107,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0bf34b77e6d2abd4aafb87f2d3290244, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Input1: {fileID: 0}
+  Output1: {fileID: 0}
+  isConnected: 0
+  setOnListOnce: 0
   cLine: {fileID: 2945174092019041862}

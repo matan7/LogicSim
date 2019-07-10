@@ -13,7 +13,7 @@ public class SnapToGrid : MonoBehaviour
    
     private void Start()
     {
-        transform.position = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y));
+        transform.position = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y), Mathf.Round(transform.position.z));
         
         pivotDistance = new Vector2(0, 0);
     }
@@ -43,12 +43,12 @@ public class SnapToGrid : MonoBehaviour
                     return;
                 }
                 Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                transform.position = new Vector2(mousePos.x - pivotDistance.x, mousePos.y - pivotDistance.y);
+                transform.position = new Vector3(mousePos.x - pivotDistance.x, mousePos.y - pivotDistance.y, transform.position.z);
 
             }
             if (Input.GetMouseButtonUp(0))
             {
-                transform.position = new Vector2(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y));
+                transform.position = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y), Mathf.Round(transform.position.z));
                 isMoving = false;
             }
         }

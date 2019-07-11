@@ -107,6 +107,27 @@ TextureImporter:
   - first:
       213: 2779085721130051293
     second: OriginPoint
+  - first:
+      213: -5944188053718757599
+    second: CopyIcon
+  - first:
+      213: -6567643371809809131
+    second: PasteIcon
+  - first:
+      213: 8394158078495450125
+    second: CutIcon
+  - first:
+      213: -9180129457090887526
+    second: DeleteIcon
+  - first:
+      213: -818169423965538391
+    second: NewIcon
+  - first:
+      213: 1507196999817282918
+    second: SaveIcon
+  - first:
+      213: 4077145829424181497
+    second: OpenIcon
   externalObjects: {}
   serializedVersion: 9
   mipmaps:
@@ -916,7 +937,7 @@ TextureImporter:
         width: 22
         height: 22
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -924,6 +945,153 @@ TextureImporter:
       bones: []
       spriteID: b37ed0ca3e12b0249a5bf5975c66aa89
       internalID: 2779085721130051293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CopyIcon
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 24
+        width: 70
+        height: 78
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2edb276532512214683107e13be9f6ac
+      internalID: -5944188053718757599
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: PasteIcon
+      rect:
+        serializedVersion: 2
+        x: 92
+        y: 25
+        width: 65
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 28e599dd26679bb4083b887222832a7e
+      internalID: -6567643371809809131
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: CutIcon
+      rect:
+        serializedVersion: 2
+        x: 165
+        y: 25
+        width: 70
+        height: 72
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7f62b72f8859c9c44b47e75ea8d41db2
+      internalID: 8394158078495450125
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DeleteIcon
+      rect:
+        serializedVersion: 2
+        x: 247
+        y: 22
+        width: 70
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1296fda6814d8e4691adeb2fd6c57b3
+      internalID: -9180129457090887526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: NewIcon
+      rect:
+        serializedVersion: 2
+        x: 343
+        y: 25
+        width: 65
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c6744bca0d6d95943b1b42dec63f8500
+      internalID: -818169423965538391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SaveIcon
+      rect:
+        serializedVersion: 2
+        x: 428
+        y: 27
+        width: 70
+        height: 70
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6647ddadb56539549b36885cbeace00a
+      internalID: 1507196999817282918
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: OpenIcon
+      rect:
+        serializedVersion: 2
+        x: 624
+        y: 22
+        width: 76
+        height: 70
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1fbb7cfde20054045876ff82d4001bce
+      internalID: 4077145829424181497
       vertices: []
       indices: 
       edges: []

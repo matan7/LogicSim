@@ -27,6 +27,7 @@ public class LinePoint : MonoBehaviour
             thisLine.GetComponent<CurrentTransmitter>().Input1 = null;
             thisLine.GetComponent<CurrentTransmitter>().setOnListOnce = true;
             this.transform.parent = null;
+            this.GetComponent<SpriteRenderer>().color = Color.white;
         }
     }
     private void OnMouseUp()

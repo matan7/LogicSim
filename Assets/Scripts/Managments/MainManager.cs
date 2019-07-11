@@ -19,6 +19,8 @@ public class MainManager : MonoBehaviour
     private RaycastHit2D hit;
     private Vector3 copyPositionSum = new Vector3();
     private Vector3 selectionPositionSum = new Vector3();
+
+    private bool isCutting = false;
     private void Start()
     {
         
@@ -137,19 +139,50 @@ public class MainManager : MonoBehaviour
     // Functions when items are selected
     private void SelectionManagment()
     {
-        if(selectionHolder.transform.childCount > 0)
+        if (selectionHolder.transform.childCount == 1)
         {
-            
             // Deletes selected items
             if (Input.GetKeyDown(KeyCode.Delete))
             {
-                foreach(Transform child in selectionHolder.transform)
+                foreach (Transform child in selectionHolder.transform)
                 {
                     GameObject.Destroy(child.gameObject);
                 }
             }
             // Create list of object ready to copy
-            if((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.C))
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.C))
+            {
+                copyMemory.Clear();
+                foreach (Transform child in selectionHolder.transform)
+                {
+                    copyMemory.Add(child.gameObject);
+                }
+            }
+            //Cuts selected items and prepare to paste elsewhere
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.X))
+            {
+                copyMemory.Clear();
+                foreach (Transform child in selectionHolder.transform)
+                {
+                    child.GetComponent<SpriteRenderer>().color -= new Color(0, 0, 0, 0.5f);
+                    copyMemory.Add(child.gameObject);
+                }
+                isCutting = true;
+            }
+
+        }
+        else if (selectionHolder.transform.childCount > 1)
+        {
+            // Deletes selected items
+            if (Input.GetKeyDown(KeyCode.Delete))
+            {
+                foreach (Transform child in selectionHolder.transform)
+                {
+                    GameObject.Destroy(child.gameObject);
+                }
+            }
+            // Create list of object ready to copy
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.C))
             {
                 copyMemory.Clear();
                 copyPositionSum = Vector3.zero;
@@ -159,7 +192,21 @@ public class MainManager : MonoBehaviour
                     copyPositionSum += child.transform.localPosition;
                 }
                 copyPositionSum /= copyMemory.Count;
-            }         
+            }
+            //Cuts selected items and prepare to paste elsewhere
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.X))
+            {
+                copyMemory.Clear();
+                copyPositionSum = Vector3.zero;
+                foreach (Transform child in selectionHolder.transform)
+                {
+                    child.GetComponent<SpriteRenderer>().color -= new Color(0, 0, 0, 0.5f);
+                    copyMemory.Add(child.gameObject);
+                    copyPositionSum += child.transform.localPosition;
+                }
+                copyPositionSum /= copyMemory.Count;
+                isCutting = true;
+            }
         }
         // Paste copies of item
         if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.V))
@@ -170,8 +217,8 @@ public class MainManager : MonoBehaviour
                 {
                     GameObject clone = GameObject.Instantiate(item);
                     clone.name = item.name;
-                    clone.transform.position +=  mousePoint - copyPositionSum;
-                    clone.transform.position = new Vector3(clone.transform.position.x, clone.transform.position.y, 1);
+                    clone.transform.position += originPoint.transform.position - copyPositionSum;
+                    clone.transform.position = new Vector3(clone.transform.position.x - 3, clone.transform.position.y + 2, 1);
                     clone.GetComponent<SpriteRenderer>().color = Color.white;
                     if (clone.transform.Find("Output/Line") != null)
                     {
@@ -185,7 +232,12 @@ public class MainManager : MonoBehaviour
                 catch
                 {
                 }
+                if (isCutting)
+                {
+                    Destroy(item);
+                }
             }
+            isCutting = false;
         }
     }
 }

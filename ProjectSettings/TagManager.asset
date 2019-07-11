@@ -10,6 +10,7 @@ TagManager:
   - Item
   - MainManager
   - Selection
+  - Line
   layers:
   - Default
   - TransparentFX

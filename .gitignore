@@ -61,3 +61,15 @@ Build.rar
 
 # Crashlytics generated file
 crashlytics-build.properties
+
+# Unity user-specific editor settings
+/[Uu]ser[Ss]ettings/
+
+# Unity package lock (auto-generated)
+Packages/packages-lock.json
+
+# Visual Studio component config
+.vsconfig
+
+# Claude Code
+.claude/

@@ -1,3 +1,4 @@
+using Core.Selecting;
 using Core.Settings;
 using UnityEngine;
 
@@ -6,6 +7,9 @@ public class SelectableSprite : MonoBehaviour, ISelectable
 {
     private SpriteRenderer _spriteRenderer;
     private Color _startColor;
+
+    public Transform Transform => transform;
+
     private void Awake()
     {
         _spriteRenderer = GetComponent<SpriteRenderer>();

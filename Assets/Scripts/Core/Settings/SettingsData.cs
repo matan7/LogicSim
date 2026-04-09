@@ -9,6 +9,7 @@ namespace Core.Settings
 
         // Input data
         public float ClickGestureTimeMax = 0.3f;
+        public float DragThreshold = 0.1f;
 
         // UI
         public bool SnapToGrid = true;

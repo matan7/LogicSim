@@ -435,7 +435,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Delete",
+                    "name": "DeleteCommand",
                     "type": "Button",
                     "id": "1f96edc1-efd2-4546-a1e0-4943c8f53d9d",
                     "expectedControlType": "",
@@ -518,7 +518,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Delete",
+                    "action": "DeleteCommand",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

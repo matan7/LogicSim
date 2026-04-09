@@ -1,24 +1,44 @@
 ﻿using Core.Command;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Commands
 {
     public class DeleteCommand : ICommand
     {
-        private GameObject _object;
-        public DeleteCommand(GameObject @object)
+        private List<GameObject> _objects;
+
+        public DeleteCommand(List<GameObject> objects)
         {
-            _object = @object;
+            _objects = objects;
         }
 
-        public void Execute() => _object.SetActive(false);
-        public void Undo() => _object.SetActive(true);
+        public void Execute()
+        {
+            for (int i = 0; i < _objects.Count; i++)
+            {
+                _objects[i].SetActive(false);
+            }
+        }
+
+        public void Undo()
+        {
+            for (int i = 0; i < _objects.Count; i++)
+            {
+                _objects[i].SetActive(true);
+            }
+        }
+
         public void Dispose()
         {
-            if (!_object.activeSelf)
+            for (int i = 0; i < _objects.Count; i++)
             {
-                GameObject.Destroy(_object);
+                if (!_objects[i].activeSelf)
+                {
+                    GameObject.Destroy(_objects[i]);
+                }
             }
+            
         }
     }
 }

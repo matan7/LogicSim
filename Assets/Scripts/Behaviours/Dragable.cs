@@ -5,13 +5,10 @@ namespace Behaviours
 {
     public class Dragable : MonoBehaviour
     {
-        public bool IsMoving { get; private set; }
-
         private Vector2 _pivotDistance = Vector2.zero;
 
         public Vector3 OnStartDrag(Vector3 mousePosition)
         {
-            IsMoving = true;
             _pivotDistance = mousePosition - transform.position;
             return transform.position;
         }
@@ -25,7 +22,6 @@ namespace Behaviours
         {
             if (SettingsService.Settings.SnapToGrid)
                 transform.position = new(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y));
-            IsMoving = false;
             return transform.position;
         }
     }

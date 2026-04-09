@@ -2541,7 +2541,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1850971979
 Transform:
   m_ObjectHideFlags: 0
@@ -2675,7 +2675,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SelectingManager
   _selectionSpriteRenderer: {fileID: 257960900}
-  _selectionHolder: {fileID: 1850971979}
 --- !u!1 &2070664712
 GameObject:
   m_ObjectHideFlags: 0

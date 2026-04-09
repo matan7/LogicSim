@@ -5,6 +5,7 @@ using Core.Settings;
 using Core.Input;
 using Core.Simulator;
 using System;
+using Core.Selecting;
 
 namespace Core
 {
@@ -18,6 +19,8 @@ namespace Core
         public static InputService InputService { get; private set; }
         public static SimulatorService SimulatorService { get; private set; }
         public static SettingsService SettingsService { get; private set; }
+
+        public static SelectingService SelectingService { get; private set; }
 
         [Header("Dependencies")]
         [SerializeField] private InputActionAsset _defaultInputActions;
@@ -39,7 +42,7 @@ namespace Core
             InputService = new InputService(_defaultInputActions, SettingsService);
             CommandService = new CommandService();
             SimulatorService = new SimulatorService();
-
+            SelectingService = new SelectingService();
 
         }
     }

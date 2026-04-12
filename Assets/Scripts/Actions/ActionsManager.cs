@@ -1,4 +1,7 @@
-﻿using Core.Command;
+﻿using Assets.Scripts.Actions;
+using Behaviours;
+using Core.Clipboard;
+using Core.Command;
 using Core.Input;
 using Core.Selecting;
 using System;
@@ -11,6 +14,8 @@ namespace Actions
         private InputService _inputService;
         private CommandService _commandService;
         private SelectingService _selectingService;
+        private ClipboardService _clipboardService;
+        private PivotPoint _pivotPoint;
 
         public Action UpdateEvent;
 
@@ -19,6 +24,8 @@ namespace Actions
         private RedoAction _redoAction;
         private SelectionDrawAction _selectionDrawAction;
         private SelectAction _selectAction;
+        private CopyAction _copyAction;
+        private PasteAction _pasteAction;
         private DeleteAction _deleteAction;
 
         private void Start()
@@ -26,6 +33,9 @@ namespace Actions
             _inputService = Core.SystemCore.InputService;
             _commandService = Core.SystemCore.CommandService;
             _selectingService = Core.SystemCore.SelectingService;
+            _clipboardService = Core.SystemCore.ClipboardService;
+
+            _pivotPoint = PivotPoint.Instance;
             CreateActions();
         }
 
@@ -42,6 +52,8 @@ namespace Actions
             _deleteAction = new DeleteAction(_commandService, _inputService, _selectingService);
             _selectionDrawAction = new SelectionDrawAction(_inputService, this, _selectingService, DrawingSelectionManager.Instance);
             _selectAction = new SelectAction(_inputService, this, _selectingService);
+            _copyAction = new CopyAction(_selectingService, _clipboardService, _inputService);
+            _pasteAction = new PasteAction(_commandService, _clipboardService, _inputService, _pivotPoint);            
         }
     }
 }

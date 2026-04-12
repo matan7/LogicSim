@@ -9,6 +9,7 @@ namespace Behaviours
 {
     public class PivotPoint : MonoBehaviour
     {
+        public static PivotPoint Instance {  get; private set; }
         private WaitForSeconds _waiting;
         private Coroutine _clickTimer;
         private Camera _camera;
@@ -16,6 +17,17 @@ namespace Behaviours
         private Vector2 _lastMousePosition;
         private Vector2 _startPosition;
 
+        private void Awake()
+        {
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+            }
+            else
+            {
+                Instance = this;
+            }
+        }
         private void Start()
         {
             _waiting = new WaitForSeconds(SettingsService.Settings.ClickGestureTimeMax);

@@ -4,8 +4,8 @@ using Core.Command;
 using Core.Settings;
 using Core.Input;
 using Core.Simulator;
-using System;
 using Core.Selecting;
+using Core.Clipboard;
 
 namespace Core
 {
@@ -19,8 +19,8 @@ namespace Core
         public static InputService InputService { get; private set; }
         public static SimulatorService SimulatorService { get; private set; }
         public static SettingsService SettingsService { get; private set; }
-
         public static SelectingService SelectingService { get; private set; }
+        public static ClipboardService ClipboardService { get; private set; }
 
         [Header("Dependencies")]
         [SerializeField] private InputActionAsset _defaultInputActions;
@@ -43,6 +43,7 @@ namespace Core
             CommandService = new CommandService();
             SimulatorService = new SimulatorService();
             SelectingService = new SelectingService();
+            ClipboardService = new ClipboardService();
 
         }
     }

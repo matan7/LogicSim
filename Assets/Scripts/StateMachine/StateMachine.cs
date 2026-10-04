@@ -6,9 +6,9 @@ namespace StateMachine
     public class StateMachine : MonoBehaviour
     {
         public static StateMachine Instance { get; private set; }
-        public AppliacationState AppliacationState { get; private set; }
+        public ApplicationState ApplicationState { get; private set; }
 
-        public event Action<AppliacationState> AppliacationStateChanged;
+        public event Action<ApplicationState> ApplicationStateChanged;
 
         void Awake()
         {
@@ -21,13 +21,13 @@ namespace StateMachine
                 Instance = this;
             }
 
-            AppliacationState = AppliacationState.Editor;
+            ApplicationState = ApplicationState.Editor;
         }
 
-        public void SetApplicationState(AppliacationState state)
+        public void SetApplicationState(ApplicationState state)
         {
-            AppliacationState = state;
-            AppliacationStateChanged?.Invoke(AppliacationState);
+            ApplicationState = state;
+            ApplicationStateChanged?.Invoke(ApplicationState);
         }
 
     }

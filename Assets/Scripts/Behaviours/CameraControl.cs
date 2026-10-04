@@ -6,7 +6,7 @@ using Core;
 namespace Behaviours
 {
     [RequireComponent(typeof(Camera))]
-    public class CameraControll : MonoBehaviour
+    public class CameraControl : MonoBehaviour
     {
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private Transform _tiledBgTransform;

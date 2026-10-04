@@ -6,7 +6,7 @@ AnimatorController:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ToolsPannel
+  m_Name: ToolsPanel
   serializedVersion: 5
   m_AnimatorParameters:
   - m_Name: OnOff
@@ -110,7 +110,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PannelTurnOn
+  m_Name: PanelTurnOn
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
@@ -137,7 +137,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PannelTurnFF
+  m_Name: PanelTurnFF
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
@@ -164,7 +164,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PannelTurnOff
+  m_Name: PanelTurnOff
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:

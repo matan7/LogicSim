@@ -5,16 +5,16 @@ using Core;
 
 namespace Behaviours
 {
-    [RequireComponent(typeof(UiDragable))]
+    [RequireComponent(typeof(UiDraggable))]
     public class ObjectSpawner : MonoBehaviour
     {
         [SerializeField] private GameObject _objectToInstantiate;
-        private UiDragable _uiObjectDragAndDrop;
+        private UiDraggable _uiObjectDragAndDrop;
 
 
         void Start()
         {
-            _uiObjectDragAndDrop = GetComponent<UiDragable>();
+            _uiObjectDragAndDrop = GetComponent<UiDraggable>();
             _uiObjectDragAndDrop.EndDrag += OnEndDrag;
         }
 

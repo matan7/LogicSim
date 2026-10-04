@@ -6,18 +6,18 @@ namespace Actions
 {
     public class RedoAction
     {
-        private CommandService _commandSerivice;
-        private InputService _inputSerivice;
+        private CommandService _commandService;
+        private InputService _inputService;
         public RedoAction(CommandService commandService, InputService inputService)
         {
-            _commandSerivice = commandService;
-            _inputSerivice = inputService;
-            _inputSerivice.CurrentInputActions.FindAction("RedoCommand").performed += OnRedoShortcutPerformed;
+            _commandService = commandService;
+            _inputService = inputService;
+            _inputService.CurrentInputActions.FindAction("RedoCommand").performed += OnRedoShortcutPerformed;
         }
 
         private void OnRedoShortcutPerformed(InputAction.CallbackContext context)
         {
-            _commandSerivice.RedoCommand();
+            _commandService.RedoCommand();
         }
     }
 }

@@ -76,7 +76,7 @@ namespace Actions
 
         private ISelectable RayCast()
         {
-            if (EventSystem.current.IsPointerOverGameObject()!)
+            if (EventSystem.current.IsPointerOverGameObject())
                 return null;
 
             _hit = Physics2D.Raycast(_pendingPosition, Vector2.zero);

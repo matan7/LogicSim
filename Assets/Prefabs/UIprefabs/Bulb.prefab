@@ -239,7 +239,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9ee93e889b482da4b835a0ee8fc171c7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Core::Core.Behaviours.UiDragable
+  m_EditorClassIdentifier: Assembly-CSharp::Behaviours.UiDraggable
 --- !u!1 &7526327031005374870
 GameObject:
   m_ObjectHideFlags: 0

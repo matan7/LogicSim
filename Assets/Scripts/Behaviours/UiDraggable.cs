@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Behaviours
 {
     [RequireComponent(typeof(RectTransform))]
-    public class UiDragable : MonoBehaviour
+    public class UiDraggable : MonoBehaviour
     {
         public event Action<Vector3> EndDrag;
 
@@ -18,7 +18,7 @@ namespace Behaviours
         private Camera _mainCamera;
         private Color _startColor;
         private Vector2 _dropPositionOffset;
-        private Vector2 _ortographicSizeFactor;
+        private Vector2 _orthographicSizeFactor;
         private Color _dragColor;
 
         void Start()
@@ -39,13 +39,13 @@ namespace Behaviours
         private void OnServiceChanged()
         {
             _dropPositionOffset = SettingsService.Settings.DropPositionOffset;
-            _ortographicSizeFactor = SettingsService.Settings.OrthographicSizeFactor;
+            _orthographicSizeFactor = SettingsService.Settings.OrthographicSizeFactor;
             _dragColor = SettingsService.Settings.DragColor;
         }
 
         internal void OnDrag(Vector2 mousePosition)
         {
-            _rectTransform.sizeDelta = new Vector2(1 / _mainCamera.orthographicSize * _ortographicSizeFactor.x, 1 / _mainCamera.orthographicSize * _ortographicSizeFactor.y);
+            _rectTransform.sizeDelta = new Vector2(1 / _mainCamera.orthographicSize * _orthographicSizeFactor.x, 1 / _mainCamera.orthographicSize * _orthographicSizeFactor.y);
             transform.position = mousePosition;
             _image.color = _dragColor;
         }

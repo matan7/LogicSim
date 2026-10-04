@@ -1,6 +1,6 @@
 ﻿namespace StateMachine
 {
-    public enum AppliacationState : byte
+    public enum ApplicationState : byte
     {
         None = 0,
         Editor = 1,

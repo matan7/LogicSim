@@ -13,7 +13,7 @@ namespace Core.Clipboard
             _clipboards[typeof(T)] = items;
         }
 
-        public void SetStringClipboad(string data)
+        public void SetStringClipboard(string data)
         {
             GUIUtility.systemCopyBuffer = data;
         }

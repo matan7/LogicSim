@@ -762,7 +762,7 @@ GameObject:
   m_Component:
   - component: {fileID: 545572198}
   m_Layer: 5
-  m_Name: CustomCircuts
+  m_Name: CustomCircuits
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1574,7 +1574,7 @@ GameObject:
   - component: {fileID: 969912699}
   - component: {fileID: 969912701}
   m_Layer: 5
-  m_Name: ToolsPannel
+  m_Name: ToolsPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2145,7 +2145,7 @@ GameObject:
   - component: {fileID: 1587905587}
   - component: {fileID: 1587905586}
   m_Layer: 5
-  m_Name: CustomCircutsTxt
+  m_Name: CustomCircuitsTxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2190,7 +2190,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Custom Circut Elements
+  m_text: Custom Circuit Elements
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 90a6c0793dd7f574e8f11932c1323b29, type: 2}
   m_sharedMaterial: {fileID: 21502470744708862, guid: 90a6c0793dd7f574e8f11932c1323b29,

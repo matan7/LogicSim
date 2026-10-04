@@ -7,13 +7,13 @@ namespace Commands
 {
     public class SelectionDragCommand : ICommand
     {
-        private List<Dragable> _selectedDragables;
+        private List<Draggable> _selectedDraggables;
         private List<Vector3> _startPositions;
         private List<Vector3> _endPositions;
 
-        public SelectionDragCommand(List<Dragable> selectedDragables, List<Vector3> startPositions, List<Vector3> endPositions)
+        public SelectionDragCommand(List<Draggable> selectedDraggables, List<Vector3> startPositions, List<Vector3> endPositions)
         {
-            _selectedDragables = selectedDragables;
+            _selectedDraggables = selectedDraggables;
             _startPositions = startPositions;
             _endPositions = endPositions;
         }
@@ -24,17 +24,17 @@ namespace Commands
 
         public void Execute()
         {
-            for (int i = 0; i < _selectedDragables.Count; i++)
+            for (int i = 0; i < _selectedDraggables.Count; i++)
             {
-                _selectedDragables[i].transform.position = _endPositions[i];
+                _selectedDraggables[i].transform.position = _endPositions[i];
             }
         }
 
         public void Undo()
         {
-            for (int i = 0; i < _selectedDragables.Count; i++)
+            for (int i = 0; i < _selectedDraggables.Count; i++)
             {
-                _selectedDragables[i].transform.position = _startPositions[i];
+                _selectedDraggables[i].transform.position = _startPositions[i];
             }
         }
     }

@@ -168,7 +168,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0167ee7e4f40fce45a5616c7c9d521b6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Behaviours.Dragable
+  m_EditorClassIdentifier: Assembly-CSharp::Behaviours.Draggable
 --- !u!1001 &3761894178780111510
 PrefabInstance:
   m_ObjectHideFlags: 0

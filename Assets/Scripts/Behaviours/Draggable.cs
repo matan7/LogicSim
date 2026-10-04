@@ -3,7 +3,7 @@ using Core.Settings;
 
 namespace Behaviours
 {
-    public class Dragable : MonoBehaviour
+    public class Draggable : MonoBehaviour
     {
         private Vector2 _pivotDistance = Vector2.zero;
 

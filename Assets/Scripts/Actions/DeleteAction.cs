@@ -10,16 +10,16 @@ namespace Actions
 {
     public class DeleteAction
     {
-        private CommandService _commandSerivice;
-        private InputService _inputSerivice;
+        private CommandService _commandService;
+        private InputService _inputService;
         private SelectingService _selectingService;
 
         public DeleteAction(CommandService commandService, InputService inputService, SelectingService selectingService)
         {
-            _commandSerivice = commandService;
-            _inputSerivice = inputService;
+            _commandService = commandService;
+            _inputService = inputService;
             _selectingService = selectingService;
-            _inputSerivice.CurrentInputActions.FindAction("Commands/DeleteCommand").performed += OnDeletePerformed;
+            _inputService.CurrentInputActions.FindAction("Commands/DeleteCommand").performed += OnDeletePerformed;
         }
 
         private void OnDeletePerformed(InputAction.CallbackContext context)
@@ -30,7 +30,7 @@ namespace Actions
                 for (int i = 0; i < _selectingService.SelectionList.Count; i++) 
                     objects.Add(_selectingService.SelectionList[i].Transform.gameObject);
                 DeleteCommand command = new DeleteCommand(objects);
-                _commandSerivice.ExecuteCommand(command);
+                _commandService.ExecuteCommand(command);
             }
         }
     }

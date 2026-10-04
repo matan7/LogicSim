@@ -16,8 +16,8 @@ namespace Actions
         // References
         private InputService _inputService;
         private Camera _camera;
-        private Dragable _dragable;
-        private UiDragable _uIDragable;
+        private Draggable _draggable;
+        private UiDraggable _uiDraggable;
         private CommandService _commandService;
         private SelectingService _selectingService;
 
@@ -28,7 +28,7 @@ namespace Actions
         private bool _isDragPending;
         private Vector2 _pendingPosition;
         private Vector2 _mousePosition;
-        private List<Dragable> _selectedDragables = new List<Dragable>();
+        private List<Draggable> _selectedDraggables = new List<Draggable>();
         private List<Vector3> _startPositions = new List<Vector3>();
 
         public DragAction(InputService inputService, CommandService commandService, ActionsManager actionsManager, SelectingService selectingService)
@@ -55,35 +55,35 @@ namespace Actions
                     var ped = new PointerEventData(EventSystem.current) { position = _mousePosition };
                     var results = new List<RaycastResult>();
                     EventSystem.current.RaycastAll(ped, results);
-                    if (results.Count > 0 && results[0].gameObject.TryGetComponent<UiDragable>(out UiDragable dragable))
+                    if (results.Count > 0 && results[0].gameObject.TryGetComponent<UiDraggable>(out UiDraggable draggable))
                     {
-                        _uIDragable = dragable;
+                        _uiDraggable = draggable;
                     }
                 }
                 else
                 {
                     _hit = Physics2D.Raycast(_pendingPosition, Vector2.zero);
-                    if (_hit.collider != null && _hit.collider.TryGetComponent<Dragable>(out Dragable dragable))
+                    if (_hit.collider != null && _hit.collider.TryGetComponent<Draggable>(out Draggable draggable))
                     {
                         var selectionList = _selectingService.SelectionList;
-                        if (selectionList.Count > 1 && dragable.TryGetComponent<ISelectable>(out ISelectable selectable) && selectionList.Contains(selectable))
+                        if (selectionList.Count > 1 && draggable.TryGetComponent<ISelectable>(out ISelectable selectable) && selectionList.Contains(selectable))
                         {
-                            _selectedDragables.Clear();
+                            _selectedDraggables.Clear();
                             _startPositions.Clear();
 
                             for (int i = 0; i < selectionList.Count; i++)
                             {
-                                if (!selectionList[i].Transform.TryGetComponent<Dragable>(out Dragable otherDragable))
+                                if (!selectionList[i].Transform.TryGetComponent<Draggable>(out Draggable otherDraggable))
                                     continue;
 
-                                _selectedDragables.Add(otherDragable);
-                                _startPositions.Add(otherDragable.OnStartDrag(_pendingPosition));
+                                _selectedDraggables.Add(otherDraggable);
+                                _startPositions.Add(otherDraggable.OnStartDrag(_pendingPosition));
                             }
                         }
                         else
                         {
-                            _dragable = dragable;
-                            _startPosition = _dragable.OnStartDrag(_pendingPosition);
+                            _draggable = draggable;
+                            _startPosition = _draggable.OnStartDrag(_pendingPosition);
                         }
                     }
                 }
@@ -109,67 +109,67 @@ namespace Actions
         {
             _isDragging = false;
 
-            if (_selectedDragables.Count > 1)
+            if (_selectedDraggables.Count > 1)
             {
                 List<Vector3> endPositions = new List<Vector3>();
-                for (int i = 0; i < _selectedDragables.Count; i++)
-                    endPositions.Add(_selectedDragables[i].OnDragEnd());
+                for (int i = 0; i < _selectedDraggables.Count; i++)
+                    endPositions.Add(_selectedDraggables[i].OnDragEnd());
 
                 if (Vector3.Distance(_startPositions[0], endPositions[0]) > SettingsService.Settings.DragThreshold)
                 {
-                    SelectionDragCommand command = new SelectionDragCommand(new List<Dragable>(_selectedDragables), new List<Vector3>(_startPositions), endPositions);
+                    SelectionDragCommand command = new SelectionDragCommand(new List<Draggable>(_selectedDraggables), new List<Vector3>(_startPositions), endPositions);
                     _commandService.ExecuteCommand(command);
                 }
                 else
                 {
-                    for (int i = 0; i < _selectedDragables.Count; i++)
-                        _selectedDragables[i].transform.position = _startPositions[i];
+                    for (int i = 0; i < _selectedDraggables.Count; i++)
+                        _selectedDraggables[i].transform.position = _startPositions[i];
                 }
             }
-            else if (_dragable != null)
+            else if (_draggable != null)
             {
-                Vector3 endPosition = _dragable.OnDragEnd();
+                Vector3 endPosition = _draggable.OnDragEnd();
 
                 if (Vector3.Distance(_startPosition, endPosition) > SettingsService.Settings.DragThreshold)
                 {
-                    DragCommand command = new DragCommand(_dragable, _startPosition, endPosition);
+                    DragCommand command = new DragCommand(_draggable, _startPosition, endPosition);
                     _commandService.ExecuteCommand(command);
                 }
                 else
                 {
-                    _dragable.transform.position = _startPosition;
+                    _draggable.transform.position = _startPosition;
                 }
 
-                _dragable = null;
+                _draggable = null;
             }
 
-            if (_uIDragable != null)
+            if (_uiDraggable != null)
             {
-                _uIDragable.OnDragEnd();
-                _uIDragable = null;
+                _uiDraggable.OnDragEnd();
+                _uiDraggable = null;
             }
 
-            _selectedDragables.Clear();
+            _selectedDraggables.Clear();
             _startPositions.Clear();
         }
 
 
         private void Drag(Vector2 mousePosition)
         {
-            if (_uIDragable != null)
+            if (_uiDraggable != null)
             {
-                _uIDragable.OnDrag(_mousePosition);
+                _uiDraggable.OnDrag(_mousePosition);
             }
-            if (_selectedDragables.Count > 1) 
+            if (_selectedDraggables.Count > 1) 
             {
-                for (int i = 0; i < _selectedDragables.Count; i++)
+                for (int i = 0; i < _selectedDraggables.Count; i++)
                 {
-                    _selectedDragables[i].OnDrag(mousePosition);
+                    _selectedDraggables[i].OnDrag(mousePosition);
                 }
             }
-            else if (_dragable != null)
+            else if (_draggable != null)
             {
-                _dragable.OnDrag(mousePosition);
+                _draggable.OnDrag(mousePosition);
             }
         }
     }

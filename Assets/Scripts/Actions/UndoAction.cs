@@ -6,18 +6,18 @@ namespace Actions
 {
     public class UndoAction
     {
-        private CommandService _commandSerivice;
-        private InputService _inputSerivice;
+        private CommandService _commandService;
+        private InputService _inputService;
         public UndoAction(CommandService commandService, InputService inputService)
         {
-            _commandSerivice = commandService;
-            _inputSerivice = inputService;
-            _inputSerivice.CurrentInputActions.FindAction("Commands/UndoCommand").performed += OnUndoShortcutPerformed;
+            _commandService = commandService;
+            _inputService = inputService;
+            _inputService.CurrentInputActions.FindAction("Commands/UndoCommand").performed += OnUndoShortcutPerformed;
         }
 
         private void OnUndoShortcutPerformed(InputAction.CallbackContext context)
         {
-            _commandSerivice.UndoCommand();
+            _commandService.UndoCommand();
         }
     }
 }

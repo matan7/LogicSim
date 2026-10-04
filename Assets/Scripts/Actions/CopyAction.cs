@@ -35,7 +35,7 @@ namespace Assets.Scripts.Actions
 
                     if (start > end) (start, end) = (end, start);
                     string selected = input.text.Substring(start, end - start);
-                    _clipboardService.SetStringClipboad(selected);
+                    _clipboardService.SetStringClipboard(selected);
                 }
             }
             else if (_selectingService.SelectionList.Count > 0)

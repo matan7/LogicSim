@@ -1,12 +1,13 @@
+using Assets.Scripts;
 using UnityEngine;
 
 public class LineConnector : MonoBehaviour
 {
-    [SerializeField] private Transform _startPoint;
-    [SerializeField] private Transform _endPoint;
+    [SerializeField] private IConnector _startPoint;
+    [SerializeField] private IConnector _endPoint;
     [SerializeField] private LineRenderer _lineRenderer;
 
-    public void Setup(Transform start, Transform end)
+    public void Setup(IConnector start, IConnector end)
     {
         _startPoint = start;
         _endPoint = end;
@@ -14,14 +15,14 @@ public class LineConnector : MonoBehaviour
 
     public void DrawLine()
     {
-        if (_startPoint.position == _endPoint.position)
+        if (_startPoint.Transform().position == _startPoint.Transform().position)
         {
             _lineRenderer.positionCount = 0;
             _lineRenderer.enabled = false;
             return;
         }
-        Vector3 startPosition = _startPoint.position;  
-        Vector3 endPosition = _endPoint.position;
+        Vector3 startPosition = _startPoint.Transform().position;  
+        Vector3 endPosition = _endPoint.Transform().position;
 
         // They have same vertical or same horizontal position
         if (startPosition.x == endPosition.x || startPosition.y == endPosition.y)
@@ -42,4 +43,6 @@ public class LineConnector : MonoBehaviour
             _lineRenderer.enabled = true;
         }
     }
+
+    
 }

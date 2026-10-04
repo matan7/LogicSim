@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Output : MonoBehaviour, IConnector
+public class Input : MonoBehaviour, IConnector
 {
     public List<LineConnector> ConnectedLines { get; private set; }
 

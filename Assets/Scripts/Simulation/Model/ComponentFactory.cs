@@ -37,6 +37,19 @@ namespace LogicSim.Simulation
             return component;
         }
 
+        /// <summary>Gives a detached component a fresh id from <paramref name="circuit"/> so wires can reference it before it is added.</summary>
+        public static void ReserveId(Circuit circuit, CircuitComponent component)
+        {
+            if (component.Id == 0)
+                component.Id = circuit.ReserveComponentId();
+        }
+
+        /// <summary>Sets the id of a detached component (used when building a snapshot from scratch).</summary>
+        public static void SetDetachedId(CircuitComponent component, int id)
+        {
+            component.Id = id;
+        }
+
         /// <summary>Moves a component that is not part of a circuit yet (e.g. before an add edit is applied).</summary>
         public static void SetDetachedPosition(CircuitComponent component, float x, float y)
         {

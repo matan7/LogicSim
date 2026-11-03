@@ -239,7 +239,7 @@ namespace LogicSim.Tests
         [Test]
         public void LargeCircuit_RunsWithinBudget()
         {
-            var circuit = EngineParityTests.RandomCircuit(42, gates: 20_000, switches: 32);
+            var circuit = BenchmarkCircuits.Random(42, gates: 20_000, switches: 32);
             var stopwatch = Stopwatch.StartNew();
             var compiled = CircuitCompiler.Compile(circuit);
             long compileMs = stopwatch.ElapsedMilliseconds;

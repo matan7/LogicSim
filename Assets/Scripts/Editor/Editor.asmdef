@@ -4,7 +4,9 @@
     "references": [
         "Core",
         "UnityEditor.UI",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "LogicSim.Simulation",
+        "LogicSim.Simulation.Jobs"
     ],
     "includePlatforms": [
         "Editor"

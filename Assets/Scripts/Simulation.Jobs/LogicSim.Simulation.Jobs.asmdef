@@ -1,0 +1,23 @@
+{
+    "name": "LogicSim.Simulation.Jobs",
+    "rootNamespace": "LogicSim.Simulation.Jobs",
+    "references": [
+        "LogicSim.Simulation",
+        "Unity.Burst"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.burst",
+            "expression": "1.6.0",
+            "define": "LOGICSIM_BURST"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -471,7 +471,7 @@ namespace LogicSim.Tests
         [TestCase(5)]
         public void EventDriven_MatchesFullSweep(int seed)
         {
-            var circuit = RandomCircuit(seed, gates: 300, switches: 8);
+            var circuit = BenchmarkCircuits.Random(seed, gates: 300, switches: 8);
             var compiled = CircuitCompiler.Compile(circuit);
             var random = new Random(seed * 7919);
 
@@ -501,7 +501,7 @@ namespace LogicSim.Tests
         [Test]
         public void SwitchingModes_KeepsResultsConsistent()
         {
-            var circuit = RandomCircuit(11, gates: 200, switches: 6);
+            var circuit = BenchmarkCircuits.Random(11, gates: 200, switches: 6);
             var compiled = CircuitCompiler.Compile(circuit);
             using (var reference = new ManagedSimulationEngine { Mode = SimulationMode.EventDriven })
             using (var mixed = new ManagedSimulationEngine())
@@ -522,46 +522,6 @@ namespace LogicSim.Tests
                         Assert.That(mixed.GetNet(net), Is.EqualTo(reference.GetNet(net)), $"net {net} at step {step}");
                 }
             }
-        }
-
-        internal static Circuit RandomCircuit(int seed, int gates, int switches)
-        {
-            var random = new Random(seed);
-            var circuit = new Circuit();
-            var outputs = new List<CircuitComponent>();
-            for (int i = 0; i < switches; i++)
-            {
-                var sw = new CircuitComponent(ComponentKind.Switch, 0, -i);
-                circuit.AddComponent(sw);
-                outputs.Add(sw);
-            }
-            var kinds = new[]
-            {
-                ComponentKind.And, ComponentKind.Or, ComponentKind.Nand, ComponentKind.Nor, ComponentKind.Xor,
-                ComponentKind.Xnor, ComponentKind.Not, ComponentKind.Buffer, ComponentKind.DFlipFlop, ComponentKind.Clock
-            };
-            var gateList = new List<CircuitComponent>();
-            for (int i = 0; i < gates; i++)
-            {
-                var kind = kinds[random.Next(kinds.Length)];
-                var gate = ComponentFactory.Create(kind, 5, -i, clockHalfPeriod: random.Next(2, 20));
-                circuit.AddComponent(gate);
-                gateList.Add(gate);
-                outputs.Add(gate);
-            }
-            // Wire every input to a random output anywhere in the circuit, including later gates (feedback).
-            foreach (var gate in gateList)
-            {
-                for (int pin = 0; pin < circuit.GetInputCount(gate); pin++)
-                {
-                    if (random.NextDouble() < 0.05)
-                        continue;
-                    var source = outputs[random.Next(outputs.Count)];
-                    int outPin = random.Next(circuit.GetOutputCount(source));
-                    circuit.Connect(new PinRef(source.Id, outPin), new PinRef(gate.Id, pin));
-                }
-            }
-            return circuit;
         }
     }
 }

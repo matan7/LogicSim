@@ -36,11 +36,17 @@ namespace LogicSim.Simulation
             Recompiled?.Invoke();
         }
 
+        /// <summary>Power-on state with the inputs as they are in the model now (not as they were when compiled).</summary>
         public void Reset()
         {
             EnsureCompiled();
             Engine.Complete();
             Engine.Reset();
+            foreach (var pair in Compiled.InputSlots)
+            {
+                if (Circuit.TryGetComponent(pair.Key, out var component))
+                    Engine.SetInput(pair.Value, component.Value);
+            }
         }
 
         public void Schedule(long ticks)

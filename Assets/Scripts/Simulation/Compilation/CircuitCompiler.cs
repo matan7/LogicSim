@@ -188,7 +188,7 @@ namespace LogicSim.Simulation
                         op = OpCode.Input;
                         param = _slotGates.Count;
                         _slotGates.Add(gate);
-                        _initialInputs.Add(component.Kind == ComponentKind.Button ? (byte)0 : (byte)(component.Value ? 1 : 0));
+                        _initialInputs.Add((byte)(component.Value ? 1 : 0));
                         _result.InputSlots[component.Id] = param;
                     }
 

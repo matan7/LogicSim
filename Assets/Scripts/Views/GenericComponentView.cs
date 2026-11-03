@@ -62,8 +62,9 @@ namespace LogicSim.Views
             collider.size = new Vector2(width, height);
             collider.offset = new Vector2(width / 2, -height / 2);
 
-            _label = CreateText("Label", new Vector2(width / 2, -height / 2), new Vector2(width - 1.2f, height - 1f), 7f);
-            _caption = CreateText("Caption", new Vector2(width / 2, 0.8f), new Vector2(width + 4, 1.4f), 4f);
+            // Auto-sizing keeps every text inside its rect (world units), whatever the font scale.
+            _label = CreateText("Label", new Vector2(width / 2, -height / 2), new Vector2(width - 1.2f, Mathf.Min(3f, height - 1f)), 30f);
+            _caption = CreateText("Caption", new Vector2(width / 2, 0.9f), new Vector2(width + 4, 1.4f), 14f);
             _caption.color = new Color(1, 1, 1, 0.7f);
 
             CreatePins<InputPin>(_inputPins, inputs, rows, 0, circuit, component, false);
@@ -84,10 +85,8 @@ namespace LogicSim.Views
                 var name = output ? circuit.GetOutputName(component, i) : circuit.GetInputName(component, i);
                 if (ShowPinName(component, name, count))
                 {
-                    var text = CreateText("Pin " + name, new Vector2(output ? x - 1.1f : x + 1.1f, go.transform.localPosition.y), new Vector2(2f, 1.2f), 3f);
+                    var text = CreateText("Pin " + name, new Vector2(output ? x - 1.3f : x + 1.3f, go.transform.localPosition.y), new Vector2(2.2f, 1.1f), 10f);
                     text.alignment = output ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
-                    text.enableAutoSizing = false;
-                    text.fontSize = 3f;
                 }
             }
         }

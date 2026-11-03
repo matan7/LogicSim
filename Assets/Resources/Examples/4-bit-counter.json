@@ -1,0 +1,267 @@
+{
+  "format": "logicsim",
+  "version": 1,
+  "name": "4-bit counter",
+  "circuit": {
+    "components": [
+      {
+        "id": 1,
+        "type": "Clock",
+        "x": 0.0,
+        "y": -8.0,
+        "label": "clk",
+        "halfPeriod": 120
+      },
+      {
+        "id": 2,
+        "type": "Constant",
+        "x": 0.0,
+        "y": 0.0,
+        "label": "one",
+        "value": true
+      },
+      {
+        "id": 3,
+        "type": "TFlipFlop",
+        "x": 10.0,
+        "y": 0.0,
+        "label": "t0"
+      },
+      {
+        "id": 4,
+        "type": "TFlipFlop",
+        "x": 20.0,
+        "y": 0.0,
+        "label": "t1"
+      },
+      {
+        "id": 5,
+        "type": "TFlipFlop",
+        "x": 30.0,
+        "y": 0.0,
+        "label": "t2"
+      },
+      {
+        "id": 6,
+        "type": "TFlipFlop",
+        "x": 40.0,
+        "y": 0.0,
+        "label": "t3"
+      },
+      {
+        "id": 7,
+        "type": "HexDisplay",
+        "x": 52.0,
+        "y": -10.0,
+        "label": "Count"
+      },
+      {
+        "id": 8,
+        "type": "Bulb",
+        "x": 52.0,
+        "y": 4.0,
+        "label": "Q0"
+      },
+      {
+        "id": 9,
+        "type": "Bulb",
+        "x": 58.0,
+        "y": 4.0,
+        "label": "Q1"
+      },
+      {
+        "id": 10,
+        "type": "Bulb",
+        "x": 64.0,
+        "y": 4.0,
+        "label": "Q2"
+      },
+      {
+        "id": 11,
+        "type": "Bulb",
+        "x": 70.0,
+        "y": 4.0,
+        "label": "Q3"
+      }
+    ],
+    "wires": [
+      {
+        "id": 1,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 3,
+          "pin": 0
+        }
+      },
+      {
+        "id": 2,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 4,
+          "pin": 0
+        }
+      },
+      {
+        "id": 3,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 5,
+          "pin": 0
+        }
+      },
+      {
+        "id": 4,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 0
+        }
+      },
+      {
+        "id": 5,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 3,
+          "pin": 1
+        }
+      },
+      {
+        "id": 6,
+        "from": {
+          "component": 3,
+          "pin": 1
+        },
+        "to": {
+          "component": 4,
+          "pin": 1
+        }
+      },
+      {
+        "id": 7,
+        "from": {
+          "component": 4,
+          "pin": 1
+        },
+        "to": {
+          "component": 5,
+          "pin": 1
+        }
+      },
+      {
+        "id": 8,
+        "from": {
+          "component": 5,
+          "pin": 1
+        },
+        "to": {
+          "component": 6,
+          "pin": 1
+        }
+      },
+      {
+        "id": 9,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 0
+        }
+      },
+      {
+        "id": 10,
+        "from": {
+          "component": 4,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 1
+        }
+      },
+      {
+        "id": 11,
+        "from": {
+          "component": 5,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 2
+        }
+      },
+      {
+        "id": 12,
+        "from": {
+          "component": 6,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 3
+        }
+      },
+      {
+        "id": 13,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 8,
+          "pin": 0
+        }
+      },
+      {
+        "id": 14,
+        "from": {
+          "component": 4,
+          "pin": 0
+        },
+        "to": {
+          "component": 9,
+          "pin": 0
+        }
+      },
+      {
+        "id": 15,
+        "from": {
+          "component": 5,
+          "pin": 0
+        },
+        "to": {
+          "component": 10,
+          "pin": 0
+        }
+      },
+      {
+        "id": 16,
+        "from": {
+          "component": 6,
+          "pin": 0
+        },
+        "to": {
+          "component": 11,
+          "pin": 0
+        }
+      }
+    ]
+  },
+  "subcircuits": []
+}

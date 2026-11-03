@@ -16,6 +16,7 @@ namespace Core.Simulation
 
         private readonly AppStateService _appState;
         private double _tickBudget;
+        private bool _scheduled;
 
         public SimulationSession Session { get; }
         public ISimulationEngine Engine => Session.Engine;
@@ -87,10 +88,15 @@ namespace Core.Simulation
                 return;
             _tickBudget -= ticks;
             Session.Schedule(ticks);
+            _scheduled = true;
         }
 
+        /// <summary>Collects the work started by <see cref="BeginFrame"/>.</summary>
         public void EndFrame()
         {
+            if (!_scheduled)
+                return;
+            _scheduled = false;
             Session.Complete();
             if (IsRunning)
                 ValuesUpdated?.Invoke();

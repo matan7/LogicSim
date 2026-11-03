@@ -33,6 +33,7 @@ namespace Actions
             Bind(inputService, "Commands/SpeedDown", () => AppCommands.ChangeSpeed(0.5));
             Bind(inputService, "Commands/CancelCommand", Cancel);
             Bind(inputService, "Commands/HelpCommand", AppCommands.ShowHelp);
+            Bind(inputService, "Commands/FrameAll", AppCommands.FrameAll);
         }
 
         private void Cancel()

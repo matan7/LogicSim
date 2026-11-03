@@ -1,0 +1,122 @@
+{
+  "format": "logicsim",
+  "version": 1,
+  "name": "SR latch",
+  "circuit": {
+    "components": [
+      {
+        "id": 1,
+        "type": "Button",
+        "x": 0.0,
+        "y": -8.0,
+        "label": "Set"
+      },
+      {
+        "id": 2,
+        "type": "Button",
+        "x": 0.0,
+        "y": 0.0,
+        "label": "Reset"
+      },
+      {
+        "id": 3,
+        "type": "Nor",
+        "x": 12.0,
+        "y": 0.0,
+        "label": "top",
+        "inputs": 2
+      },
+      {
+        "id": 4,
+        "type": "Nor",
+        "x": 12.0,
+        "y": -8.0,
+        "label": "bottom",
+        "inputs": 2
+      },
+      {
+        "id": 5,
+        "type": "Bulb",
+        "x": 24.0,
+        "y": 0.0,
+        "label": "Q"
+      },
+      {
+        "id": 6,
+        "type": "Bulb",
+        "x": 24.0,
+        "y": -8.0,
+        "label": "nQ"
+      }
+    ],
+    "wires": [
+      {
+        "id": 1,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 3,
+          "pin": 0
+        }
+      },
+      {
+        "id": 2,
+        "from": {
+          "component": 4,
+          "pin": 0
+        },
+        "to": {
+          "component": 3,
+          "pin": 1
+        }
+      },
+      {
+        "id": 3,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 4,
+          "pin": 0
+        }
+      },
+      {
+        "id": 4,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 4,
+          "pin": 1
+        }
+      },
+      {
+        "id": 5,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 5,
+          "pin": 0
+        }
+      },
+      {
+        "id": 6,
+        "from": {
+          "component": 4,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 0
+        }
+      }
+    ]
+  },
+  "subcircuits": []
+}

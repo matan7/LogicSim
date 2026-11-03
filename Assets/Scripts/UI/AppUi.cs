@@ -64,6 +64,7 @@ namespace LogicSim.UI
             SystemCore.AppStateService.StateChanged += OnStateChanged;
             SystemCore.CircuitService.Circuit.Library.Changed += RebuildSubcircuitEntries;
             RebuildSubcircuitEntries();
+            ShowToast("Ctrl+O opens the examples, F1 shows help", 8f);
         }
 
         private void OnDestroy()
@@ -120,7 +121,12 @@ namespace LogicSim.UI
                 Debug.LogWarning("[LogicSim] UndoButton template not found; toolbar buttons are not created.");
                 return;
             }
-            _buttonTemplate = undo.gameObject;
+            // Pristine, inactive copy: the scene's undo/redo buttons get restyled below.
+            _buttonTemplate = Instantiate(undo.gameObject, transform);
+            _buttonTemplate.SetActive(false);
+            foreach (var behaviour in _buttonTemplate.GetComponentsInChildren<MonoBehaviour>(true))
+                if (behaviour is UndoButton || behaviour is RedoButton)
+                    DestroyImmediate(behaviour);
             var icons = UiIconSet.Instance;
 
             var edit = IconContainerOf("Edit");
@@ -156,10 +162,7 @@ namespace LogicSim.UI
         {
             var go = Instantiate(_buttonTemplate, container);
             go.name = label + "Button";
-            // The template carries the undo behaviour; remove it before it starts.
-            foreach (var behaviour in go.GetComponentsInChildren<MonoBehaviour>(true))
-                if (behaviour is UndoButton || behaviour is RedoButton)
-                    DestroyImmediate(behaviour);
+            go.SetActive(true);
 
             var button = go.GetComponentInChildren<Button>(true);
             if (button != null)
@@ -307,11 +310,11 @@ namespace LogicSim.UI
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = columns;
             grid.childAlignment = TextAnchor.UpperCenter;
-            grid.padding = new RectOffset(0, 0, 25, 0);
+            grid.padding = new RectOffset(0, 0, 10, 0);
 
             int items = itemCount ?? container.childCount;
             int rows = Mathf.Max(1, Mathf.CeilToInt(items / (float)columns));
-            float gridHeight = 25 + rows * cellHeight + (rows - 1) * spacingY;
+            float gridHeight = 10 + rows * cellHeight + (rows - 1) * spacingY;
 
             container.anchorMin = container.anchorMax = new Vector2(0, 1);
             container.pivot = new Vector2(0.5f, 1);

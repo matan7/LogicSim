@@ -93,7 +93,16 @@ namespace LogicSim.Views
                 if (_lineMaterial != null)
                     return _lineMaterial;
                 var shader = Shader.Find("Sprites/Default");
-                _lineMaterial = new Material(shader) { name = "LogicSim Wire" };
+                if (shader != null)
+                {
+                    _lineMaterial = new Material(shader) { name = "LogicSim Wire" };
+                }
+                else
+                {
+                    // The sprite shader is always in builds through the sprites' default material.
+                    var sprite = Object.FindFirstObjectByType<SpriteRenderer>();
+                    _lineMaterial = sprite != null ? new Material(sprite.sharedMaterial) : null;
+                }
                 return _lineMaterial;
             }
         }

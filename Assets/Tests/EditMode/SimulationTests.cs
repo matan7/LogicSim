@@ -199,6 +199,41 @@ namespace LogicSim.Tests
         }
     }
 
+    public class SessionTests
+    {
+        [Test]
+        public void InputsSetBeforeCompiling_AreUsed_IncludingButtons()
+        {
+            var t = new TestCircuit();
+            var button = t.Add(ComponentKind.Button);
+            var bulb = t.Add(ComponentKind.Bulb);
+            t.Connect(button, bulb);
+            t.Circuit.SetInputValue(button.Id, true);
+            using (var session = t.CreateSession())
+            {
+                session.Settle(100);
+                Assert.That(session.GetDisplayValue(bulb), Is.True);
+            }
+        }
+
+        [Test]
+        public void Reset_UsesCurrentInputValues()
+        {
+            var t = new TestCircuit();
+            var sw = t.Add(ComponentKind.Switch);
+            var bulb = t.Add(ComponentKind.Bulb);
+            t.Connect(sw, bulb);
+            using (var session = t.CreateSession())
+            {
+                session.Settle(100);
+                t.Circuit.SetInputValue(sw.Id, true);
+                session.Reset();
+                session.Settle(100);
+                Assert.That(session.GetDisplayValue(bulb), Is.True);
+            }
+        }
+    }
+
     public class SequentialTests
     {
         [Test]

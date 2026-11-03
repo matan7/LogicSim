@@ -1,0 +1,8 @@
+<!-- Keep types that Json.NET creates through reflection (file format DTOs, MCP payloads) in IL2CPP builds. -->
+<linker>
+  <assembly fullname="LogicSim.Simulation" preserve="all" />
+  <assembly fullname="LogicSim.Mcp" preserve="all" />
+  <assembly fullname="Core">
+    <type fullname="Core.Settings.SettingsData" preserve="all" />
+  </assembly>
+</linker>

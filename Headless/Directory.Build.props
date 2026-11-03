@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Mirror Unity's compiler settings so code that builds here also builds in Unity 6. -->
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AssetsDir>$(MSBuildThisFileDirectory)../Assets/</AssetsDir>
+  </PropertyGroup>
+</Project>

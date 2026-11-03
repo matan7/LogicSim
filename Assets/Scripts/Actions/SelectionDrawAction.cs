@@ -13,8 +13,6 @@ namespace Actions
         private DrawingSelectionManager _selectingManager;
         private Camera _camera;
 
-        private RaycastHit2D _hit;
-
         private Vector2 _mouseStartPosition;
         private Vector2 _mousePosition;
         private Vector2 _pendingPosition;
@@ -43,8 +41,8 @@ namespace Actions
         {
             if (_isDrawingSelectionPending)
             {
-                _hit = Physics2D.Raycast(_pendingPosition, Vector2.zero);
-                if (_hit.collider == null && !EventSystem.current.IsPointerOverGameObject())
+                // Only on empty canvas, and only while editing.
+                if (Core.SystemCore.AppStateService.IsEditing && Physics2D.OverlapPoint(_pendingPosition) == null && !PointerQuery.IsOverUi())
                 {
                     _mouseStartPosition = _pendingPosition;
                     _isDrawingSelection = true;

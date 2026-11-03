@@ -1,28 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
+using LogicSim.Simulation;
 using UnityEngine;
 
 namespace Core.Clipboard
 {
+    /// <summary>Holds copied circuit fragments; also mirrors them as JSON in the system clipboard.</summary>
     public class ClipboardService
     {
-        private Dictionary<Type, object> _clipboards = new Dictionary<Type, object>();
+        public CircuitFragment Fragment { get; private set; }
 
-        public void SetClipboard<T>(List<T> items)
+        public bool HasFragment => Fragment != null && !Fragment.IsEmpty;
+
+        public void SetFragment(CircuitFragment fragment, SubcircuitLibrary library)
         {
-            _clipboards[typeof(T)] = items;
+            Fragment = fragment;
+            if (fragment != null && !fragment.IsEmpty)
+                SetStringClipboard(CircuitSerializer.SerializeFragment(fragment, library));
+        }
+
+        /// <summary>Fragment copied in another LogicSim window (or by an MCP client), if the system clipboard holds one.</summary>
+        public CircuitFragment ReadSystemFragment(SubcircuitLibrary library)
+        {
+            var text = GUIUtility.systemCopyBuffer;
+            if (!CircuitSerializer.LooksLikeFragment(text))
+                return null;
+            try
+            {
+                return CircuitSerializer.DeserializeFragment(text, library);
+            }
+            catch (CircuitException)
+            {
+                return null;
+            }
         }
 
         public void SetStringClipboard(string data)
         {
             GUIUtility.systemCopyBuffer = data;
-        }
-
-        public List<T> GetClipboard<T>()
-        {
-            if (_clipboards.TryGetValue(typeof(T), out var list))
-                return (List<T>)list;
-            return null;
         }
     }
 }

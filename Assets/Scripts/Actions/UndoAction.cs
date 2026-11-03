@@ -12,11 +12,15 @@ namespace Actions
         {
             _commandService = commandService;
             _inputService = inputService;
-            _inputService.CurrentInputActions.FindAction("Commands/UndoCommand").performed += OnUndoShortcutPerformed;
+            var action = _inputService.Find("Commands/UndoCommand");
+            if (action != null)
+                action.performed += OnUndoShortcutPerformed;
         }
 
         private void OnUndoShortcutPerformed(InputAction.CallbackContext context)
         {
+            if (!Core.SystemCore.AppStateService.IsEditing || EditCommands.IsTextInputFocused())
+                return;
             _commandService.UndoCommand();
         }
     }

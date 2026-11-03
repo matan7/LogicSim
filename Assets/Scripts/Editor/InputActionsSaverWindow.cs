@@ -1,15 +1,15 @@
-using Core.Settings;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Core.Editor
 {
+    /// <summary>Stores the binding overrides of an input action asset in the player's settings folder.</summary>
     public class InputActionsSaverWindow : EditorWindow
     {
         private InputActionAsset _inputActions;
 
-        [MenuItem("Tools/Save Input Actions")]
+        [MenuItem("Tools/Save Input Binding Overrides")]
         public static void Open()
         {
             GetWindow<InputActionsSaverWindow>("Input Actions Saver");
@@ -26,11 +26,11 @@ namespace Core.Editor
             EditorGUILayout.Space();
 
             GUI.enabled = _inputActions != null;
-            if (GUILayout.Button("Save Input Actions"))
+            if (GUILayout.Button("Save Binding Overrides"))
             {
                 var settingsService = new Core.Settings.SettingsService();
-                settingsService.SaveInputActions(_inputActions);
-                Debug.Log($"[InputActionsSaver] Saved '{_inputActions.name}' to persistent data path.");
+                settingsService.SaveInputOverrides(_inputActions.SaveBindingOverridesAsJson());
+                Debug.Log($"[InputActionsSaver] Saved binding overrides of '{_inputActions.name}' to the persistent data path.");
             }
             GUI.enabled = true;
         }

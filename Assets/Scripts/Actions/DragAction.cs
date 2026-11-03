@@ -1,176 +1,168 @@
-using Behaviours;
-using Core.Command;
-using Commands;
-using Core.Input;
-using Core.Settings;
-using Core.Selecting;
 using System.Collections.Generic;
+using Behaviours;
+using Core;
+using Core.Input;
+using Core.Selecting;
+using Core.Settings;
+using LogicSim.Simulation;
+using LogicSim.Views;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 namespace Actions
 {
+    /// <summary>Drags components (or the whole selection) and palette entries. Moves become one undoable edit.</summary>
     public class DragAction
     {
-        // References
-        private InputService _inputService;
-        private Camera _camera;
-        private Draggable _draggable;
-        private UiDraggable _uiDraggable;
-        private CommandService _commandService;
-        private SelectingService _selectingService;
+        private readonly InputService _inputService;
+        private readonly SelectingService _selectingService;
+        private readonly Camera _camera;
 
-        // Fields
         private bool _isDragging;
-        private RaycastHit2D _hit;
-        private Vector3 _startPosition;
         private bool _isDragPending;
         private Vector2 _pendingPosition;
         private Vector2 _mousePosition;
-        private List<Draggable> _selectedDraggables = new List<Draggable>();
-        private List<Vector3> _startPositions = new List<Vector3>();
+        private UiDraggable _uiDraggable;
+        private readonly List<Draggable> _draggables = new List<Draggable>();
+        private readonly List<int> _componentIds = new List<int>();
+        private readonly List<Vector3> _startPositions = new List<Vector3>();
 
-        public DragAction(InputService inputService, CommandService commandService, ActionsManager actionsManager, SelectingService selectingService)
+        public DragAction(InputService inputService, ActionsManager actionsManager, SelectingService selectingService)
         {
             _inputService = inputService;
-            _commandService = commandService;
             _selectingService = selectingService;
-
-            _inputService.CurrentInputActions.FindAction("Drag").performed += OnDrag;
-            _inputService.CurrentInputActions.FindAction("Drag").canceled += OnEndDrag;
             _camera = Camera.main;
 
+            var drag = _inputService.Find("Drag");
+            if (drag != null)
+            {
+                drag.performed += OnDrag;
+                drag.canceled += OnEndDrag;
+            }
             actionsManager.UpdateEvent += Update;
         }
 
         private void Update()
         {
-            if (_isDragPending)
+            if (!_isDragPending)
+                return;
+            _isDragPending = false;
+            if (!SystemCore.AppStateService.IsEditing)
+                return;
+
+            if (PointerQuery.IsOverUi())
             {
-                _isDragPending = false;
+                var ped = new PointerEventData(EventSystem.current) { position = _mousePosition };
+                var results = new List<RaycastResult>();
+                EventSystem.current.RaycastAll(ped, results);
+                if (results.Count > 0 && results[0].gameObject.TryGetComponent(out UiDraggable draggable))
+                    _uiDraggable = draggable;
+                return;
+            }
 
-                if (EventSystem.current.IsPointerOverGameObject())
+            // Pins start wires (WireAction); only bodies are dragged.
+            if (PointerQuery.PinAt(_pendingPosition) != null)
+                return;
+            var view = PointerQuery.ComponentAt(_pendingPosition);
+            if (view == null || !view.TryGetComponent(out Draggable pressed))
+                return;
+
+            _draggables.Clear();
+            _componentIds.Clear();
+            _startPositions.Clear();
+
+            var selectionList = _selectingService.SelectionList;
+            bool dragSelection = view.TryGetComponent(out ISelectable selectable) && selectionList.Contains(selectable) && selectionList.Count > 1;
+            if (dragSelection)
+            {
+                foreach (var item in selectionList)
                 {
-                    var ped = new PointerEventData(EventSystem.current) { position = _mousePosition };
-                    var results = new List<RaycastResult>();
-                    EventSystem.current.RaycastAll(ped, results);
-                    if (results.Count > 0 && results[0].gameObject.TryGetComponent<UiDraggable>(out UiDraggable draggable))
-                    {
-                        _uiDraggable = draggable;
-                    }
-                }
-                else
-                {
-                    _hit = Physics2D.Raycast(_pendingPosition, Vector2.zero);
-                    if (_hit.collider != null && _hit.collider.TryGetComponent<Draggable>(out Draggable draggable))
-                    {
-                        var selectionList = _selectingService.SelectionList;
-                        if (selectionList.Count > 1 && draggable.TryGetComponent<ISelectable>(out ISelectable selectable) && selectionList.Contains(selectable))
-                        {
-                            _selectedDraggables.Clear();
-                            _startPositions.Clear();
-
-                            for (int i = 0; i < selectionList.Count; i++)
-                            {
-                                if (!selectionList[i].Transform.TryGetComponent<Draggable>(out Draggable otherDraggable))
-                                    continue;
-
-                                _selectedDraggables.Add(otherDraggable);
-                                _startPositions.Add(otherDraggable.OnStartDrag(_pendingPosition));
-                            }
-                        }
-                        else
-                        {
-                            _draggable = draggable;
-                            _startPosition = _draggable.OnStartDrag(_pendingPosition);
-                        }
-                    }
+                    if (item.Transform == null || !item.Transform.TryGetComponent(out Draggable other) || !item.Transform.TryGetComponent(out ComponentView otherView))
+                        continue;
+                    Add(other, otherView);
                 }
             }
+            else
+            {
+                Add(pressed, view);
+            }
+        }
+
+        private void Add(Draggable draggable, ComponentView view)
+        {
+            _draggables.Add(draggable);
+            _componentIds.Add(view.ComponentId);
+            _startPositions.Add(draggable.OnStartDrag(_pendingPosition));
         }
 
         private void OnDrag(InputAction.CallbackContext context)
         {
             _mousePosition = context.ReadValue<Vector2>();
-            Vector2 mousePosition = _camera.ScreenToWorldPoint(_mousePosition);
+            Vector2 world = _camera.ScreenToWorldPoint(_mousePosition);
 
             if (!_isDragging)
             {
                 _isDragging = true;
                 _isDragPending = true;
-                _pendingPosition = mousePosition;
+                _pendingPosition = world;
             }
 
-            Drag(mousePosition);
+            if (_uiDraggable != null)
+                _uiDraggable.OnDrag(_mousePosition);
+            for (int i = 0; i < _draggables.Count; i++)
+                if (_draggables[i] != null)
+                    _draggables[i].OnDrag(world);
         }
 
         private void OnEndDrag(InputAction.CallbackContext context)
         {
             _isDragging = false;
+            _isDragPending = false;
 
-            if (_selectedDraggables.Count > 1)
-            {
-                List<Vector3> endPositions = new List<Vector3>();
-                for (int i = 0; i < _selectedDraggables.Count; i++)
-                    endPositions.Add(_selectedDraggables[i].OnDragEnd());
-
-                if (Vector3.Distance(_startPositions[0], endPositions[0]) > SettingsService.Settings.DragThreshold)
-                {
-                    SelectionDragCommand command = new SelectionDragCommand(new List<Draggable>(_selectedDraggables), new List<Vector3>(_startPositions), endPositions);
-                    _commandService.ExecuteCommand(command);
-                }
-                else
-                {
-                    for (int i = 0; i < _selectedDraggables.Count; i++)
-                        _selectedDraggables[i].transform.position = _startPositions[i];
-                }
-            }
-            else if (_draggable != null)
-            {
-                Vector3 endPosition = _draggable.OnDragEnd();
-
-                if (Vector3.Distance(_startPosition, endPosition) > SettingsService.Settings.DragThreshold)
-                {
-                    DragCommand command = new DragCommand(_draggable, _startPosition, endPosition);
-                    _commandService.ExecuteCommand(command);
-                }
-                else
-                {
-                    _draggable.transform.position = _startPosition;
-                }
-
-                _draggable = null;
-            }
+            if (_draggables.Count > 0)
+                FinishMove();
 
             if (_uiDraggable != null)
             {
                 _uiDraggable.OnDragEnd();
                 _uiDraggable = null;
             }
-
-            _selectedDraggables.Clear();
-            _startPositions.Clear();
         }
 
-
-        private void Drag(Vector2 mousePosition)
+        private void FinishMove()
         {
-            if (_uiDraggable != null)
+            var circuit = SystemCore.CircuitService.Circuit;
+            var ids = new List<int>();
+            var from = new List<(float x, float y)>();
+            var to = new List<(float x, float y)>();
+            bool moved = false;
+            for (int i = 0; i < _draggables.Count; i++)
             {
-                _uiDraggable.OnDrag(_mousePosition);
+                if (_draggables[i] == null || !circuit.TryGetComponent(_componentIds[i], out _))
+                    continue;
+                Vector3 end = _draggables[i].OnDragEnd();
+                ids.Add(_componentIds[i]);
+                from.Add((_startPositions[i].x, _startPositions[i].y));
+                to.Add((end.x, end.y));
+                moved |= Vector3.Distance(_startPositions[i], end) > SettingsService.Settings.DragThreshold;
             }
-            if (_selectedDraggables.Count > 1) 
+
+            if (moved)
             {
-                for (int i = 0; i < _selectedDraggables.Count; i++)
-                {
-                    _selectedDraggables[i].OnDrag(mousePosition);
-                }
+                SystemCore.CircuitService.Editor.Apply(new MoveComponentsEdit(circuit, ids, from, to));
             }
-            else if (_draggable != null)
+            else
             {
-                _draggable.OnDrag(mousePosition);
+                // A click, not a drag: put everything back exactly.
+                for (int i = 0; i < _draggables.Count; i++)
+                    if (_draggables[i] != null)
+                        _draggables[i].transform.position = _startPositions[i];
             }
+
+            _draggables.Clear();
+            _componentIds.Clear();
+            _startPositions.Clear();
         }
     }
 }

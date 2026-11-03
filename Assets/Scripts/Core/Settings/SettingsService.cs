@@ -1,4 +1,3 @@
-using UnityEngine.InputSystem;
 using System;
 
 namespace Core.Settings
@@ -7,12 +6,12 @@ namespace Core.Settings
     {
         public static SettingsData Settings { get; private set; }
 
-        private SettingsIO _settingsIO;
+        private readonly SettingsIO _settingsIO;
 
         public static event Action SettingsChanged;
 
-        public SettingsService() 
-        { 
+        public SettingsService()
+        {
             _settingsIO = new SettingsIO();
             LoadSettings();
         }
@@ -20,21 +19,21 @@ namespace Core.Settings
         internal void LoadSettings()
         {
             Settings = _settingsIO.LoadSettingsFile();
+            SettingsChanged?.Invoke();
         }
-        internal void SaveSettings()
+
+        public void SaveSettings()
         {
             _ = _settingsIO.SaveSettingsFile(Settings);
+            SettingsChanged?.Invoke();
         }
 
-        internal InputActionAsset LoadInputActions()
+        /// <summary>JSON produced by InputActionAsset.SaveBindingOverridesAsJson, or null.</summary>
+        public string LoadInputOverrides() => _settingsIO.LoadInputOverrides();
+
+        public void SaveInputOverrides(string json)
         {
-            return _settingsIO.LoadInputActionsFile();
+            _ = _settingsIO.SaveInputOverrides(json);
         }
-
-        public void SaveInputActions(InputActionAsset inputActions)
-        {
-            _ = _settingsIO.SaveInputActionsFile(inputActions);
-        }
-
     }
 }

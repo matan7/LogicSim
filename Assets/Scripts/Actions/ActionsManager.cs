@@ -1,59 +1,36 @@
-﻿using Assets.Scripts.Actions;
-using Behaviours;
-using Core.Clipboard;
-using Core.Command;
-using Core.Input;
-using Core.Selecting;
+using Core;
 using System;
 using UnityEngine;
 
 namespace Actions
 {
+    /// <summary>Creates the input-driven actions and gives them a per-frame update.</summary>
     public class ActionsManager : MonoBehaviour
     {
-        private InputService _inputService;
-        private CommandService _commandService;
-        private SelectingService _selectingService;
-        private ClipboardService _clipboardService;
-        private PivotPoint _pivotPoint;
-
         public Action UpdateEvent;
-
-        private DragAction _dragAction;
-        private UndoAction _undoAction;
-        private RedoAction _redoAction;
-        private SelectionDrawAction _selectionDrawAction;
-        private SelectAction _selectAction;
-        private CopyAction _copyAction;
-        private PasteAction _pasteAction;
-        private DeleteAction _deleteAction;
 
         private void Start()
         {
-            _inputService = Core.SystemCore.InputService;
-            _commandService = Core.SystemCore.CommandService;
-            _selectingService = Core.SystemCore.SelectingService;
-            _clipboardService = Core.SystemCore.ClipboardService;
+            var input = SystemCore.InputService;
+            var selecting = SystemCore.SelectingService;
 
-            _pivotPoint = PivotPoint.Instance;
-            CreateActions();
+            // Order matters: the wire tool claims presses on pins before dragging and selection look at them.
+            var wireAction = new WireAction(input, this);
+            new DragAction(input, this, selecting);
+            new SimInteractionAction(input, this);
+            new UndoAction(SystemCore.CommandService, input);
+            new RedoAction(SystemCore.CommandService, input);
+            new DeleteAction(input);
+            new SelectionDrawAction(input, this, selecting, DrawingSelectionManager.Instance);
+            new SelectAction(input, this, selecting);
+            new CopyAction(input);
+            new PasteAction(input);
+            new ShortcutActions(input, wireAction);
         }
 
         private void Update()
         {
             UpdateEvent?.Invoke();
-        }
-
-        private void CreateActions()
-        {
-            _dragAction = new DragAction(_inputService, _commandService, this, _selectingService);
-            _undoAction = new UndoAction(_commandService, _inputService);
-            _redoAction = new RedoAction(_commandService, _inputService);
-            _deleteAction = new DeleteAction(_commandService, _inputService, _selectingService);
-            _selectionDrawAction = new SelectionDrawAction(_inputService, this, _selectingService, DrawingSelectionManager.Instance);
-            _selectAction = new SelectAction(_inputService, this, _selectingService);
-            _copyAction = new CopyAction(_selectingService, _clipboardService, _inputService);
-            _pasteAction = new PasteAction(_commandService, _clipboardService, _inputService, _pivotPoint);            
         }
     }
 }

@@ -12,11 +12,15 @@ namespace Actions
         {
             _commandService = commandService;
             _inputService = inputService;
-            _inputService.CurrentInputActions.FindAction("RedoCommand").performed += OnRedoShortcutPerformed;
+            var action = _inputService.Find("Commands/RedoCommand");
+            if (action != null)
+                action.performed += OnRedoShortcutPerformed;
         }
 
         private void OnRedoShortcutPerformed(InputAction.CallbackContext context)
         {
+            if (!Core.SystemCore.AppStateService.IsEditing || EditCommands.IsTextInputFocused())
+                return;
             _commandService.RedoCommand();
         }
     }

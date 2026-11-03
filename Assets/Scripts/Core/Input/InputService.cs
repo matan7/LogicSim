@@ -1,54 +1,55 @@
 using System;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using Core.Settings;
 
 namespace Core.Input
 {
+    /// <summary>
+    /// Owns the input action asset. User rebinds are stored as binding overrides, so actions added in
+    /// later versions of the app keep working with old settings files.
+    /// </summary>
     public class InputService
     {
-        public InputActionAsset CurrentInputActions { get; private set; }
+        public InputActionAsset CurrentInputActions { get; }
 
-        public event Action<InputActionAsset> InputActionChange;
-
-        private InputActionAsset _defaultInputActions;
-
-        private InputActionAsset _customInputActions;
-
-        private SettingsService _settingsService;   
+        private readonly SettingsService _settingsService;
 
         public InputService(InputActionAsset defaultInputActions, SettingsService settingsService)
         {
-            _defaultInputActions = defaultInputActions;
+            if (defaultInputActions == null)
+                throw new ArgumentNullException(nameof(defaultInputActions));
             _settingsService = settingsService;
-#if UNITY_EDITOR
-            InputActionAsset inputActions = defaultInputActions;
-#else
-            InputActionAsset inputActions = _settingsService.LoadInputActions();
-#endif
-            if (inputActions != null) 
-            {                 
-                _customInputActions = inputActions;
-                CurrentInputActions = _customInputActions;
-            }
-            else
+            CurrentInputActions = defaultInputActions;
+
+            var overrides = _settingsService.LoadInputOverrides();
+            if (!string.IsNullOrEmpty(overrides))
             {
-                _settingsService.SaveInputActions(_defaultInputActions);
-                CurrentInputActions = _defaultInputActions;
-                _customInputActions = _defaultInputActions;
+                try
+                {
+                    CurrentInputActions.LoadBindingOverridesFromJson(overrides);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"{nameof(InputService)}: ignoring invalid binding overrides. {exception.Message}");
+                }
             }
 
             CurrentInputActions.Enable();
         }
 
-        public void ChangeInputAction(InputActionAsset inputActions)
+        /// <summary>Finds an action, logging a warning instead of throwing when it does not exist.</summary>
+        public InputAction Find(string nameOrPath)
         {
-            CurrentInputActions = inputActions;
-            InputActionChange?.Invoke(inputActions);
+            var action = CurrentInputActions.FindAction(nameOrPath);
+            if (action == null)
+                Debug.LogWarning($"{nameof(InputService)}: input action '{nameOrPath}' not found");
+            return action;
         }
 
         public void SaveInputActions()
         {
-            _settingsService.SaveInputActions(CurrentInputActions);
+            _settingsService.SaveInputOverrides(CurrentInputActions.SaveBindingOverridesAsJson());
         }
     }
 }

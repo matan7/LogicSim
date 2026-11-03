@@ -20,6 +20,9 @@ namespace Behaviours
         private Vector2 _dropPositionOffset;
         private Vector2 _orthographicSizeFactor;
         private Color _dragColor;
+        private Transform _originalParent;
+        private int _originalSiblingIndex;
+        private bool _dragging;
 
         void Start()
         {
@@ -45,6 +48,16 @@ namespace Behaviours
 
         internal void OnDrag(Vector2 mousePosition)
         {
+            if (!_dragging)
+            {
+                // Lift the icon onto the root canvas so the scrolling tool panel does not clip it.
+                _dragging = true;
+                _originalParent = transform.parent;
+                _originalSiblingIndex = transform.GetSiblingIndex();
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null)
+                    transform.SetParent(canvas.rootCanvas.transform, true);
+            }
             _rectTransform.sizeDelta = new Vector2(1 / _mainCamera.orthographicSize * _orthographicSizeFactor.x, 1 / _mainCamera.orthographicSize * _orthographicSizeFactor.y);
             transform.position = mousePosition;
             _image.color = _dragColor;
@@ -52,10 +65,17 @@ namespace Behaviours
 
         internal void OnDragEnd()
         {
-            EndDrag?.Invoke(new Vector3(Camera.main.ScreenToWorldPoint(transform.position).x - _dropPositionOffset.x, Camera.main.ScreenToWorldPoint(transform.position).y + _dropPositionOffset.y));
+            var world = _mainCamera.ScreenToWorldPoint(transform.position);
+            if (_dragging && _originalParent != null)
+            {
+                transform.SetParent(_originalParent, false);
+                transform.SetSiblingIndex(_originalSiblingIndex);
+            }
+            _dragging = false;
             _rectTransform.sizeDelta = _startSize;
             transform.localPosition = _startPosition;
             _image.color = _startColor;
+            EndDrag?.Invoke(new Vector3(world.x - _dropPositionOffset.x, world.y + _dropPositionOffset.y));
         }
     }
 }

@@ -15,8 +15,6 @@ namespace Actions
         private bool _isSelectPending = false;
         private bool _isSelectMorePending = false;
 
-        private RaycastHit2D _hit;
-
         private Vector2 _pendingPosition;
 
         public SelectAction(InputService inputService, ActionsManager actionsManager, SelectingService selectingService)
@@ -46,6 +44,12 @@ namespace Actions
 
         private void Update()
         {
+            if (!Core.SystemCore.AppStateService.IsEditing)
+            {
+                _isSelectMorePending = false;
+                _isSelectPending = false;
+                return;
+            }
             if (_isSelectMorePending)
             {
                 ISelectable selectable = RayCast();
@@ -76,16 +80,9 @@ namespace Actions
 
         private ISelectable RayCast()
         {
-            if (EventSystem.current.IsPointerOverGameObject())
+            if (PointerQuery.IsOverUi())
                 return null;
-
-            _hit = Physics2D.Raycast(_pendingPosition, Vector2.zero);
-            if (_hit.collider != null && _hit.collider.TryGetComponent<ISelectable>(out ISelectable selectable))
-            {
-                return selectable;
-            }
-
-            return null;
+            return PointerQuery.SelectableAt(_pendingPosition);
         }
     }
 }

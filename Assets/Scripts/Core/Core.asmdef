@@ -1,8 +1,11 @@
 {
     "name": "Core",
-    "rootNamespace": "Assembly-CSharp",
+    "rootNamespace": "Core",
     "references": [
-        "GUID:75469ad4d38634e559750d17036d5f7c"
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "LogicSim.Simulation",
+        "LogicSim.Simulation.Jobs",
+        "LogicSim.Mcp"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

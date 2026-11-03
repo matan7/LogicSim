@@ -23,6 +23,18 @@ namespace Core.Settings
         public Vector2 CameraMinMaxZoom = new Vector2(10, 75);
         public float CameraOrthographicSize = 25;
 
+        // Wires and signals
+        public Color WireColor = new Color(0.85f, 0.88f, 0.92f, 1f);
+        public Color SignalHighColor = new Color(0.35f, 1f, 0.45f, 1f);
+        public Color SignalLowColor = new Color(0.18f, 0.32f, 0.22f, 1f);
+
+        // Simulation
+        public double TicksPerSecond = 600;
+
+        // MCP server (Model Context Protocol) for AI agents
+        public bool McpEnabled = true;
+        public int McpPort = 8765;
+
         // System
         public int UndoHistoryMoves = 100;
 

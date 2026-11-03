@@ -1,61 +1,34 @@
-﻿using Core.Clipboard;
 using Core.Input;
-using Core.Selecting;
-using System;
-using System.Collections.Generic;
 using TMPro;
-using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-namespace Assets.Scripts.Actions
+namespace Actions
 {
     internal class CopyAction
     {
-        private SelectingService _selectingService;
-        private ClipboardService _clipboardService;
-        private InputService _inputService;
-        public CopyAction(SelectingService selectingService, ClipboardService clipboardService, InputService inputService)
+        public CopyAction(InputService inputService)
         {
-            _selectingService = selectingService;
-            _clipboardService = clipboardService;
-            _inputService = inputService;
-
-            _inputService.CurrentInputActions.FindAction("Commands/CopyCommand").canceled += Copy;
+            var action = inputService.Find("Commands/CopyCommand");
+            if (action != null)
+                action.performed += Copy;
         }
 
         private void Copy(InputAction.CallbackContext context)
         {
-            if (EventSystem.current.currentSelectedGameObject != null)
+            var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            if (selected != null && selected.TryGetComponent(out TMP_InputField input))
             {
-                if (EventSystem.current.currentSelectedGameObject.TryGetComponent(out TMP_InputField input))
-                {
-                    int start = input.selectionStringAnchorPosition;
-                    int end = input.selectionStringFocusPosition;
-
-                    if (start > end) (start, end) = (end, start);
-                    string selected = input.text.Substring(start, end - start);
-                    _clipboardService.SetStringClipboard(selected);
-                }
+                // Text fields copy their own selection.
+                int start = input.selectionStringAnchorPosition;
+                int end = input.selectionStringFocusPosition;
+                if (start > end)
+                    (start, end) = (end, start);
+                if (end > start)
+                    Core.SystemCore.ClipboardService.SetStringClipboard(input.text.Substring(start, end - start));
+                return;
             }
-            else if (_selectingService.SelectionList.Count > 0)
-            {
-                var selectionList = _selectingService.SelectionList;
-                var clipboard = new List<GameObject>();
-                for (int i = 0; i < selectionList.Count; i++)
-                {
-                    if (selectionList[i].Transform.gameObject.activeInHierarchy)
-                    {
-                        clipboard.Add(selectionList[i].Transform.gameObject);
-                    }
-                }
-
-                _clipboardService.SetClipboard<GameObject>(clipboard);
-            }
-            else
-            {
-                _clipboardService.SetClipboard<GameObject>(null);
-            }
+            EditCommands.Copy();
         }
     }
 }

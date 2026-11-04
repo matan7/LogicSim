@@ -137,6 +137,11 @@ namespace LogicSim.Simulation
             return GetWiresOf(componentId).Where(w => w.From.ComponentId == componentId && w.From.Pin == pin);
         }
 
+        public IEnumerable<CircuitComponent> InstancesOf(string subcircuitId)
+        {
+            return _components.Values.Where(c => c.Kind == ComponentKind.Subcircuit && c.SubcircuitId == subcircuitId);
+        }
+
         public CircuitComponent FindByLabel(string label)
         {
             if (string.IsNullOrEmpty(label))
@@ -245,6 +250,21 @@ namespace LogicSim.Simulation
                 return;
             component.Value = value;
             InputValueChanged?.Invoke(component);
+        }
+
+        /// <summary>Points a subcircuit instance at another definition. Wires are kept; the caller makes sure the pins match.</summary>
+        public void SetSubcircuitId(int id, string subcircuitId)
+        {
+            var component = GetComponent(id);
+            if (component.Kind != ComponentKind.Subcircuit)
+                throw new CircuitException($"{component} is not a subcircuit");
+            if (string.IsNullOrEmpty(subcircuitId))
+                throw new CircuitException("Subcircuit id must not be empty");
+            if (component.SubcircuitId == subcircuitId)
+                return;
+            component.SubcircuitId = subcircuitId;
+            ComponentPropertiesChanged?.Invoke(component);
+            MarkStructureChanged();
         }
 
         private void NormalizeInputCount(CircuitComponent component)
@@ -367,6 +387,18 @@ namespace LogicSim.Simulation
         /// </summary>
         public IReadOnlyList<string> ReplaceContents(IEnumerable<CircuitComponent> components, IEnumerable<Wire> wires)
         {
+            return ReplaceContents(components, wires, validatePins: true);
+        }
+
+        /// <summary>Like <see cref="ReplaceContents(IEnumerable{CircuitComponent}, IEnumerable{Wire})"/> but trusts the pin
+        /// numbers of the wires (used while a subcircuit definition is being swapped for a version with other pins).</summary>
+        internal IReadOnlyList<string> ReplaceContentsUnchecked(IEnumerable<CircuitComponent> components, IEnumerable<Wire> wires)
+        {
+            return ReplaceContents(components, wires, validatePins: false);
+        }
+
+        private IReadOnlyList<string> ReplaceContents(IEnumerable<CircuitComponent> components, IEnumerable<Wire> wires, bool validatePins)
+        {
             var problems = new List<string>();
             _components.Clear();
             _wires.Clear();
@@ -391,8 +423,13 @@ namespace LogicSim.Simulation
 
             foreach (var wire in wires)
             {
-                if (!CanConnect(wire.From, wire.To, out var error))
+                string error = null;
+                bool valid = validatePins
+                    ? CanConnect(wire.From, wire.To, out error)
+                    : _components.ContainsKey(wire.From.ComponentId) && _components.ContainsKey(wire.To.ComponentId) && !_wireByInput.ContainsKey(wire.To.Key);
+                if (!valid)
                 {
+                    error = error ?? "invalid endpoints";
                     problems.Add($"Wire {wire.Id} skipped: {error}");
                     continue;
                 }

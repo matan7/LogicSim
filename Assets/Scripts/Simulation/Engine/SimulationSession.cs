@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LogicSim.Simulation
 {
@@ -6,7 +7,7 @@ namespace LogicSim.Simulation
     /// Keeps a simulation engine in sync with an editable <see cref="Circuit"/>:
     /// recompiles after structural edits and forwards input changes.
     /// </summary>
-    public sealed class SimulationSession : IDisposable
+    public sealed class SimulationSession : IDisposable, ISignalReader
     {
         public Circuit Circuit { get; }
         public ISimulationEngine Engine { get; }
@@ -15,7 +16,8 @@ namespace LogicSim.Simulation
         /// <summary>Raised after the netlist was rebuilt (all values were reset).</summary>
         public event Action Recompiled;
 
-        public bool IsDirty => Compiled == null || Compiled.SourceVersion != Circuit.StructureVersion;
+        public bool IsDirty => Compiled == null || Compiled.SourceVersion != Circuit.StructureVersion
+            || Compiled.LibraryVersion != Circuit.Library.Version;
 
         public long Tick => Engine.Circuit == null ? 0 : Engine.Tick;
 
@@ -109,6 +111,14 @@ namespace LogicSim.Simulation
                 if (GetInputPinValue(component.Id, pin))
                     value |= 1 << pin;
             return value;
+        }
+
+        /// <summary>Reader for the values inside an IC instance (empty path = the document).</summary>
+        public ISignalReader CreateReader(IReadOnlyList<int> instancePath)
+        {
+            if (instancePath == null || instancePath.Count == 0)
+                return this;
+            return new InstanceSignalReader(this, instancePath);
         }
 
         private void OnInputValueChanged(CircuitComponent component)

@@ -19,46 +19,76 @@ namespace LogicSim.Simulation
         void Apply(ICircuitEdit edit);
     }
 
-    /// <summary>Applies edits immediately and keeps a simple undo/redo history.</summary>
-    public sealed class DirectCircuitEditor : ICircuitEditor
+    /// <summary>Applies edits immediately and keeps an undo/redo history (with one scope per opened IC).</summary>
+    public sealed class DirectCircuitEditor : ICircuitEditor, IEditHistory
     {
-        private readonly Stack<ICircuitEdit> _undo = new Stack<ICircuitEdit>();
-        private readonly Stack<ICircuitEdit> _redo = new Stack<ICircuitEdit>();
+        private sealed class Scope
+        {
+            public readonly List<ICircuitEdit> Undo = new List<ICircuitEdit>();
+            public readonly List<ICircuitEdit> Redo = new List<ICircuitEdit>();
+        }
+
+        private readonly List<Scope> _scopes = new List<Scope> { new Scope() };
+
+        private Scope Top => _scopes[_scopes.Count - 1];
 
         public Circuit Circuit { get; }
-        public int UndoCount => _undo.Count;
-        public int RedoCount => _redo.Count;
+        public int UndoCount => Top.Undo.Count;
+        public int RedoCount => Top.Redo.Count;
+        public int ScopeDepth => _scopes.Count - 1;
 
         public DirectCircuitEditor(Circuit circuit)
         {
             Circuit = circuit ?? throw new ArgumentNullException(nameof(circuit));
         }
 
-        public void Apply(ICircuitEdit edit)
+        public void Apply(ICircuitEdit edit) => Execute(edit);
+
+        public void Execute(ICircuitEdit edit)
         {
             edit.Apply();
-            _undo.Push(edit);
-            _redo.Clear();
+            Record(edit);
+        }
+
+        public void Record(ICircuitEdit appliedEdit)
+        {
+            Top.Undo.Add(appliedEdit);
+            Top.Redo.Clear();
         }
 
         public bool Undo()
         {
-            if (_undo.Count == 0)
+            var scope = Top;
+            if (scope.Undo.Count == 0)
                 return false;
-            var edit = _undo.Pop();
+            var edit = scope.Undo[scope.Undo.Count - 1];
+            scope.Undo.RemoveAt(scope.Undo.Count - 1);
             edit.Revert();
-            _redo.Push(edit);
+            scope.Redo.Add(edit);
             return true;
         }
 
         public bool Redo()
         {
-            if (_redo.Count == 0)
+            var scope = Top;
+            if (scope.Redo.Count == 0)
                 return false;
-            var edit = _redo.Pop();
+            var edit = scope.Redo[scope.Redo.Count - 1];
+            scope.Redo.RemoveAt(scope.Redo.Count - 1);
             edit.Apply();
-            _undo.Push(edit);
+            scope.Undo.Add(edit);
             return true;
+        }
+
+        public void PushScope() => _scopes.Add(new Scope());
+
+        public IReadOnlyList<ICircuitEdit> PopScope()
+        {
+            if (_scopes.Count == 1)
+                throw new InvalidOperationException("The document scope cannot be removed");
+            var scope = Top;
+            _scopes.RemoveAt(_scopes.Count - 1);
+            return scope.Undo.ToList();
         }
     }
 
@@ -314,6 +344,7 @@ namespace LogicSim.Simulation
         private readonly List<ICircuitEdit> _edits;
 
         public string Description { get; }
+        public IReadOnlyList<ICircuitEdit> Edits => _edits;
 
         public CompositeEdit(string description, IEnumerable<ICircuitEdit> edits)
         {

@@ -94,6 +94,14 @@ namespace LogicSim.Simulation
         /// <summary>Circuit structure version this netlist was compiled from.</summary>
         public int SourceVersion;
 
+        /// <summary>Subcircuit library version this netlist was compiled from.</summary>
+        public int LibraryVersion;
+
+        /// <summary>The document level; nested scopes are the IC instances.</summary>
+        public CompiledScope RootScope;
+
+        private NetResolver _probeResolver;
+
         public int TotalInputConnections => InNets?.Length ?? 0;
 
         public bool HasErrors
@@ -125,5 +133,63 @@ namespace LogicSim.Simulation
         {
             return InputSlots.TryGetValue(componentId, out int slot) ? slot : -1;
         }
+
+        /// <summary>Scope of the IC instance reached by following <paramref name="instancePath"/> from the document. Null if it does not exist.</summary>
+        public CompiledScope FindScope(IReadOnlyList<int> instancePath)
+        {
+            var scope = RootScope;
+            if (instancePath == null)
+                return scope;
+            foreach (var instanceId in instancePath)
+            {
+                if (scope == null || !scope.Children.TryGetValue(instanceId, out scope))
+                    return null;
+            }
+            return scope;
+        }
+
+        public int GetOutputNet(CompiledScope scope, int componentId, int pin)
+        {
+            if (scope == null || scope.IsRoot)
+                return GetOutputNet(componentId, pin);
+            return (_probeResolver ?? (_probeResolver = new NetResolver(this, compiling: false))).ResolveOutput(scope, componentId, pin);
+        }
+
+        public int GetInputNet(CompiledScope scope, int componentId, int pin)
+        {
+            if (scope == null || scope.IsRoot)
+                return GetInputNet(componentId, pin);
+            return (_probeResolver ?? (_probeResolver = new NetResolver(this, compiling: false))).ResolveInput(scope, componentId, pin);
+        }
+    }
+
+    /// <summary>One circuit instance in the compiled hierarchy: the document or an IC instance inside it.</summary>
+    public sealed class CompiledScope
+    {
+        public int Index { get; }
+        public Circuit Circuit { get; }
+        public CompiledScope Parent { get; }
+
+        /// <summary>Component id of the instance in the parent scope (0 for the document).</summary>
+        public int InstanceId { get; }
+
+        public SubcircuitDefinition Definition { get; }
+
+        public bool IsRoot => Parent == null;
+
+        internal readonly Dictionary<int, CompiledScope> Children = new Dictionary<int, CompiledScope>();
+        internal Dictionary<int, int[]> PrimitiveOutputs = new Dictionary<int, int[]>();
+        internal Dictionary<(int component, int pin, bool input), int> Memo;
+
+        internal CompiledScope(int index, Circuit circuit, CompiledScope parent, int instanceId, SubcircuitDefinition definition)
+        {
+            Index = index;
+            Circuit = circuit;
+            Parent = parent;
+            InstanceId = instanceId;
+            Definition = definition;
+        }
+
+        public bool TryGetChild(int instanceId, out CompiledScope child) => Children.TryGetValue(instanceId, out child);
     }
 }

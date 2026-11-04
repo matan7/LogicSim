@@ -39,25 +39,12 @@ namespace LogicSim.Simulation
             }
         }
 
-        private sealed class Scope
-        {
-            public int Index;
-            public Circuit Circuit;
-            public Scope Parent;
-            public int InstanceId;
-            public SubcircuitDefinition Definition;
-            public readonly Dictionary<int, Scope> Children = new Dictionary<int, Scope>();
-            public readonly Dictionary<int, int[]> PrimitiveOutputs = new Dictionary<int, int[]>();
-            public bool IsRoot => Parent == null;
-        }
-
         private sealed class Builder
         {
             private readonly Circuit _root;
             private readonly CompiledCircuit _result = new CompiledCircuit();
-            private readonly List<Scope> _scopes = new List<Scope>();
-            private readonly Dictionary<(int scope, int component, int pin, bool input), int> _memo = new Dictionary<(int, int, int, bool), int>();
-            private readonly HashSet<(int scope, int component, int pin, bool input)> _resolving = new HashSet<(int, int, int, bool)>();
+            private readonly List<CompiledScope> _scopes = new List<CompiledScope>();
+            private readonly NetResolver _resolver;
             private int _nextNet = 1;
 
             private readonly List<byte> _op = new List<byte>();
@@ -73,6 +60,7 @@ namespace LogicSim.Simulation
             public Builder(Circuit root)
             {
                 _root = root;
+                _resolver = new NetResolver(_result, compiling: true);
             }
 
             public CompiledCircuit Build()
@@ -88,24 +76,23 @@ namespace LogicSim.Simulation
 
                 MapRoot(rootScope);
                 Finish();
+
+                // Nets inside ICs are resolved again on demand (probing); drop the compile-time caches.
+                foreach (var scope in _scopes)
+                    scope.Memo = null;
+                rootScope.PrimitiveOutputs = null;
+                _result.RootScope = rootScope;
                 return _result;
             }
 
-            private Scope CreateScope(Circuit circuit, Scope parent, int instanceId, SubcircuitDefinition definition)
+            private CompiledScope CreateScope(Circuit circuit, CompiledScope parent, int instanceId, SubcircuitDefinition definition)
             {
-                var scope = new Scope
-                {
-                    Index = _scopes.Count,
-                    Circuit = circuit,
-                    Parent = parent,
-                    InstanceId = instanceId,
-                    Definition = definition
-                };
+                var scope = new CompiledScope(_scopes.Count, circuit, parent, instanceId, definition);
                 _scopes.Add(scope);
                 return scope;
             }
 
-            private void BuildChildren(Scope scope, List<string> ancestry)
+            private void BuildChildren(CompiledScope scope, List<string> ancestry)
             {
                 foreach (var component in scope.Circuit.Components)
                 {
@@ -114,17 +101,17 @@ namespace LogicSim.Simulation
 
                     if (!_root.Library.TryGet(component.SubcircuitId, out var definition))
                     {
-                        Report(DiagnosticSeverity.Error, $"Subcircuit '{component.SubcircuitId}' is not defined", scope, component);
+                        _resolver.Report(DiagnosticSeverity.Error, $"Subcircuit '{component.SubcircuitId}' is not defined", scope, component);
                         continue;
                     }
                     if (ancestry.Contains(definition.Id))
                     {
-                        Report(DiagnosticSeverity.Error, $"Subcircuit '{definition.Id}' contains itself", scope, component);
+                        _resolver.Report(DiagnosticSeverity.Error, $"Subcircuit '{definition.Id}' contains itself", scope, component);
                         continue;
                     }
                     if (ancestry.Count >= MaxNestingDepth)
                     {
-                        Report(DiagnosticSeverity.Error, $"Subcircuits are nested deeper than {MaxNestingDepth} levels", scope, component);
+                        _resolver.Report(DiagnosticSeverity.Error, $"Subcircuits are nested deeper than {MaxNestingDepth} levels", scope, component);
                         continue;
                     }
 
@@ -136,7 +123,7 @@ namespace LogicSim.Simulation
                 }
             }
 
-            private static bool IsPrimitive(Scope scope, CircuitComponent component)
+            private static bool IsPrimitive(CompiledScope scope, CircuitComponent component)
             {
                 if (GetOpCode(component.Kind).HasValue)
                     return true;
@@ -144,7 +131,7 @@ namespace LogicSim.Simulation
                 return scope.IsRoot && component.Spec.IsInterfaceInput;
             }
 
-            private void AllocatePrimitiveNets(Scope scope)
+            private void AllocatePrimitiveNets(CompiledScope scope)
             {
                 foreach (var component in scope.Circuit.Components)
                 {
@@ -158,7 +145,7 @@ namespace LogicSim.Simulation
                 }
             }
 
-            private void EmitGates(Scope scope)
+            private void EmitGates(CompiledScope scope)
             {
                 var circuit = scope.Circuit;
                 foreach (var component in circuit.Components)
@@ -197,13 +184,13 @@ namespace LogicSim.Simulation
                     _inStart.Add(_inNets.Count);
                     int inputs = circuit.GetInputCount(component);
                     for (int pin = 0; pin < inputs; pin++)
-                        _inNets.Add(ResolveInput(scope, component.Id, pin));
+                        _inNets.Add(_resolver.ResolveInput(scope, component.Id, pin));
                     _out0.Add(outNets.Length > 0 ? outNets[0] : -1);
                     _out1.Add(outNets.Length > 1 ? outNets[1] : -1);
                 }
             }
 
-            private void MapRoot(Scope root)
+            private void MapRoot(CompiledScope root)
             {
                 foreach (var component in root.Circuit.Components)
                 {
@@ -212,7 +199,7 @@ namespace LogicSim.Simulation
                     {
                         var nets = new int[outputs];
                         for (int pin = 0; pin < outputs; pin++)
-                            nets[pin] = ResolveOutput(root, component.Id, pin);
+                            nets[pin] = _resolver.ResolveOutput(root, component.Id, pin);
                         _result.OutputNets[component.Id] = nets;
                     }
                     int inputs = root.Circuit.GetInputCount(component);
@@ -220,70 +207,10 @@ namespace LogicSim.Simulation
                     {
                         var nets = new int[inputs];
                         for (int pin = 0; pin < inputs; pin++)
-                            nets[pin] = ResolveInput(root, component.Id, pin);
+                            nets[pin] = _resolver.ResolveInput(root, component.Id, pin);
                         _result.InputNets[component.Id] = nets;
                     }
                 }
-            }
-
-            private int ResolveInput(Scope scope, int componentId, int pin)
-            {
-                var key = (scope.Index, componentId, pin, true);
-                if (_memo.TryGetValue(key, out int cached))
-                    return cached;
-                var wire = scope.Circuit.GetWireInto(componentId, pin);
-                int net = wire == null ? CompiledCircuit.LowNet : ResolveOutput(scope, wire.From.ComponentId, wire.From.Pin);
-                _memo[key] = net;
-                return net;
-            }
-
-            private int ResolveOutput(Scope scope, int componentId, int pin)
-            {
-                var key = (scope.Index, componentId, pin, false);
-                if (_memo.TryGetValue(key, out int cached))
-                    return cached;
-                if (!scope.Circuit.TryGetComponent(componentId, out var component))
-                    return CompiledCircuit.LowNet;
-                if (!_resolving.Add(key))
-                {
-                    Report(DiagnosticSeverity.Warning, "Pins are connected in a loop without any gate; treated as 0", scope, component);
-                    return CompiledCircuit.LowNet;
-                }
-
-                int net = CompiledCircuit.LowNet;
-                if (scope.PrimitiveOutputs.TryGetValue(componentId, out var nets))
-                {
-                    if (pin >= 0 && pin < nets.Length)
-                        net = nets[pin];
-                }
-                else if (component.Spec.IsInterfaceInput && !scope.IsRoot)
-                {
-                    int index = scope.Definition.IndexOfInputComponent(componentId);
-                    if (index >= 0)
-                        net = ResolveInput(scope.Parent, scope.InstanceId, index);
-                }
-                else if (component.Kind == ComponentKind.Subcircuit && scope.Children.TryGetValue(componentId, out var child))
-                {
-                    var outputs = child.Definition.OutputComponentIds;
-                    if (pin >= 0 && pin < outputs.Count)
-                        net = ResolveInput(child, outputs[pin], 0);
-                }
-
-                _resolving.Remove(key);
-                _memo[key] = net;
-                return net;
-            }
-
-            private void Report(DiagnosticSeverity severity, string message, Scope scope, CircuitComponent component)
-            {
-                _result.Diagnostics.Add(new CompileDiagnostic(severity, message, scope.IsRoot ? component.Id : RootComponentOf(scope)));
-            }
-
-            private static int RootComponentOf(Scope scope)
-            {
-                while (scope.Parent != null && !scope.Parent.IsRoot)
-                    scope = scope.Parent;
-                return scope.InstanceId;
             }
 
             private void Finish()
@@ -303,6 +230,7 @@ namespace LogicSim.Simulation
                 r.InputSlotGate = _slotGates.ToArray();
                 r.InitialInputs = _initialInputs.ToArray();
                 r.SourceVersion = _root.StructureVersion;
+                r.LibraryVersion = _root.Library.Version;
                 BuildFanout(r);
             }
 
@@ -349,6 +277,93 @@ namespace LogicSim.Simulation
                 r.FanoutStart = counts;
                 r.FanoutGates = fanout;
             }
+        }
+    }
+
+    /// <summary>
+    /// Follows wires through subcircuit boundaries to the gate output that drives a pin. Used while compiling and,
+    /// afterwards, to find the nets inside a particular IC instance (probing).
+    /// </summary>
+    internal sealed class NetResolver
+    {
+        private readonly CompiledCircuit _result;
+        private readonly bool _compiling;
+        private readonly HashSet<(CompiledScope, int, int, bool)> _resolving = new HashSet<(CompiledScope, int, int, bool)>();
+
+        public NetResolver(CompiledCircuit result, bool compiling)
+        {
+            _result = result;
+            _compiling = compiling;
+        }
+
+        public int ResolveInput(CompiledScope scope, int componentId, int pin)
+        {
+            // After compilation the document level is answered from the maps built for it.
+            if (!_compiling && scope.IsRoot)
+                return _result.GetInputNet(componentId, pin);
+            var memo = scope.Memo ?? (scope.Memo = new Dictionary<(int, int, bool), int>());
+            var key = (componentId, pin, true);
+            if (memo.TryGetValue(key, out int cached))
+                return cached;
+            var wire = scope.Circuit.GetWireInto(componentId, pin);
+            int net = wire == null ? CompiledCircuit.LowNet : ResolveOutput(scope, wire.From.ComponentId, wire.From.Pin);
+            memo[key] = net;
+            return net;
+        }
+
+        public int ResolveOutput(CompiledScope scope, int componentId, int pin)
+        {
+            if (!_compiling && scope.IsRoot)
+                return _result.GetOutputNet(componentId, pin);
+            var memo = scope.Memo ?? (scope.Memo = new Dictionary<(int, int, bool), int>());
+            var key = (componentId, pin, false);
+            if (memo.TryGetValue(key, out int cached))
+                return cached;
+            if (!scope.Circuit.TryGetComponent(componentId, out var component))
+                return CompiledCircuit.LowNet;
+            var loopKey = (scope, componentId, pin, false);
+            if (!_resolving.Add(loopKey))
+            {
+                Report(DiagnosticSeverity.Warning, "Pins are connected in a loop without any gate; treated as 0", scope, component);
+                return CompiledCircuit.LowNet;
+            }
+
+            int net = CompiledCircuit.LowNet;
+            if (scope.PrimitiveOutputs != null && scope.PrimitiveOutputs.TryGetValue(componentId, out var nets))
+            {
+                if (pin >= 0 && pin < nets.Length)
+                    net = nets[pin];
+            }
+            else if (component.Spec.IsInterfaceInput && !scope.IsRoot)
+            {
+                int index = scope.Definition.IndexOfInputComponent(componentId);
+                if (index >= 0)
+                    net = ResolveInput(scope.Parent, scope.InstanceId, index);
+            }
+            else if (component.Kind == ComponentKind.Subcircuit && scope.Children.TryGetValue(componentId, out var child))
+            {
+                var outputs = child.Definition.OutputComponentIds;
+                if (pin >= 0 && pin < outputs.Count)
+                    net = ResolveInput(child, outputs[pin], 0);
+            }
+
+            _resolving.Remove(loopKey);
+            memo[key] = net;
+            return net;
+        }
+
+        public void Report(DiagnosticSeverity severity, string message, CompiledScope scope, CircuitComponent component)
+        {
+            if (!_compiling)
+                return;
+            _result.Diagnostics.Add(new CompileDiagnostic(severity, message, scope.IsRoot ? component.Id : RootComponentOf(scope)));
+        }
+
+        private static int RootComponentOf(CompiledScope scope)
+        {
+            while (scope.Parent != null && !scope.Parent.IsRoot)
+                scope = scope.Parent;
+            return scope.InstanceId;
         }
     }
 }

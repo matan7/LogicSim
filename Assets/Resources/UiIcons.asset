@@ -20,5 +20,3 @@ MonoBehaviour:
   Paste: {fileID: -6567643371809809131, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
   Delete: {fileID: -9180129457090887526, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
   Subcircuit: {fileID: 21300066, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Play: {fileID: 21300020, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Connector: {fileID: 21300042, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}

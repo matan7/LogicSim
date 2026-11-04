@@ -73,13 +73,6 @@ namespace LogicSim.Simulation
             return Engine.Settle(maxTicks);
         }
 
-        public bool ReadNet(int net)
-        {
-            if (Compiled == null)
-                return false;
-            return Engine.GetNet(net);
-        }
-
         public bool GetOutputValue(int componentId, int pin)
         {
             return Compiled != null && Engine.GetNet(Compiled.GetOutputNet(componentId, pin));

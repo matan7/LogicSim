@@ -4,13 +4,11 @@ using UnityEngine.UI;
 
 public class RedoButton : MonoBehaviour
 {
-    private Image _iconImage;
     private Button _button;
 
     void Start()
     {
         _button = GetComponent<Button>();
-        _iconImage = GetComponentInChildren<Image>();
 
         _button.onClick.AddListener(OnClick);
         SystemCore.CommandService.HistoryChanged += OnHistoryChanged;

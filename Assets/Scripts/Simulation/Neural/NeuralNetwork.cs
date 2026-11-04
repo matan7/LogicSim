@@ -270,12 +270,6 @@ namespace LogicSim.Simulation
             return lut;
         }
 
-        public bool LookUp(int output, int pattern)
-        {
-            var lut = GetLut();
-            return (lut[output * LutWordsPerOutput + (pattern >> 6)] >> (pattern & 63) & 1) != 0;
-        }
-
         #endregion
 
         public string Describe()

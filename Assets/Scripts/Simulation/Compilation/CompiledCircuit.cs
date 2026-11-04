@@ -122,8 +122,6 @@ namespace LogicSim.Simulation
 
         private NetResolver _probeResolver;
 
-        public int TotalInputConnections => InNets?.Length ?? 0;
-
         public bool HasErrors
         {
             get
@@ -214,7 +212,5 @@ namespace LogicSim.Simulation
             InstanceId = instanceId;
             Definition = definition;
         }
-
-        public bool TryGetChild(int instanceId, out CompiledScope child) => Children.TryGetValue(instanceId, out child);
     }
 }

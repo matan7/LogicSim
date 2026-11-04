@@ -114,21 +114,6 @@ namespace LogicSim.Mcp
             return single == null ? null : Serialize(single);
         }
 
-        /// <summary>True when the message contains at least one request (as opposed to only notifications/responses).</summary>
-        public static bool ContainsRequest(string json)
-        {
-            try
-            {
-                var token = JToken.Parse(json);
-                var items = token is JArray array ? array.Children().ToArray() : new[] { token };
-                return items.OfType<JObject>().Any(o => o["method"] != null && o["id"] != null);
-            }
-            catch (JsonException)
-            {
-                return true;
-            }
-        }
-
         public static bool IsInitializeRequest(string json)
         {
             try

@@ -17,7 +17,6 @@ namespace LogicSim.Views
         public static readonly Color LabelColor = new Color(0.92f, 0.94f, 0.97f, 1f);
         public static readonly Color PinIdle = new Color(0.85f, 0.88f, 0.92f, 1f);
         public static readonly Color PinHighlight = new Color(1f, 0.82f, 0.25f, 1f);
-        public static readonly Color PreviewInvalid = new Color(1f, 0.35f, 0.3f, 1f);
 
         public static Color WireColor => Settings?.WireColor ?? Outline;
         public static Color HighColor => Settings?.SignalHighColor ?? new Color(0.35f, 1f, 0.45f, 1f);

@@ -31,7 +31,6 @@ namespace LogicSim.Simulation
     {
         private readonly SubcircuitLibrary _library;
         private readonly string _id;
-        private SubcircuitDefinition _removed;
         private List<SubcircuitDefinition> _order;
 
         public string Description => "Delete IC";
@@ -44,7 +43,7 @@ namespace LogicSim.Simulation
 
         public void Apply()
         {
-            _removed = _library.Get(_id);
+            _library.Get(_id); // unknown ids throw
             _order = _library.Definitions.ToList();
             _library.Remove(_id);
         }
@@ -141,9 +140,6 @@ namespace LogicSim.Simulation
 
         /// <summary>Pin mapping from the previous version (available after the first apply).</summary>
         public SubcircuitPinMap PinMap => _plan?.PinMap;
-
-        /// <summary>Wires removed because their pin no longer exists (available after the first apply).</summary>
-        public int DroppedWireCount => _plan == null ? 0 : _plan.Circuits.Sum(c => c.Removed.Count - c.Added.Count);
 
         public UpdateSubcircuitEdit(SubcircuitLibrary library, SubcircuitDefinition after, IEnumerable<Circuit> liveCircuits, string description = null)
         {

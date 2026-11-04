@@ -18,7 +18,6 @@ namespace Core.Documents
     {
         public const string DefaultName = "Untitled";
 
-        private readonly CommandService _commandService;
         private ISignalReader _levelReader;
         private object _levelReaderKey;
 
@@ -48,7 +47,6 @@ namespace Core.Documents
 
         public CircuitService(CommandService commandService, AppStateService appState)
         {
-            _commandService = commandService;
             Root = new Circuit();
             Hierarchy = new CircuitHierarchy(Root, new CommandEditHistory(commandService));
             Documents = new CircuitDocumentStore(Path.Combine(Application.persistentDataPath, "Circuits"));

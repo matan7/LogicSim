@@ -513,8 +513,6 @@ namespace LogicSim.UI
             return false;
         }
 
-        public bool HasOpenPanel => _panels.Any(p => p.IsOpen);
-
         public void ShowMessage(string title, string text, bool monospace = false)
         {
             var panel = OpenPanel(title);

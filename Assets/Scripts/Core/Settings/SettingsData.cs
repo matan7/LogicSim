@@ -21,7 +21,6 @@ namespace Core.Settings
 
         // Camera
         public Vector2 CameraMinMaxZoom = new Vector2(10, 75);
-        public float CameraOrthographicSize = 25;
 
         // Wires and signals
         public Color WireColor = new Color(0.85f, 0.88f, 0.92f, 1f);

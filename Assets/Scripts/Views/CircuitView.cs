@@ -51,9 +51,6 @@ namespace LogicSim.Views
         private Transform _wireRoot;
         private bool _valuesDirty;
 
-        public IEnumerable<ComponentView> ComponentViews => _components.Values;
-        public IEnumerable<WireView> WireViews => _wires.Values;
-
         private void Awake()
         {
             Instance = this;
@@ -133,8 +130,6 @@ namespace LogicSim.Views
         #region Queries
 
         public bool TryGetComponentView(int id, out ComponentView view) => _components.TryGetValue(id, out view);
-
-        public bool TryGetWireView(int id, out WireView view) => _wires.TryGetValue(id, out view);
 
         public Vector3 GetPinPosition(PinRef pin, bool output)
         {

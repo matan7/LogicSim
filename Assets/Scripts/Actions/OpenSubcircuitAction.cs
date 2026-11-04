@@ -1,4 +1,3 @@
-using Core;
 using Core.Input;
 using LogicSim.Simulation;
 using LogicSim.UI;

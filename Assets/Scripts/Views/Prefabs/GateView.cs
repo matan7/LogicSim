@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using LogicSim.Simulation;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -18,9 +17,6 @@ namespace LogicSim.Views
             AddPin<InputPin>(_input2, inputs);
             AddPin<OutputPin>(_output, outputs);
         }
-
-        /// <summary>Number of inputs drawn on the prefab.</summary>
-        public int PrefabInputCount => (_input1 != null ? 1 : 0) + (_input2 != null ? 1 : 0);
 
         internal static void AddPin<T>(GameObject go, List<PinView> list) where T : PinView
         {

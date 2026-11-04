@@ -25,12 +25,4 @@ public class SelectableSprite : MonoBehaviour, ISelectable
     {
         _spriteRenderer.color = _startColor;
     }
-
-    public Color GetDefaultColor => _startColor;
-
-    public void SetDefaultColor(Color color)
-    {
-        _startColor = color;
-        Deselect();
-    }
 }

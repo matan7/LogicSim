@@ -64,13 +64,6 @@ namespace LogicSim.Simulation
 
         public bool TryGetWire(int id, out Wire wire) => _wires.TryGetValue(id, out wire);
 
-        public Wire GetWire(int id)
-        {
-            if (_wires.TryGetValue(id, out var wire))
-                return wire;
-            throw new CircuitException($"Wire {id} does not exist");
-        }
-
         public int GetInputCount(CircuitComponent component)
         {
             if (component.Kind == ComponentKind.Subcircuit)

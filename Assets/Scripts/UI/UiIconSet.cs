@@ -14,8 +14,6 @@ namespace LogicSim.UI
         public Sprite Paste;
         public Sprite Delete;
         public Sprite Subcircuit;
-        public Sprite Play;
-        public Sprite Connector;
 
         private static UiIconSet _instance;
 

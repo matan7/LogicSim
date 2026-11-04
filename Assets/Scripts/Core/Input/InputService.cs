@@ -46,10 +46,5 @@ namespace Core.Input
                 Debug.LogWarning($"{nameof(InputService)}: input action '{nameOrPath}' not found");
             return action;
         }
-
-        public void SaveInputActions()
-        {
-            _settingsService.SaveInputOverrides(CurrentInputActions.SaveBindingOverridesAsJson());
-        }
     }
 }

@@ -8,8 +8,6 @@ namespace Core.Clipboard
     {
         public CircuitFragment Fragment { get; private set; }
 
-        public bool HasFragment => Fragment != null && !Fragment.IsEmpty;
-
         public void SetFragment(CircuitFragment fragment, SubcircuitLibrary library)
         {
             Fragment = fragment;

@@ -59,7 +59,6 @@ namespace LogicSim.Simulation
 
         public Circuit Root { get; }
         public SubcircuitLibrary Library => Root.Library;
-        public IEditHistory History => _history;
         public IReadOnlyList<HierarchyLevel> Levels => _levels;
         public HierarchyLevel Current => _levels[_levels.Count - 1];
         public bool IsAtRoot => _levels.Count == 1;
@@ -142,8 +141,6 @@ namespace LogicSim.Simulation
                 return true;
             return !CircuitComparer.SameContents(level.Circuit, definition.Circuit);
         }
-
-        public bool HasUnappliedChanges => _levels.Any(IsModified);
 
         /// <summary>Writes the working copy of <paramref name="level"/> back to the library, recorded in the current scope.</summary>
         /// <returns>The applied edit, or null when nothing changed.</returns>

@@ -1,7 +1,6 @@
 ﻿using Core.Input;
 using Core.Selecting;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 namespace Actions

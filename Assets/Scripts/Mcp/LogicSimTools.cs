@@ -900,7 +900,7 @@ namespace LogicSim.Mcp
             var result = DescribeDefinition(definition);
             result["circuit"] = new JObject
             {
-                ["components"] = new JArray(inner.Components.Select(c => DescribeIn(inner, c))),
+                ["components"] = new JArray(inner.Components.Select(DescribeIn)),
                 ["wires"] = new JArray(inner.Wires.Select(w => new JObject
                 {
                     ["id"] = w.Id,
@@ -913,7 +913,7 @@ namespace LogicSim.Mcp
             return McpToolResult.Ok(result);
         }
 
-        private static JObject DescribeIn(Circuit circuit, CircuitComponent component)
+        private static JObject DescribeIn(CircuitComponent component)
         {
             var entry = new JObject { ["id"] = component.Id, ["type"] = component.Kind.ToString(), ["x"] = component.X, ["y"] = component.Y };
             if (!string.IsNullOrEmpty(component.Label))

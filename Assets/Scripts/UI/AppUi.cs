@@ -60,9 +60,11 @@ namespace LogicSim.UI
             MakeToolPanelScrollable();
             BindSimulationToggle();
             BuildStatusBar();
+            HierarchyBar.Create(_canvas);
 
             SystemCore.AppStateService.StateChanged += OnStateChanged;
-            SystemCore.CircuitService.Circuit.Library.Changed += RebuildSubcircuitEntries;
+            SystemCore.CircuitService.Root.Library.Changed += RebuildSubcircuitEntries;
+            SystemCore.CircuitService.LevelChanged += RebuildSubcircuitEntries;
             RebuildSubcircuitEntries();
             ShowToast("Ctrl+O opens the examples, F1 shows help", 8f);
         }
@@ -74,7 +76,10 @@ namespace LogicSim.UI
             if (SystemCore.AppStateService != null)
                 SystemCore.AppStateService.StateChanged -= OnStateChanged;
             if (SystemCore.CircuitService != null)
-                SystemCore.CircuitService.Circuit.Library.Changed -= RebuildSubcircuitEntries;
+            {
+                SystemCore.CircuitService.Root.Library.Changed -= RebuildSubcircuitEntries;
+                SystemCore.CircuitService.LevelChanged -= RebuildSubcircuitEntries;
+            }
         }
 
         #region Scene lookups
@@ -238,7 +243,13 @@ namespace LogicSim.UI
             {
                 var icons = UiIconSet.Instance;
                 if (_buttonTemplate != null)
+                {
                     AddToolbarButton(_customContainer, "Create IC", icons != null ? icons.Subcircuit : null, "IC", AppCommands.CreateSubcircuit);
+                    AddToolbarButton(_customContainer, "Collapse", null, ">IC", AppCommands.CollapseSelection);
+                    AddToolbarButton(_customContainer, "Open IC", null, "OPEN", AppCommands.OpenSelectedSubcircuit);
+                    AddToolbarButton(_customContainer, "Explode", null, "IC>", AppCommands.ExplodeSelection);
+                    AddToolbarButton(_customContainer, "Make unique", null, "UNIQ", AppCommands.MakeSelectedUnique);
+                }
                 AddPaletteEntry(_customContainer, ComponentKind.PinIn, "Input pin", "IN");
                 AddPaletteEntry(_customContainer, ComponentKind.PinOut, "Output pin", "OUT");
                 _customFixedEntries = _customContainer.childCount;
@@ -290,9 +301,17 @@ namespace LogicSim.UI
             _subcircuitEntries.Clear();
 
             var icons = UiIconSet.Instance;
-            foreach (var definition in SystemCore.CircuitService.Circuit.Library.Definitions)
+            var hierarchy = SystemCore.CircuitService.Hierarchy;
+            foreach (var definition in hierarchy.Library.Definitions)
             {
                 var entry = AddPaletteEntry(_customContainer, ComponentKind.Subcircuit, definition.Name, "IC", definition.Id, icons != null ? icons.Subcircuit : null);
+                // ICs that would end up inside themselves are shown dimmed (dropping them is refused).
+                if (!hierarchy.CanPlace(definition.Id))
+                {
+                    var image = entry.GetComponentInChildren<ObjectSpawner>(true)?.GetComponent<Image>();
+                    if (image != null)
+                        image.color = new Color(1, 1, 1, 0.3f);
+                }
                 _subcircuitEntries.Add(entry);
             }
             // Destroyed entries only leave the hierarchy at the end of the frame, so count explicitly.
@@ -420,6 +439,9 @@ namespace LogicSim.UI
                 parts.Add("<color=#FFD24A>" + _toast + "</color>");
 
             parts.Add(circuitService.DocumentName + (circuitService.IsDirty ? "*" : string.Empty));
+            var hierarchy = circuitService.Hierarchy;
+            if (!hierarchy.IsAtRoot)
+                parts.Add("IC " + hierarchy.GetName(hierarchy.Current) + (hierarchy.IsModified(hierarchy.Current) ? "*" : string.Empty));
             parts.Add($"{circuit.ComponentCount} components, {circuit.WireCount} wires");
 
             if (SystemCore.AppStateService.IsSimulating)

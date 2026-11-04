@@ -138,7 +138,7 @@ namespace LogicSim.Views
             _caption.gameObject.SetActive(!string.IsNullOrEmpty(Component.Label) && Component.Kind != ComponentKind.PinIn && Component.Kind != ComponentKind.PinOut);
         }
 
-        private string BodyText(SimulationSession session)
+        private string BodyText(ISignalReader session)
         {
             var c = Component;
             switch (c.Kind)
@@ -173,7 +173,7 @@ namespace LogicSim.Views
             }
         }
 
-        public override void ShowValues(SimulationSession session)
+        public override void ShowValues(ISignalReader session)
         {
             base.ShowValues(session);
             var kind = Component.Kind;

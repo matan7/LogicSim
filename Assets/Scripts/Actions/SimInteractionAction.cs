@@ -43,6 +43,9 @@ namespace Actions
             _pending = false;
             if (!SystemCore.AppStateService.IsSimulating || PointerQuery.IsOverUi())
                 return;
+            // Inside an IC the pins are driven by the circuit around the instance.
+            if (!SystemCore.CircuitService.Hierarchy.IsAtRoot)
+                return;
 
             var view = PointerQuery.ComponentAt(_pendingPosition);
             if (view == null)

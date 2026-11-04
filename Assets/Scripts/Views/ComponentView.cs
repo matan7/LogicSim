@@ -81,7 +81,7 @@ namespace LogicSim.Views
         }
 
         /// <summary>Shows simulation values; <paramref name="session"/> is null outside the simulation.</summary>
-        public virtual void ShowValues(SimulationSession session)
+        public virtual void ShowValues(ISignalReader session)
         {
             for (int i = 0; i < _inputs.Count; i++)
                 _inputs[i].SetValue(session == null ? (bool?)null : session.GetInputPinValue(ComponentId, i));

@@ -69,6 +69,11 @@ namespace Behaviours
             }
 
             var circuit = SystemCore.CircuitService.Circuit;
+            if (kind == ComponentKind.Subcircuit && !SystemCore.CircuitService.Hierarchy.CanPlace(_subcircuitId))
+            {
+                LogicSim.UI.AppUi.Instance?.ShowToast("An IC cannot contain itself");
+                return;
+            }
             var component = kind == ComponentKind.Subcircuit
                 ? ComponentFactory.CreateSubcircuit(_subcircuitId, position.x, position.y)
                 : ComponentFactory.Create(kind, position.x, position.y);

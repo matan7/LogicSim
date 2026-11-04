@@ -62,7 +62,41 @@ namespace LogicSim.Views
             _wireRoot = new GameObject("Wires").transform;
             _wireRoot.SetParent(transform, false);
 
-            _circuit = SystemCore.CircuitService.Circuit;
+            SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
+            SystemCore.AppStateService.StateChanged += OnStateChanged;
+            SystemCore.CircuitService.LevelChanged += OnLevelChanged;
+            BindCircuit(SystemCore.CircuitService.Circuit);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+            UnbindCircuit();
+            if (SystemCore.SimulationService != null)
+                SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
+            if (SystemCore.AppStateService != null)
+                SystemCore.AppStateService.StateChanged -= OnStateChanged;
+            if (SystemCore.CircuitService != null)
+                SystemCore.CircuitService.LevelChanged -= OnLevelChanged;
+        }
+
+        /// <summary>The circuit shown: the document or the IC opened for editing.</summary>
+        public Circuit Circuit => _circuit;
+
+        /// <summary>Raised after the view switched to another circuit level and rebuilt itself.</summary>
+        public event System.Action Rebound;
+
+        private void OnLevelChanged()
+        {
+            UnbindCircuit();
+            BindCircuit(SystemCore.CircuitService.Circuit);
+            Rebound?.Invoke();
+        }
+
+        private void BindCircuit(Circuit circuit)
+        {
+            _circuit = circuit;
             _circuit.ComponentAdded += OnComponentAdded;
             _circuit.ComponentRemoved += OnComponentRemoved;
             _circuit.ComponentMoved += OnComponentMoved;
@@ -71,17 +105,13 @@ namespace LogicSim.Views
             _circuit.WireAdded += OnWireAdded;
             _circuit.WireRemoved += OnWireRemoved;
             _circuit.Reset += Rebuild;
+            _circuit.StructureChanged += OnStructureChanged;
             _circuit.Library.Changed += OnLibraryChanged;
-            SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
-            SystemCore.AppStateService.StateChanged += OnStateChanged;
-
             Rebuild();
         }
 
-        private void OnDestroy()
+        private void UnbindCircuit()
         {
-            if (Instance == this)
-                Instance = null;
             if (_circuit == null)
                 return;
             _circuit.ComponentAdded -= OnComponentAdded;
@@ -92,12 +122,13 @@ namespace LogicSim.Views
             _circuit.WireAdded -= OnWireAdded;
             _circuit.WireRemoved -= OnWireRemoved;
             _circuit.Reset -= Rebuild;
+            _circuit.StructureChanged -= OnStructureChanged;
             _circuit.Library.Changed -= OnLibraryChanged;
-            if (SystemCore.SimulationService != null)
-                SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
-            if (SystemCore.AppStateService != null)
-                SystemCore.AppStateService.StateChanged -= OnStateChanged;
+            _circuit = null;
         }
+
+        // Editing an open IC changes whether its values can be shown.
+        private void OnStructureChanged() => _valuesDirty = true;
 
         #region Queries
 
@@ -320,11 +351,11 @@ namespace LogicSim.Views
             _valuesDirty = false;
             var simulation = SystemCore.SimulationService;
             bool live = SystemCore.AppStateService.IsSimulating;
-            var session = live ? simulation.Session : null;
-            if (session != null && session.IsDirty)
+            ISignalReader session = null;
+            if (live && !simulation.Session.IsDirty)
             {
-                // Structure changed while running; values appear after the next simulated frame.
-                session = null;
+                // Inside an IC the values come from the instance it was opened through (if any).
+                session = SystemCore.CircuitService.GetLevelSignals(simulation.Session);
             }
 
             foreach (var view in _components.Values)

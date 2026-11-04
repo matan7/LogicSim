@@ -12,11 +12,16 @@ namespace LogicSim.Mcp
         /// <summary>Short description of the host, e.g. "Unity app" or "headless".</summary>
         string HostName { get; }
 
+        /// <summary>The circuit being edited: the document or the IC opened with open_subcircuit.</summary>
         Circuit Circuit { get; }
 
-        /// <summary>Applies edits; in the Unity app they land on the undo stack.</summary>
+        /// <summary>Applies edits to <see cref="Circuit"/>; in the Unity app they land on the undo stack.</summary>
         ICircuitEditor Editor { get; }
 
+        /// <summary>The document and the ICs opened for editing.</summary>
+        CircuitHierarchy Hierarchy { get; }
+
+        /// <summary>Simulation of the whole document.</summary>
         SimulationSession Session { get; }
 
         string DocumentName { get; set; }
@@ -99,8 +104,9 @@ namespace LogicSim.Mcp
         private readonly DirectCircuitEditor _editor;
 
         public string HostName => "headless";
-        public Circuit Circuit { get; }
-        public ICircuitEditor Editor => _editor;
+        public Circuit Circuit => Hierarchy.Current.Circuit;
+        public ICircuitEditor Editor => Hierarchy.Editor;
+        public CircuitHierarchy Hierarchy { get; }
         public SimulationSession Session { get; }
         public string DocumentName { get; set; } = "Untitled";
         public bool IsRunning { get; set; }
@@ -110,9 +116,10 @@ namespace LogicSim.Mcp
 
         public HeadlessWorkspace(string documentsDirectory, ISimulationEngine engine = null)
         {
-            Circuit = new Circuit();
-            _editor = new DirectCircuitEditor(Circuit);
-            Session = new SimulationSession(Circuit, engine ?? new ManagedSimulationEngine());
+            var root = new Circuit();
+            _editor = new DirectCircuitEditor(root);
+            Hierarchy = new CircuitHierarchy(root, _editor);
+            Session = new SimulationSession(root, engine ?? new ManagedSimulationEngine());
             Documents = new CircuitDocumentStore(documentsDirectory);
         }
 

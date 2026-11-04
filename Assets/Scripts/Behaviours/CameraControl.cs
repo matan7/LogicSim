@@ -107,6 +107,15 @@ namespace Behaviours
             UpdateBackground();
         }
 
+        public (Vector3 position, float size) GetView() => (transform.position, _mainCamera.orthographicSize);
+
+        public void SetView(Vector3 position, float size)
+        {
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
+            _mainCamera.orthographicSize = Mathf.Clamp(size, _cameraMinMaxZoom.x, _cameraMinMaxZoom.y);
+            UpdateBackground();
+        }
+
         private void UpdateBackground()
         {
             if (_tiledBgTransform != null)

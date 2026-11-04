@@ -22,7 +22,7 @@ namespace LogicSim.Views
             GateView.AddPin<InputPin>(_input, inputs);
         }
 
-        public override void ShowValues(SimulationSession session)
+        public override void ShowValues(ISignalReader session)
         {
             base.ShowValues(session);
             if (_renderer != null)

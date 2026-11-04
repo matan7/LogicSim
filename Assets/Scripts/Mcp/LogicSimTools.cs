@@ -20,11 +20,17 @@ namespace LogicSim.Mcp
             "<component> is a numeric id, a label or a build_circuit key and <pin> is a pin name (in0, in1, out, D, CLK, Q, nQ, ...) or an index; " +
             "the pin may be omitted for the first output / first free input. The simulation is unit-delay: each gate needs one tick, " +
             "run_simulation with settle=true runs until the circuit is stable. Switch, Button, PinIn and Bulb, PinOut components become " +
-            "the pins of a subcircuit created with create_subcircuit. Edits are undoable with undo.";
+            "the pins of a subcircuit created with create_subcircuit; collapse_to_subcircuit turns a selection into an IC in place. " +
+            "open_subcircuit edits an IC in place: the editing tools then work on the IC's contents until close_subcircuit writes the " +
+            "changes back to every instance (pins keep their wires when moved or renamed). The simulation always runs the whole " +
+            "document; inside an IC opened through an instance, read_signals and get_circuit show the values of that instance. " +
+            "Edits are undoable with undo.";
 
         private readonly ILogicSimWorkspace _workspace;
 
         private Circuit Circuit => _workspace.Circuit;
+        private CircuitHierarchy Hierarchy => _workspace.Hierarchy;
+        private Circuit Root => _workspace.Hierarchy.Root;
 
         public LogicSimTools(ILogicSimWorkspace workspace)
         {
@@ -149,13 +155,51 @@ namespace LogicSim.Mcp
                     Prop("components", ArrayOf(AnyId()), "Components to include (default: the whole circuit).")),
                 CreateSubcircuit));
             server.AddTool(new McpTool("list_subcircuits", "List subcircuits", "Lists subcircuit definitions with their pins.", Schema(), ListSubcircuits, readOnly: true));
+            server.AddTool(new McpTool("get_subcircuit", "Get subcircuit", "Returns the components and wires inside a subcircuit definition without opening it.",
+                Schema(new[] { "subcircuit" }, Prop("subcircuit", "string", "Definition id or name.")), GetSubcircuit, readOnly: true));
+            server.AddTool(new McpTool("collapse_to_subcircuit", "Collapse to subcircuit",
+                "Moves components into a new IC and puts an instance in their place, wired so the circuit behaves the same. " +
+                "Wires crossing the boundary become pins (one per driving output). Switches, buttons, bulbs, displays and pins stay outside.",
+                Schema(new[] { "name", "components" },
+                    Prop("name", "string", "Name of the new IC."),
+                    Prop("components", ArrayOf(AnyId()), "Components to move into the IC.")),
+                CollapseToSubcircuit));
+            server.AddTool(new McpTool("explode_subcircuit", "Explode subcircuit",
+                "Replaces an IC instance with a copy of its contents, wired like the instance was.",
+                Schema(new[] { "component" }, Prop("component", AnyId(), "Subcircuit instance (id or label).")), ExplodeSubcircuit));
+            server.AddTool(new McpTool("make_subcircuit_unique", "Make subcircuit unique",
+                "Gives one instance its own copy of the definition, so editing it does not change the other instances.",
+                Schema(new[] { "component" },
+                    Prop("component", AnyId(), "Subcircuit instance (id or label)."),
+                    Prop("name", "string", "Name of the copy (default: '<name> 2').")),
+                MakeSubcircuitUnique));
+            server.AddTool(new McpTool("rename_subcircuit", "Rename subcircuit", "Renames a subcircuit definition (its id stays the same).",
+                Schema(new[] { "subcircuit", "name" },
+                    Prop("subcircuit", "string", "Definition id or name."),
+                    Prop("name", "string", "New name.")),
+                RenameSubcircuit));
+            server.AddTool(new McpTool("delete_subcircuit", "Delete subcircuit", "Deletes a subcircuit definition that is not used anywhere.",
+                Schema(new[] { "subcircuit" }, Prop("subcircuit", "string", "Definition id or name.")), DeleteSubcircuit));
+            server.AddTool(new McpTool("open_subcircuit", "Open subcircuit",
+                "Opens an IC for in-place editing. Pass an instance ('component') to also see its live values, or a definition id ('subcircuit'). " +
+                "Editing tools then act on the IC's contents (component ids are those inside the IC).",
+                Schema(
+                    Prop("component", AnyId(), "Subcircuit instance in the current circuit (id or label)."),
+                    Prop("subcircuit", "string", "Definition id or name (when there is no instance).")),
+                OpenSubcircuit));
+            server.AddTool(new McpTool("close_subcircuit", "Close subcircuit",
+                "Closes the opened IC. With apply=true (default) the changes update every instance as one undoable step; apply=false discards them.",
+                Schema(
+                    Prop("apply", "boolean", "Keep the changes (default true)."),
+                    Prop("all", "boolean", "Close every open IC and return to the document.")),
+                CloseSubcircuit));
             server.AddTool(new McpTool("save_circuit", "Save circuit", "Saves the circuit (including subcircuits) under a name.",
                 Schema(Prop("name", "string", "File name (default: current name).")), SaveCircuit));
             server.AddTool(new McpTool("load_circuit", "Load circuit", "Opens a saved circuit (undoable).",
                 Schema(new[] { "name" }, Prop("name", "string", "Name of a saved circuit.")), LoadCircuit));
             server.AddTool(new McpTool("list_saved_circuits", "List saved circuits", "Lists saved circuit names.", Schema(), ListSaved, readOnly: true));
             server.AddTool(new McpTool("export_circuit_json", "Export circuit JSON", "Returns the circuit in LogicSim's JSON file format.",
-                Schema(), _ => McpToolResult.Ok(CircuitSerializer.Serialize(Circuit, _workspace.DocumentName)), readOnly: true));
+                Schema(), _ => McpToolResult.Ok(CircuitSerializer.Serialize(Root, _workspace.DocumentName)), readOnly: true));
             server.AddTool(new McpTool("import_circuit_json", "Import circuit JSON", "Replaces the circuit with a document in LogicSim's JSON format (undoable).",
                 Schema(new[] { "json" }, Prop("json", "string", "Document JSON.")), ImportJson));
         }
@@ -165,16 +209,67 @@ namespace LogicSim.Mcp
         private McpToolResult GetCircuit(JObject args)
         {
             bool values = Bool(args, "include_values", false);
+            ISignalReader signals = null;
+            string valuesNote = null;
             if (values)
-                _workspace.Session.EnsureCompiled();
-            return McpToolResult.Ok(new JObject
+                signals = CurrentSignals(out valuesNote);
+            var result = new JObject
             {
                 ["name"] = _workspace.DocumentName,
-                ["components"] = new JArray(Circuit.Components.Select(c => Describe(c, values))),
-                ["wires"] = new JArray(Circuit.Wires.Select(w => DescribeWire(w, values))),
+                ["level"] = DescribeLevel(),
+                ["components"] = new JArray(Circuit.Components.Select(c => Describe(c, signals))),
+                ["wires"] = new JArray(Circuit.Wires.Select(w => DescribeWire(w, signals))),
                 ["subcircuits"] = new JArray(Circuit.Library.Definitions.Select(DescribeDefinition)),
                 ["counts"] = new JObject { ["components"] = Circuit.ComponentCount, ["wires"] = Circuit.WireCount }
-            });
+            };
+            if (valuesNote != null)
+                result["values_note"] = valuesNote;
+            return McpToolResult.Ok(result);
+        }
+
+        /// <summary>Values for the current level, or null with the reason why they are not available.</summary>
+        private ISignalReader CurrentSignals(out string unavailableReason)
+        {
+            var session = _workspace.Session;
+            session.EnsureCompiled();
+            unavailableReason = null;
+            if (Hierarchy.IsAtRoot)
+                return session;
+            var level = Hierarchy.Current;
+            if (Hierarchy.IsModified(level))
+            {
+                unavailableReason = "The open IC has changes that are not applied yet (close_subcircuit or run_simulation applies them).";
+                return null;
+            }
+            var path = Hierarchy.GetInstancePath(level);
+            if (path == null)
+            {
+                unavailableReason = "The IC was opened from the library, not through an instance, so it has no values.";
+                return null;
+            }
+            var reader = session.CreateReader(path);
+            if (reader is InstanceSignalReader instance && !instance.IsValid)
+            {
+                unavailableReason = "The instance is not part of the compiled circuit.";
+                return null;
+            }
+            return reader;
+        }
+
+        private JObject DescribeLevel()
+        {
+            var levels = Hierarchy.Levels;
+            var path = new JArray(levels.Select(l => Hierarchy.GetName(l)));
+            var entry = new JObject { ["path"] = path, ["depth"] = Hierarchy.Depth };
+            if (!Hierarchy.IsAtRoot)
+            {
+                var current = Hierarchy.Current;
+                entry["subcircuit"] = current.DefinitionId;
+                entry["modified"] = Hierarchy.IsModified(current);
+                if (current.InstanceId != 0)
+                    entry["instance"] = current.InstanceId;
+            }
+            return entry;
         }
 
         private McpToolResult ListComponentTypes(JObject args)
@@ -212,7 +307,7 @@ namespace LogicSim.Mcp
         private McpToolResult GetSelection(JObject args)
         {
             var selected = _workspace.SelectedComponentIds.Where(id => Circuit.TryGetComponent(id, out _)).Select(id => Circuit.GetComponent(id));
-            return McpToolResult.Ok(new JObject { ["components"] = new JArray(selected.Select(c => Describe(c, false))) });
+            return McpToolResult.Ok(new JObject { ["components"] = new JArray(selected.Select(c => Describe(c, null))) });
         }
 
         #endregion
@@ -320,7 +415,7 @@ namespace LogicSim.Mcp
                 ["created_components"] = created.Count,
                 ["created_wires"] = wires.Count,
                 ["ids"] = keys,
-                ["components"] = new JArray(created.Select(c => Describe(Circuit.GetComponent(c.Id), false)))
+                ["components"] = new JArray(created.Select(c => Describe(Circuit.GetComponent(c.Id), null)))
             });
         }
 
@@ -331,7 +426,7 @@ namespace LogicSim.Mcp
                 ComponentFactory.SetDetachedPosition(component, NextFreeX(), 0);
             _workspace.Editor.Apply(AddElementsEdit.Single(Circuit, component));
             _workspace.Focus(new[] { component.Id });
-            return McpToolResult.Ok(Describe(component, false));
+            return McpToolResult.Ok(Describe(component, null));
         }
 
         private McpToolResult RemoveComponents(JObject args)
@@ -354,7 +449,7 @@ namespace LogicSim.Mcp
             float x = (float)RequiredNumber(args, "x");
             float y = (float)RequiredNumber(args, "y");
             _workspace.Editor.Apply(MoveComponentsEdit.To(Circuit, new[] { component.Id }, new[] { (x, y) }));
-            return McpToolResult.Ok(Describe(component, false));
+            return McpToolResult.Ok(Describe(component, null));
         }
 
         private McpToolResult SetProperties(JObject args)
@@ -372,7 +467,7 @@ namespace LogicSim.Mcp
             if (args["value"] != null)
                 properties.Value = ParseBool(args["value"]);
             _workspace.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
-            return McpToolResult.Ok(Describe(component, false));
+            return McpToolResult.Ok(Describe(component, null));
         }
 
         private McpToolResult Connect(JObject args)
@@ -386,7 +481,7 @@ namespace LogicSim.Mcp
                 throw new McpToolException(error);
             var edit = new ConnectEdit(Circuit, from, to);
             _workspace.Editor.Apply(edit);
-            return McpToolResult.Ok(DescribeWire(edit.Wire, false));
+            return McpToolResult.Ok(DescribeWire(edit.Wire, null));
         }
 
         private McpToolResult Disconnect(JObject args)
@@ -412,6 +507,7 @@ namespace LogicSim.Mcp
 
         private McpToolResult NewCircuit(JObject args)
         {
+            Hierarchy.CloseTo(0, apply: true);
             _workspace.Editor.Apply(new ReplaceCircuitEdit(Circuit, CircuitSnapshot.Empty(), "New circuit"));
             _workspace.DocumentName = (string)args["name"] ?? "Untitled";
             return McpToolResult.Ok(new { name = _workspace.DocumentName });
@@ -428,11 +524,12 @@ namespace LogicSim.Mcp
             var applied = new JObject();
             foreach (var property in values.Properties())
             {
-                var component = ResolveComponent(property.Name);
+                // Inputs belong to the document, also while an IC is open.
+                var component = ResolveComponent(Root, property.Name);
                 if (!component.Spec.IsInterfaceInput)
                     throw new McpToolException($"{component} is not a Switch, Button or PinIn");
                 bool value = ParseBool(property.Value);
-                Circuit.SetInputValue(component.Id, value);
+                Root.SetInputValue(component.Id, value);
                 applied[NameOf(component)] = value ? 1 : 0;
             }
             return McpToolResult.Ok(new JObject { ["inputs"] = applied, ["hint"] = "Call run_simulation to propagate the change." });
@@ -441,6 +538,8 @@ namespace LogicSim.Mcp
         private McpToolResult RunSimulation(JObject args)
         {
             var session = _workspace.Session;
+            // The simulation runs the document; pending IC edits are written back first.
+            int applied = Hierarchy.ApplyAll();
             session.EnsureCompiled();
             long startTick = session.Tick;
             bool stable;
@@ -456,7 +555,9 @@ namespace LogicSim.Mcp
                 stable = session.Settle(maxTicks);
             }
 
-            var result = SignalSummary();
+            var result = SignalSummary(Root, session);
+            if (applied > 0)
+                result["applied_ic_edits"] = applied;
             result["ticks_elapsed"] = session.Tick - startTick;
             result["tick"] = session.Tick;
             result["stable"] = stable;
@@ -468,7 +569,9 @@ namespace LogicSim.Mcp
 
         private McpToolResult ReadSignals(JObject args)
         {
-            _workspace.Session.EnsureCompiled();
+            var signals = CurrentSignals(out var reason);
+            if (signals == null)
+                throw new McpToolException(reason);
             if (args["pins"] is JArray pins && pins.Count > 0)
             {
                 var values = new JObject();
@@ -476,13 +579,15 @@ namespace LogicSim.Mcp
                 {
                     var text = (string)pinToken;
                     var (component, pin, output) = ParseAnyPin(text);
-                    bool value = output ? _workspace.Session.GetOutputValue(component.Id, pin) : _workspace.Session.GetInputPinValue(component.Id, pin);
+                    bool value = output ? signals.GetOutputValue(component.Id, pin) : signals.GetInputPinValue(component.Id, pin);
                     values[text] = value ? 1 : 0;
                 }
                 return McpToolResult.Ok(new JObject { ["pins"] = values, ["tick"] = _workspace.Session.Tick });
             }
-            var summary = SignalSummary();
+            var summary = SignalSummary(Circuit, signals);
             summary["tick"] = _workspace.Session.Tick;
+            if (!Hierarchy.IsAtRoot)
+                summary["level"] = DescribeLevel();
             return McpToolResult.Ok(summary);
         }
 
@@ -565,7 +670,7 @@ namespace LogicSim.Mcp
             var definition = new SubcircuitDefinition(Circuit.Library.CreateUniqueId(name), name, fragment.ToCircuit(Circuit.Library));
             if (definition.InputComponentIds.Count == 0 && definition.OutputComponentIds.Count == 0)
                 throw new McpToolException("A subcircuit needs at least one Switch/Button/PinIn or Bulb/PinOut to act as a pin");
-            Circuit.Library.Add(definition);
+            _workspace.Editor.Apply(new AddSubcircuitDefinitionEdit(Circuit.Library, definition));
             return McpToolResult.Ok(DescribeDefinition(definition));
         }
 
@@ -574,12 +679,178 @@ namespace LogicSim.Mcp
             return McpToolResult.Ok(new JObject { ["subcircuits"] = new JArray(Circuit.Library.Definitions.Select(DescribeDefinition)) });
         }
 
+        private SubcircuitDefinition ResolveDefinition(JToken token)
+        {
+            var text = ((string)token)?.Trim();
+            if (string.IsNullOrEmpty(text))
+                throw new McpToolException("Missing subcircuit id");
+            var library = Circuit.Library;
+            if (library.TryGet(text, out var byId))
+                return byId;
+            var byName = library.Definitions.FirstOrDefault(d => string.Equals(d.Name, text, StringComparison.OrdinalIgnoreCase));
+            return byName ?? throw new McpToolException($"Unknown subcircuit '{text}'. Use list_subcircuits.");
+        }
+
+        private CircuitComponent ResolveInstance(JToken token)
+        {
+            var component = ResolveComponent(token);
+            if (component.Kind != ComponentKind.Subcircuit)
+                throw new McpToolException($"{component} is not a subcircuit instance");
+            return component;
+        }
+
+        private McpToolResult GetSubcircuit(JObject args)
+        {
+            var definition = ResolveDefinition(Required(args, "subcircuit"));
+            var inner = definition.Circuit;
+            var result = DescribeDefinition(definition);
+            result["circuit"] = new JObject
+            {
+                ["components"] = new JArray(inner.Components.Select(c => DescribeIn(inner, c))),
+                ["wires"] = new JArray(inner.Wires.Select(w => new JObject
+                {
+                    ["id"] = w.Id,
+                    ["from"] = $"{w.From.ComponentId}.{inner.GetOutputName(inner.GetComponent(w.From.ComponentId), w.From.Pin)}",
+                    ["to"] = $"{w.To.ComponentId}.{inner.GetInputName(inner.GetComponent(w.To.ComponentId), w.To.Pin)}"
+                }))
+            };
+            result["used_by"] = new JArray(Circuit.Library.DirectUsersOf(definition.Id).Select(d => d.Id));
+            result["instances_here"] = Circuit.InstancesOf(definition.Id).Count();
+            return McpToolResult.Ok(result);
+        }
+
+        private static JObject DescribeIn(Circuit circuit, CircuitComponent component)
+        {
+            var entry = new JObject { ["id"] = component.Id, ["type"] = component.Kind.ToString(), ["x"] = component.X, ["y"] = component.Y };
+            if (!string.IsNullOrEmpty(component.Label))
+                entry["label"] = component.Label;
+            if (component.Kind == ComponentKind.Subcircuit)
+                entry["subcircuit"] = component.SubcircuitId;
+            return entry;
+        }
+
+        private McpToolResult CollapseToSubcircuit(JObject args)
+        {
+            var name = (string)Required(args, "name");
+            var ids = (Required(args, "components") as JArray ?? throw new McpToolException("'components' must be an array"))
+                .Select(t => ResolveComponent(t).Id).ToList();
+            SubcircuitRefactoring.CollapseResult result;
+            try
+            {
+                result = SubcircuitRefactoring.Collapse(Circuit, ids, name);
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
+            _workspace.Editor.Apply(result.Edit);
+            _workspace.Focus(new[] { result.Instance.Id });
+            var output = DescribeDefinition(result.Definition);
+            output["instance"] = Describe(Circuit.GetComponent(result.Instance.Id), null);
+            if (result.KeptOutside.Count > 0)
+                output["kept_outside"] = new JArray(result.KeptOutside);
+            return McpToolResult.Ok(output);
+        }
+
+        private McpToolResult ExplodeSubcircuit(JObject args)
+        {
+            var instance = ResolveInstance(Required(args, "component"));
+            var result = SubcircuitRefactoring.Explode(Circuit, instance.Id);
+            _workspace.Editor.Apply(result.Edit);
+            _workspace.Focus(result.Components.Select(c => c.Id));
+            return McpToolResult.Ok(new JObject
+            {
+                ["removed_instance"] = instance.Id,
+                ["components"] = new JArray(result.Components.Select(c => Describe(Circuit.GetComponent(c.Id), null)))
+            });
+        }
+
+        private McpToolResult MakeSubcircuitUnique(JObject args)
+        {
+            var instance = ResolveInstance(Required(args, "component"));
+            var edit = SubcircuitRefactoring.MakeUnique(Circuit, instance.Id, (string)args["name"], out var copy);
+            _workspace.Editor.Apply(edit);
+            var output = DescribeDefinition(copy);
+            output["instance"] = instance.Id;
+            return McpToolResult.Ok(output);
+        }
+
+        private McpToolResult RenameSubcircuit(JObject args)
+        {
+            var definition = ResolveDefinition(Required(args, "subcircuit"));
+            _workspace.Editor.Apply(new RenameSubcircuitEdit(Circuit.Library, definition.Id, (string)Required(args, "name")));
+            return McpToolResult.Ok(DescribeDefinition(Circuit.Library.Get(definition.Id)));
+        }
+
+        private McpToolResult DeleteSubcircuit(JObject args)
+        {
+            var definition = ResolveDefinition(Required(args, "subcircuit"));
+            var library = Circuit.Library;
+            var users = library.DirectUsersOf(definition.Id).Select(d => d.Name).ToList();
+            bool usedInOpenLevels = Hierarchy.Levels.Any(l => l.Circuit.InstancesOf(definition.Id).Any() || l.DefinitionId == definition.Id);
+            if (users.Count > 0 || usedInOpenLevels)
+                throw new McpToolException($"'{definition.Name}' is still used" + (users.Count > 0 ? " by " + string.Join(", ", users) : " in the open circuit"));
+            _workspace.Editor.Apply(new RemoveSubcircuitDefinitionEdit(library, definition.Id));
+            return McpToolResult.Ok(new { deleted = definition.Id });
+        }
+
+        private McpToolResult OpenSubcircuit(JObject args)
+        {
+            try
+            {
+                if (args["component"] != null)
+                    Hierarchy.OpenInstance(ResolveInstance(args["component"]).Id);
+                else if (args["subcircuit"] != null)
+                    Hierarchy.OpenDefinition(ResolveDefinition(args["subcircuit"]).Id);
+                else
+                    throw new McpToolException("Pass 'component' (an instance) or 'subcircuit' (a definition id)");
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
+            var definition = Circuit.Library.Get(Hierarchy.Current.DefinitionId);
+            var result = DescribeDefinition(definition);
+            result["level"] = DescribeLevel();
+            result["hint"] = "Edit with the usual tools, then close_subcircuit to update every instance.";
+            return McpToolResult.Ok(result);
+        }
+
+        private McpToolResult CloseSubcircuit(JObject args)
+        {
+            if (Hierarchy.IsAtRoot)
+                throw new McpToolException("No subcircuit is open");
+            bool apply = Bool(args, "apply", true);
+            bool all = Bool(args, "all", false);
+            var closed = new JArray();
+            try
+            {
+                do
+                {
+                    var level = Hierarchy.Current;
+                    closed.Add(new JObject
+                    {
+                        ["subcircuit"] = level.DefinitionId,
+                        ["modified"] = Hierarchy.IsModified(level)
+                    });
+                    Hierarchy.Close(apply);
+                }
+                while (all && !Hierarchy.IsAtRoot);
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
+            return McpToolResult.Ok(new JObject { ["closed"] = closed, ["applied"] = apply, ["level"] = DescribeLevel() });
+        }
+
         private McpToolResult SaveCircuit(JObject args)
         {
             var name = (string)args["name"];
             if (string.IsNullOrWhiteSpace(name))
                 name = _workspace.DocumentName;
-            var path = _workspace.Documents.Save(Circuit, name);
+            Hierarchy.ApplyAll();
+            var path = _workspace.Documents.Save(Root, name);
             _workspace.DocumentName = name;
             return McpToolResult.Ok(new { name, path });
         }
@@ -588,6 +859,7 @@ namespace LogicSim.Mcp
         {
             var name = (string)Required(args, "name");
             var json = _workspace.Documents.Read(name);
+            Hierarchy.CloseTo(0, apply: true);
             var document = CircuitSerializer.Deserialize(json, Circuit.Library);
             _workspace.Editor.Apply(new ReplaceCircuitEdit(Circuit, document.Snapshot, "Load circuit"));
             _workspace.DocumentName = string.IsNullOrEmpty(document.Name) ? name : document.Name;
@@ -602,6 +874,7 @@ namespace LogicSim.Mcp
         private McpToolResult ImportJson(JObject args)
         {
             var json = (string)Required(args, "json");
+            Hierarchy.CloseTo(0, apply: true);
             var document = CircuitSerializer.Deserialize(json, Circuit.Library);
             _workspace.Editor.Apply(new ReplaceCircuitEdit(Circuit, document.Snapshot, "Import circuit"));
             if (!string.IsNullOrEmpty(document.Name))
@@ -630,6 +903,8 @@ namespace LogicSim.Mcp
                 var id = (string)spec["subcircuit"];
                 if (string.IsNullOrEmpty(id) || !Circuit.Library.TryGet(id, out _))
                     throw new McpToolException($"Unknown subcircuit '{id}'. Use list_subcircuits.");
+                if (!Hierarchy.CanPlace(id))
+                    throw new McpToolException($"'{id}' cannot be placed here: the open IC would contain itself");
                 component = ComponentFactory.CreateSubcircuit(id, x, y, label);
             }
             else
@@ -648,28 +923,32 @@ namespace LogicSim.Mcp
             return Circuit.ComponentCount == 0 ? 0 : (float)Math.Ceiling(Circuit.Components.Max(c => c.X) + AutoLayout.ColumnSpacing);
         }
 
-        private CircuitComponent ResolveComponent(JToken token)
+        private CircuitComponent ResolveComponent(JToken token) => ResolveComponent(Circuit, token);
+
+        private CircuitComponent ResolveComponent(Circuit circuit, JToken token)
         {
             if (token == null)
                 throw new McpToolException("Missing component reference");
             if (token.Type == JTokenType.Integer)
             {
                 int id = (int)token;
-                if (Circuit.TryGetComponent(id, out var byId))
+                if (circuit.TryGetComponent(id, out var byId))
                     return byId;
                 throw new McpToolException($"Component {id} does not exist");
             }
-            return ResolveComponent((string)token);
+            return ResolveComponent(circuit, (string)token);
         }
 
-        private CircuitComponent ResolveComponent(string reference)
+        private CircuitComponent ResolveComponent(string reference) => ResolveComponent(Circuit, reference);
+
+        private CircuitComponent ResolveComponent(Circuit circuit, string reference)
         {
             if (string.IsNullOrWhiteSpace(reference))
                 throw new McpToolException("Missing component reference");
             var text = reference.Trim().TrimStart('#');
-            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) && Circuit.TryGetComponent(id, out var byId))
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) && circuit.TryGetComponent(id, out var byId))
                 return byId;
-            var byLabel = Circuit.FindByLabel(reference.Trim());
+            var byLabel = circuit.FindByLabel(reference.Trim());
             if (byLabel != null)
                 return byLabel;
             throw new McpToolException($"No component with id or label '{reference}'");
@@ -759,13 +1038,12 @@ namespace LogicSim.Mcp
             return Circuit.GetOutputCount(single) > 0 ? (single, 0, true) : (single, 0, false);
         }
 
-        private JObject SignalSummary()
+        private JObject SignalSummary(Circuit circuit, ISignalReader session)
         {
-            var session = _workspace.Session;
             var inputs = new JObject();
             var outputs = new JObject();
             var displays = new JObject();
-            foreach (var component in Circuit.Components.OrderByDescending(c => c.Y).ThenBy(c => c.X))
+            foreach (var component in circuit.Components.OrderByDescending(c => c.Y).ThenBy(c => c.X))
             {
                 if (component.Spec.IsInterfaceInput)
                     inputs[NameOf(component)] = session.GetOutputValue(component.Id, 0) ? 1 : 0;
@@ -787,9 +1065,9 @@ namespace LogicSim.Mcp
                 result["diagnostics"] = new JArray(compiled.Diagnostics.Select(d => d.ToString()));
         }
 
-        private JObject Describe(CircuitComponent component, bool values)
+        private JObject Describe(CircuitComponent component, ISignalReader signals)
         {
-            var session = _workspace.Session;
+            bool values = signals != null;
             var entry = new JObject
             {
                 ["id"] = component.Id,
@@ -822,7 +1100,7 @@ namespace LogicSim.Mcp
                         pinEntry["from"] = $"{source.Id}.{Circuit.GetOutputName(source, wire.From.Pin)}";
                     }
                     if (values)
-                        pinEntry["value"] = session.GetInputPinValue(component.Id, pin) ? 1 : 0;
+                        pinEntry["value"] = signals.GetInputPinValue(component.Id, pin) ? 1 : 0;
                     inputs.Add(pinEntry);
                 }
                 entry["inputs"] = inputs;
@@ -836,7 +1114,7 @@ namespace LogicSim.Mcp
                 {
                     var pinEntry = new JObject { ["pin"] = pin, ["name"] = Circuit.GetOutputName(component, pin) };
                     if (values)
-                        pinEntry["value"] = session.GetOutputValue(component.Id, pin) ? 1 : 0;
+                        pinEntry["value"] = signals.GetOutputValue(component.Id, pin) ? 1 : 0;
                     outputs.Add(pinEntry);
                 }
                 entry["outputs"] = outputs;
@@ -844,7 +1122,7 @@ namespace LogicSim.Mcp
             return entry;
         }
 
-        private JObject DescribeWire(Wire wire, bool values)
+        private JObject DescribeWire(Wire wire, ISignalReader signals)
         {
             var from = Circuit.GetComponent(wire.From.ComponentId);
             var to = Circuit.GetComponent(wire.To.ComponentId);
@@ -854,8 +1132,8 @@ namespace LogicSim.Mcp
                 ["from"] = $"{from.Id}.{Circuit.GetOutputName(from, wire.From.Pin)}",
                 ["to"] = $"{to.Id}.{Circuit.GetInputName(to, wire.To.Pin)}"
             };
-            if (values)
-                entry["value"] = _workspace.Session.GetWireValue(wire) ? 1 : 0;
+            if (signals != null)
+                entry["value"] = signals.GetWireValue(wire) ? 1 : 0;
             return entry;
         }
 

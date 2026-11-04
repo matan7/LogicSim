@@ -18,6 +18,7 @@ namespace Actions
             var wireAction = new WireAction(input, this);
             new DragAction(input, this, selecting);
             new SimInteractionAction(input, this);
+            new OpenSubcircuitAction(input, this);
             new UndoAction(SystemCore.CommandService, input);
             new RedoAction(SystemCore.CommandService, input);
             new DeleteAction(input);

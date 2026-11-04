@@ -409,9 +409,14 @@ namespace LogicSim.Simulation
         {
             bool multi = circuit.GetOutputCount(source) > 1;
             var pinName = circuit.GetOutputName(source, pin);
+            var targetList = targets.ToList();
+            // A bulb or output pin outside names the signal better than the gate that drives it.
+            var shown = targetList.Where(t => t.Spec.IsInterfaceOutput && !string.IsNullOrEmpty(t.Label)).Select(t => t.Label).Distinct().ToList();
+            if (shown.Count == 1)
+                return shown[0];
             if (!string.IsNullOrEmpty(source.Label))
                 return multi ? source.Label + "." + pinName : source.Label;
-            var labeled = targets.Where(t => !string.IsNullOrEmpty(t.Label)).Select(t => t.Label).Distinct().ToList();
+            var labeled = targetList.Where(t => !string.IsNullOrEmpty(t.Label)).Select(t => t.Label).Distinct().ToList();
             if (labeled.Count == 1)
                 return labeled[0];
             return multi ? pinName : "out" + index;

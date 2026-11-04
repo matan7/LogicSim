@@ -87,6 +87,12 @@ namespace Actions
             Vector3 target = PivotPoint.Instance != null ? PivotPoint.Instance.transform.position : Vector3.zero;
             float dx = Mathf.Round(target.x - cx);
             float dy = Mathf.Round(target.y - cy);
+            var hierarchy = SystemCore.CircuitService.Hierarchy;
+            if (fragment.Components.Any(c => c.Kind == ComponentKind.Subcircuit && !hierarchy.CanPlace(c.SubcircuitId)))
+            {
+                LogicSim.UI.AppUi.Instance?.ShowToast("The clipboard contains an IC that would contain itself here");
+                return false;
+            }
             var edit = fragment.CreatePasteEdit(Circuit, dx, dy);
             if (edit.Components.Count == 0)
                 return false;

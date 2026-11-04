@@ -17,12 +17,16 @@ namespace Core.AppState
         public bool IsEditing => State == ApplicationState.Editor;
         public bool IsSimulating => State == ApplicationState.Simulator;
 
+        /// <summary>Raised before the state changes (e.g. to write back open IC edits before the simulation starts).</summary>
+        public event Action<ApplicationState> StateChanging;
+
         public event Action<ApplicationState> StateChanged;
 
         public void SetState(ApplicationState state)
         {
             if (state == State)
                 return;
+            StateChanging?.Invoke(state);
             State = state;
             StateChanged?.Invoke(state);
         }

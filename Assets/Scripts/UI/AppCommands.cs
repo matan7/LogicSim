@@ -192,7 +192,7 @@ namespace LogicSim.UI
             }
         }
 
-        /// <summary>Turns the selection (or the whole circuit) into a reusable subcircuit.</summary>
+        /// <summary>Turns the selection (or the whole circuit) into a reusable subcircuit; the selection stays as it is.</summary>
         public static void CreateSubcircuit()
         {
             if (Ui == null)
@@ -203,7 +203,8 @@ namespace LogicSim.UI
             if (ids.Count == 0)
             {
                 Ui.ShowMessage("Create IC", "Build a circuit first. Its switches, buttons and input pins become the inputs " +
-                    "of the IC, its bulbs and output pins the outputs (ordered top to bottom).");
+                    "of the IC, its bulbs and output pins the outputs (ordered top to bottom).\n\n" +
+                    "To replace part of a circuit with an IC, select it and use Collapse instead.");
                 return;
             }
 
@@ -211,7 +212,8 @@ namespace LogicSim.UI
             var preview = new SubcircuitDefinition("preview", "preview", fragment.ToCircuit(Circuit.Library));
             if (preview.InputComponentIds.Count == 0 && preview.OutputComponentIds.Count == 0)
             {
-                Ui.ShowMessage("Create IC", "The selection has no switch, button or input pin and no bulb or output pin, so the IC would have no pins.");
+                Ui.ShowMessage("Create IC", "The selection has no switch, button or input pin and no bulb or output pin, so the IC would have no pins.\n\n" +
+                    "Collapse creates the pins from the wires that cross the selection instead.");
                 return;
             }
 
@@ -220,9 +222,194 @@ namespace LogicSim.UI
                 {
                     var library = Circuit.Library;
                     var definition = new SubcircuitDefinition(library.CreateUniqueId(name), name, fragment.ToCircuit(library));
-                    library.Add(definition);
+                    SystemCore.CircuitService.Editor.Apply(new AddSubcircuitDefinitionEdit(library, definition));
                     Ui.ShowToast($"Created '{name}' - drag it from Custom Circuit Elements");
                 });
+        }
+
+        /// <summary>Replaces the selected components with an instance of a new IC made from them.</summary>
+        public static void CollapseSelection()
+        {
+            if (Ui == null || !RequireEditing("Collapse"))
+                return;
+            var ids = Actions.EditCommands.SelectedComponentIds();
+            if (ids.Count == 0)
+            {
+                Ui.ShowMessage("Collapse to IC", "Select the gates to move into a new IC. Wires that cross the selection become its pins; " +
+                    "switches, buttons, bulbs and pins stay outside so you can still drive and watch the circuit.");
+                return;
+            }
+            Ui.PromptText("Collapse to IC", "Name of the new IC:", "IC " + (Circuit.Library.Count + 1), name =>
+            {
+                try
+                {
+                    var result = SubcircuitRefactoring.Collapse(Circuit, ids, name);
+                    SystemCore.SelectingService.DeselectAll();
+                    SystemCore.CircuitService.Editor.Apply(result.Edit);
+                    Actions.EditCommands.Select(new[] { result.Instance.Id });
+                    Ui.ShowToast($"'{result.Definition.Name}': {result.Definition.InputComponentIds.Count} inputs, " +
+                        $"{result.Definition.OutputComponentIds.Count} outputs. Double-click it to edit.");
+                }
+                catch (CircuitException exception)
+                {
+                    Ui.ShowMessage("Collapse to IC", exception.Message);
+                }
+            });
+        }
+
+        public static void ExplodeSelection()
+        {
+            if (Ui == null || !RequireEditing("Explode"))
+                return;
+            var instances = SelectedInstances();
+            if (instances.Count == 0)
+            {
+                Ui.ShowToast("Select an IC to explode");
+                return;
+            }
+            var edits = new System.Collections.Generic.List<ICircuitEdit>();
+            var created = new System.Collections.Generic.List<int>();
+            // Each explode reserves fresh ids, so the edits can be built one after another before applying.
+            foreach (var instance in instances)
+            {
+                var result = SubcircuitRefactoring.Explode(Circuit, instance.Id);
+                edits.Add(result.Edit);
+                created.AddRange(result.Components.Select(c => c.Id));
+            }
+            SystemCore.SelectingService.DeselectAll();
+            SystemCore.CircuitService.Editor.Apply(edits.Count == 1 ? edits[0] : new CompositeEdit("Explode ICs", edits));
+            Actions.EditCommands.Select(created);
+        }
+
+        public static void MakeSelectedUnique()
+        {
+            if (Ui == null || !RequireEditing("Make unique"))
+                return;
+            var instances = SelectedInstances();
+            if (instances.Count != 1)
+            {
+                Ui.ShowToast("Select one IC to give it its own copy");
+                return;
+            }
+            var instance = instances[0];
+            var definition = Circuit.Library.Get(instance.SubcircuitId);
+            Ui.PromptText("Make unique", $"Copy '{definition.Name}' for this instance only. Name of the copy:",
+                SubcircuitRefactoring.UniqueName(Circuit.Library, definition.Name), name =>
+                {
+                    SystemCore.CircuitService.Editor.Apply(SubcircuitRefactoring.MakeUnique(Circuit, instance.Id, name, out var copy));
+                    Ui.ShowToast($"This instance now uses '{copy.Name}'");
+                });
+        }
+
+        /// <summary>Opens the selected IC (or the given instance) for in-place editing.</summary>
+        public static void OpenSelectedSubcircuit()
+        {
+            var instances = SelectedInstances();
+            if (instances.Count != 1)
+            {
+                Ui?.ShowToast("Select one IC (or double-click it) to open it");
+                return;
+            }
+            OpenSubcircuit(instances[0].Id);
+        }
+
+        public static void OpenSubcircuit(int instanceId)
+        {
+            if (!Circuit.TryGetComponent(instanceId, out var instance) || instance.Kind != ComponentKind.Subcircuit)
+                return;
+            if (!Circuit.Library.Contains(instance.SubcircuitId))
+            {
+                Ui?.ShowToast("This IC's definition is missing");
+                return;
+            }
+            var camera = CameraControl.Instance;
+            if (camera != null)
+                _savedViews.Push(camera.GetView());
+            try
+            {
+                SystemCore.SelectingService.DeselectAll();
+                SystemCore.CircuitService.OpenInstance(instanceId);
+            }
+            catch (CircuitException exception)
+            {
+                if (camera != null)
+                    _savedViews.Pop();
+                Ui?.ShowMessage("Open IC", exception.Message);
+                return;
+            }
+            FrameAll();
+            var hierarchy = SystemCore.CircuitService.Hierarchy;
+            Ui?.ShowToast(SystemCore.AppStateService.IsSimulating
+                ? "Showing the values of this instance. Esc goes back."
+                : $"Editing '{hierarchy.GetName(hierarchy.Current)}': changes apply to every instance when you leave (Esc or Done).");
+        }
+
+        /// <summary>Leaves the open IC. <paramref name="apply"/>: keep the changes (one undo step) or discard them.</summary>
+        public static void CloseSubcircuit(bool apply)
+        {
+            var service = SystemCore.CircuitService;
+            if (service.Hierarchy.IsAtRoot)
+                return;
+            CloseTo(service.Hierarchy.Depth - 1, apply);
+        }
+
+        /// <summary>Goes back to the given level of the breadcrumb (0 = the document).</summary>
+        public static void CloseTo(int depth, bool apply)
+        {
+            var service = SystemCore.CircuitService;
+            var hierarchy = service.Hierarchy;
+            if (depth >= hierarchy.Depth)
+                return;
+            if (!apply && SystemCore.AppStateService.IsSimulating)
+                apply = true;
+            try
+            {
+                SystemCore.SelectingService.DeselectAll();
+                while (hierarchy.Depth > depth)
+                {
+                    int instanceId = hierarchy.Current.InstanceId;
+                    var name = hierarchy.GetName(hierarchy.Current);
+                    bool modified = hierarchy.IsModified(hierarchy.Current);
+                    service.CloseLevel(apply);
+                    var camera = CameraControl.Instance;
+                    if (_savedViews.Count > 0)
+                    {
+                        var (position, size) = _savedViews.Pop();
+                        if (camera != null)
+                            camera.SetView(position, size);
+                    }
+                    if (hierarchy.Depth == depth)
+                    {
+                        if (instanceId != 0)
+                            Actions.EditCommands.Select(new[] { instanceId });
+                        if (modified)
+                            Ui?.ShowToast(apply ? $"Updated every instance of '{name}'" : $"Discarded the changes to '{name}'");
+                    }
+                }
+            }
+            catch (CircuitException exception)
+            {
+                Ui?.ShowMessage("Close IC", exception.Message);
+            }
+        }
+
+        private static readonly System.Collections.Generic.Stack<(Vector3 position, float size)> _savedViews =
+            new System.Collections.Generic.Stack<(Vector3 position, float size)>();
+
+        private static System.Collections.Generic.List<CircuitComponent> SelectedInstances()
+        {
+            return Actions.EditCommands.SelectedComponentIds()
+                .Select(id => Circuit.GetComponent(id))
+                .Where(c => c.Kind == ComponentKind.Subcircuit && Circuit.Library.Contains(c.SubcircuitId))
+                .ToList();
+        }
+
+        private static bool RequireEditing(string what)
+        {
+            if (SystemCore.AppStateService.IsEditing)
+                return true;
+            Ui?.ShowToast(what + " is available in edit mode (F5 stops the simulation)");
+            return false;
         }
 
         #endregion
@@ -256,6 +443,13 @@ namespace LogicSim.UI
             text.AppendLine("Ctrl+Z / Ctrl+Y undo / redo     Ctrl+X / C / V cut, copy, paste     Del delete");
             text.AppendLine("Ctrl+A select all     R rotate     F frame circuit     Esc cancel / deselect");
             text.AppendLine("Ctrl+N new     Ctrl+O open     Ctrl+S save     F1 help");
+            text.AppendLine();
+            text.AppendLine("<b>ICs (custom components)</b>");
+            text.AppendLine("Create IC: the selection becomes a palette entry (its switches/bulbs/pins are the IC pins).");
+            text.AppendLine("Collapse: the selection is replaced by a new IC; wires crossing it become the pins.");
+            text.AppendLine("Double-click an IC (or Open IC) to edit it in place: Done updates every instance, Discard drops the changes,");
+            text.AppendLine("Esc goes back. While simulating, double-click shows the live values inside that instance.");
+            text.AppendLine("Explode replaces an IC with its contents; Make unique gives one instance its own copy.");
             text.AppendLine();
             text.AppendLine("<b>Simulation</b>");
             text.AppendLine("F5 or the play button toggles the simulation. Click switches, hold buttons.");

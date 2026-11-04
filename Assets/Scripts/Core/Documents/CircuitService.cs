@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using Core.AppState;
 using Core.Command;
 using LogicSim.Mcp;
 using LogicSim.Simulation;
@@ -7,13 +10,29 @@ using UnityEngine;
 
 namespace Core.Documents
 {
-    /// <summary>Owns the open circuit document: model, undoable editing, file name and saving.</summary>
+    /// <summary>
+    /// Owns the open circuit document: model, undoable editing, the ICs opened for in-place editing,
+    /// file name and saving.
+    /// </summary>
     public class CircuitService
     {
         public const string DefaultName = "Untitled";
 
-        public Circuit Circuit { get; }
-        public ICircuitEditor Editor { get; }
+        private readonly CommandService _commandService;
+        private ISignalReader _levelReader;
+        private object _levelReaderKey;
+
+        /// <summary>The document (top level).</summary>
+        public Circuit Root { get; }
+
+        public CircuitHierarchy Hierarchy { get; }
+
+        /// <summary>The circuit being edited: the document or the working copy of the open IC.</summary>
+        public Circuit Circuit => Hierarchy.Current.Circuit;
+
+        /// <summary>Applies edits to <see cref="Circuit"/> through the undo history of the current level.</summary>
+        public ICircuitEditor Editor => Hierarchy.Editor;
+
         public CircuitDocumentStore Documents { get; }
         public string DocumentName { get; private set; } = DefaultName;
         public bool IsDirty { get; private set; }
@@ -24,15 +43,28 @@ namespace Core.Documents
         /// <summary>A whole document was opened (views may want to frame it).</summary>
         public event Action DocumentOpened;
 
-        public CircuitService(CommandService commandService)
+        /// <summary>An IC was opened or closed: <see cref="Circuit"/> is a different object now.</summary>
+        public event Action LevelChanged;
+
+        public CircuitService(CommandService commandService, AppStateService appState)
         {
-            Circuit = new Circuit();
-            Editor = new CommandCircuitEditor(Circuit, commandService);
+            _commandService = commandService;
+            Root = new Circuit();
+            Hierarchy = new CircuitHierarchy(Root, new CommandEditHistory(commandService));
             Documents = new CircuitDocumentStore(Path.Combine(Application.persistentDataPath, "Circuits"));
 
-            Circuit.StructureChanged += MarkDirty;
-            Circuit.ComponentMoved += _ => MarkDirty();
-            Circuit.ComponentPropertiesChanged += _ => MarkDirty();
+            Root.StructureChanged += MarkDirty;
+            Root.ComponentMoved += _ => MarkDirty();
+            Root.ComponentPropertiesChanged += _ => MarkDirty();
+            Root.Library.Changed += MarkDirty;
+            Hierarchy.Changed += () => LevelChanged?.Invoke();
+
+            // The simulation runs the document as stored in the library: write back open ICs first.
+            appState.StateChanging += state =>
+            {
+                if (state == ApplicationState.Simulator)
+                    ApplyOpenLevels();
+            };
         }
 
         public bool HasName => DocumentName != DefaultName;
@@ -43,9 +75,54 @@ namespace Core.Documents
             DocumentChanged?.Invoke();
         }
 
+        /// <summary>Writes the working copies of all open ICs back to the library.</summary>
+        public int ApplyOpenLevels()
+        {
+            try
+            {
+                return Hierarchy.ApplyAll();
+            }
+            catch (CircuitException exception)
+            {
+                Debug.LogWarning("[LogicSim] " + exception.Message);
+                return 0;
+            }
+        }
+
+        public void OpenInstance(int instanceId) => Hierarchy.OpenInstance(instanceId);
+
+        public void OpenDefinition(string definitionId) => Hierarchy.OpenDefinition(definitionId);
+
+        public void CloseLevel(bool apply) => Hierarchy.Close(apply);
+
+        public void CloseTo(int depth, bool apply) => Hierarchy.CloseTo(depth, apply);
+
+        /// <summary>
+        /// Simulation values for the current level: the document, or the instance the IC was opened through.
+        /// Null when the level has unapplied changes or was opened from the library.
+        /// </summary>
+        public ISignalReader GetLevelSignals(SimulationSession session)
+        {
+            if (Hierarchy.IsAtRoot)
+                return session;
+            var level = Hierarchy.Current;
+            if (Hierarchy.IsModified(level))
+                return null;
+            if (!ReferenceEquals(_levelReaderKey, level))
+            {
+                _levelReaderKey = level;
+                var path = Hierarchy.GetInstancePath(level);
+                _levelReader = path == null ? null : session.CreateReader(path);
+            }
+            if (_levelReader is InstanceSignalReader instance && !instance.IsValid)
+                return null;
+            return _levelReader;
+        }
+
         public void New()
         {
-            Editor.Apply(new ReplaceCircuitEdit(Circuit, CircuitSnapshot.Empty(), "New circuit"));
+            Hierarchy.CloseTo(0, apply: true);
+            Editor.Apply(new ReplaceCircuitEdit(Root, CircuitSnapshot.Empty(), "New circuit"));
             SetDocumentName(DefaultName);
             IsDirty = false;
             DocumentChanged?.Invoke();
@@ -56,7 +133,8 @@ namespace Core.Documents
         {
             if (!string.IsNullOrWhiteSpace(name))
                 DocumentName = name.Trim();
-            var path = Documents.Save(Circuit, DocumentName);
+            ApplyOpenLevels();
+            var path = Documents.Save(Root, DocumentName);
             IsDirty = false;
             DocumentChanged?.Invoke();
             return path;
@@ -67,8 +145,9 @@ namespace Core.Documents
         /// <summary>Replaces the circuit with a document (undoable).</summary>
         public CircuitDocument OpenJson(string json, string fallbackName)
         {
-            var document = CircuitSerializer.Deserialize(json, Circuit.Library);
-            Editor.Apply(new ReplaceCircuitEdit(Circuit, document.Snapshot, "Open circuit"));
+            var document = CircuitSerializer.Deserialize(json, Root.Library);
+            Hierarchy.CloseTo(0, apply: true);
+            Editor.Apply(new ReplaceCircuitEdit(Root, document.Snapshot, "Open circuit"));
             foreach (var warning in document.Warnings)
                 Debug.LogWarning("[LogicSim] " + warning);
             DocumentName = string.IsNullOrWhiteSpace(document.Name) ? fallbackName : document.Name;
@@ -84,6 +163,45 @@ namespace Core.Documents
                 return;
             IsDirty = true;
             DocumentChanged?.Invoke();
+        }
+    }
+
+    /// <summary>The model's undo history interface on top of the app's command stack.</summary>
+    public sealed class CommandEditHistory : IEditHistory
+    {
+        private readonly CommandService _commands;
+
+        public CommandEditHistory(CommandService commands)
+        {
+            _commands = commands;
+        }
+
+        public int UndoCount => _commands.UndoCount;
+        public int RedoCount => _commands.RedoCount;
+        public int ScopeDepth => _commands.ScopeDepth;
+
+        public void Execute(ICircuitEdit edit) => _commands.ExecuteCommand(new CircuitEditCommand(edit));
+        public void Record(ICircuitEdit appliedEdit) => _commands.PushExecuted(new CircuitEditCommand(appliedEdit));
+
+        public bool Undo()
+        {
+            int before = _commands.UndoCount;
+            _commands.UndoCommand();
+            return _commands.UndoCount < before;
+        }
+
+        public bool Redo()
+        {
+            int before = _commands.RedoCount;
+            _commands.RedoCommand();
+            return _commands.RedoCount < before;
+        }
+
+        public void PushScope() => _commands.PushScope();
+
+        public IReadOnlyList<ICircuitEdit> PopScope()
+        {
+            return _commands.PopScope().OfType<CircuitEditCommand>().Select(c => c.Edit).ToList();
         }
     }
 

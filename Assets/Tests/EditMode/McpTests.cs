@@ -212,5 +212,86 @@ namespace LogicSim.Tests
             Call("import_circuit_json", new { json });
             Assert.That(_workspace.Circuit.FindByLabel("clk").ClockHalfPeriod, Is.EqualTo(7));
         }
+
+        private void BuildFlatFullAdder()
+        {
+            Call("build_circuit", new
+            {
+                clear = true,
+                components = new object[]
+                {
+                    new { key = "A", type = "Switch" }, new { key = "B", type = "Switch" }, new { key = "Cin", type = "Switch" },
+                    new { key = "x1", type = "Xor" }, new { key = "x2", type = "Xor" },
+                    new { key = "a1", type = "And" }, new { key = "a2", type = "And" }, new { key = "o", type = "Or" },
+                    new { key = "S", type = "Bulb" }, new { key = "Cout", type = "Bulb" }
+                },
+                connections = new object[]
+                {
+                    new[] { "A", "x1" }, new[] { "B", "x1" }, new[] { "x1", "x2" }, new[] { "Cin", "x2" },
+                    new[] { "A", "a1" }, new[] { "B", "a1" }, new[] { "x1", "a2" }, new[] { "Cin", "a2" },
+                    new[] { "a1", "o" }, new[] { "a2", "o" }, new[] { "x2", "S" }, new[] { "o", "Cout" }
+                }
+            });
+        }
+
+        [Test]
+        public void Collapse_OpenEditClose_Explode()
+        {
+            BuildFlatFullAdder();
+            var before = (string)Call("truth_table")["text"];
+
+            var collapsed = Call("collapse_to_subcircuit", new { name = "Adder", components = new[] { "x1", "x2", "a1", "a2", "o" } });
+            Assert.That(collapsed["inputs"].ToObject<string[]>(), Is.EqualTo(new[] { "A", "B", "Cin" }));
+            int instance = (int)collapsed["instance"]["id"];
+            Assert.That((string)Call("truth_table")["text"], Is.EqualTo(before));
+
+            // Look inside the instance while simulating.
+            Call("set_inputs", new { values = new JObject { ["A"] = 1, ["B"] = 1 } });
+            Call("run_simulation");
+            var opened = Call("open_subcircuit", new { component = instance });
+            Assert.That(opened["level"]["path"].ToObject<string[]>(), Is.EqualTo(new[] { "Main", "Adder" }));
+            var inside = Call("read_signals");
+            Assert.That((int)inside["inputs"]["A"], Is.EqualTo(1));
+            Assert.That((int)inside["outputs"]["Cout"], Is.EqualTo(1));
+            Assert.That((int)inside["outputs"]["S"], Is.EqualTo(0));
+
+            // Rename an output pin inside the IC; the wire to the bulb outside must survive.
+            Call("set_component_properties", new { component = "Cout", label = "Carry" });
+            Assert.That((bool)Call("get_circuit")["level"]["modified"], Is.True);
+            Call("read_signals", expectError: true);
+            var closed = Call("close_subcircuit");
+            Assert.That((int)closed["level"]["depth"], Is.EqualTo(0));
+            var definition = Call("list_subcircuits")["subcircuits"][0];
+            Assert.That(definition["outputs"].ToObject<string[]>(), Is.EqualTo(new[] { "S", "Carry" }));
+            Assert.That((string)Call("truth_table")["text"], Is.EqualTo(before));
+
+            var exploded = Call("explode_subcircuit", new { component = instance });
+            Assert.That(exploded["components"].Count(), Is.EqualTo(5));
+            Assert.That((string)Call("truth_table")["text"], Is.EqualTo(before));
+
+            // Explode, edit IC and collapse are one undo step each.
+            Call("undo");
+            Call("undo");
+            Assert.That((string)Call("list_subcircuits")["subcircuits"][0]["outputs"][1], Is.EqualTo("Cout"));
+            Call("undo");
+            Assert.That(Call("list_subcircuits")["subcircuits"].Count(), Is.EqualTo(0));
+            Assert.That((string)Call("truth_table")["text"], Is.EqualTo(before));
+        }
+
+        [Test]
+        public void OpenSubcircuit_RefusesRecursionAndDiscardsOnCancel()
+        {
+            BuildFlatFullAdder();
+            var collapsed = Call("collapse_to_subcircuit", new { name = "Adder", components = new[] { "x1", "x2", "a1", "a2", "o" } });
+            var id = (string)collapsed["id"];
+            Call("open_subcircuit", new { subcircuit = "Adder" });
+            Call("add_component", new { type = "Subcircuit", subcircuit = id }, expectError: true);
+            Call("add_component", new { type = "Not" });
+            Call("close_subcircuit", new { apply = false });
+            Assert.That((int)Call("get_subcircuit", new { subcircuit = id })["components"], Is.EqualTo(collapsed["components"].Value<int>()));
+            Call("delete_subcircuit", new { subcircuit = id }, expectError: true);
+            Call("make_subcircuit_unique", new { component = (int)collapsed["instance"]["id"] });
+            Call("delete_subcircuit", new { subcircuit = id });
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace LogicSim.App
         public string HostName => "Unity app";
         public Circuit Circuit => SystemCore.CircuitService.Circuit;
         public ICircuitEditor Editor => SystemCore.CircuitService.Editor;
+        public CircuitHierarchy Hierarchy => SystemCore.CircuitService.Hierarchy;
         public SimulationSession Session => SystemCore.SimulationService.Session;
         public CircuitDocumentStore Documents => SystemCore.CircuitService.Documents;
 

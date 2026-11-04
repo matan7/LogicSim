@@ -44,8 +44,8 @@ namespace Core
             SelectingService = new SelectingService();
             ClipboardService = new ClipboardService();
             AppStateService = new AppStateService();
-            CircuitService = new CircuitService(CommandService);
-            SimulationService = new SimulationService(CircuitService.Circuit, AppStateService, SettingsService.Settings.TicksPerSecond);
+            CircuitService = new CircuitService(CommandService, AppStateService);
+            SimulationService = new SimulationService(CircuitService.Root, AppStateService, SettingsService.Settings.TicksPerSecond);
         }
 
         private void OnDestroy()

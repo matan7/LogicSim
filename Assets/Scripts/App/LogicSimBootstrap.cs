@@ -22,6 +22,8 @@ namespace LogicSim.App
             if (Object.FindFirstObjectByType<CircuitView>() != null)
                 return;
 
+            ComputeLutBuilder.Register();
+
             var root = new GameObject("LogicSim");
             root.AddComponent<SimulationDriver>();
             root.AddComponent<CircuitView>();

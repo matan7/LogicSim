@@ -1,7 +1,8 @@
 # LogicSim
 
 A digital logic simulator built with Unity 6. Place gates, wire them up, flip switches and watch signals propagate.
-Build your own integrated circuits from smaller ones, compute truth tables, and let an AI agent design and test
+Build your own integrated circuits from smaller ones and edit them in place, mix logic with **neurons** (perceptrons,
+spiking neurons and small neural networks you can train), compute truth tables, and let an AI agent design and test
 circuits through the built-in **MCP server**.
 
 ![CI](https://github.com/matan7/LogicSim/actions/workflows/ci.yml/badge.svg)
@@ -12,6 +13,19 @@ circuits through the built-in **MCP server**.
   bulb, hex display, D / T / JK flip-flops, input/output pins.
 - **Custom ICs:** turn any circuit (or a selection) into a reusable component. Switches, buttons and input pins
   become its inputs; bulbs and output pins become its outputs. ICs can nest.
+  - **Collapse:** replace a selection with a new IC in place; wires that cross the selection become its pins.
+  - **Edit in place:** double-click an IC to edit its contents with its own undo history. *Done* updates every
+    instance (wires follow their pin when pins are moved or renamed) as one undo step; *Discard* drops the changes.
+  - **Look inside while simulating:** double-click an IC instance during the simulation to see its live values.
+  - **Explode** an IC back into its parts, or **make one instance unique** to change it without touching the others.
+- **Neurons:**
+  - **Neuron** (perceptron): fires when the weighted sum of its inputs reaches a threshold.
+  - **Spiking neuron** (leaky integrate-and-fire): inputs charge a membrane potential that leaks every tick;
+    reaching the threshold emits a one-tick spike, then the neuron rests for a refractory period.
+  - **Neural block:** a small multi-layer network (up to 16 inputs and outputs) on binary inputs.
+  - **Training:** the perceptron rule for neurons and backpropagation for neural blocks, from a truth table you type
+    or from any IC (the block learns to behave like it).
+  - Weights, thresholds and layers are edited in the inspector panel.
 - **Editor:**
   - drag and drop from the palette
   - pin-to-pin wiring with orthogonal routing
@@ -25,9 +39,9 @@ circuits through the built-in **MCP server**.
   - wires are colored by their signal
 - **Analysis:** truth tables for any combinational circuit (up to 12 inputs).
 - **Files:** JSON documents with embedded IC definitions, plus bundled examples (half/full adder, SR latch,
-  4-bit counter, 4-bit adder built from IC instances).
-- **AI agents (MCP):** 27 tools to build, edit, simulate and analyse circuits, available inside the running app and as a
-  headless server.
+  4-bit counter, 4-bit adder built from IC instances, neurons, a spiking neuron).
+- **AI agents (MCP):** 36 tools to build, edit, simulate, analyse and train circuits, available inside the running app
+  and as a headless server.
 
 ## Architecture
 
@@ -72,6 +86,9 @@ The compiler flattens the circuit into a netlist:
 - each primitive becomes a gate with an opcode,
 - IC boundaries become net aliases, so ICs add no delay.
 
+The compiled netlist keeps the tree of IC instances, so the values inside one particular instance can be looked up
+while the whole document is simulated.
+
 Simulation is two-valued and **unit-delay**.
 
 - **Event-driven mode:** only gates whose inputs changed in the previous tick are evaluated. When nothing is pending,
@@ -81,6 +98,18 @@ Simulation is two-valued and **unit-delay**.
   them active per tick).
 - **Frame scheduling:** in the app, each frame's ticks run in a single worker job scheduled in `LateUpdate`, so the
   simulation overlaps with rendering. The job is collected at the start of the next frame.
+
+### Neurons in the netlist
+
+- **Perceptrons** are gates with a weight per input connection.
+- **Spiking neurons** keep their potential and refractory counter in the kernel state. A neuron that is charged,
+  resting or driven reschedules itself for the next tick, so event-driven simulation stays exact and an idle neuron
+  costs nothing. Burst runs with strict float semantics, and parity tests compare potentials bit for bit.
+- **Neural blocks** never run a network during the simulation. Their inputs are bits, so every output is a function of
+  at most 2^16 input patterns. The compiler evaluates the network once for every pattern and stores one lookup table
+  per output, so a block costs one table lookup per output and tick. Tables are cached per network. In the app,
+  tables with 1024 or more patterns are built by a compute shader (`Assets/Resources/NeuralLut.compute`, one GPU
+  thread per pattern); elsewhere they are built in parallel on the CPU.
 
 Managed backend, single thread, Intel Xeon 2.8 GHz (`dotnet run --project Headless/LogicSim.Benchmark -c Release`):
 
@@ -113,6 +142,14 @@ Benchmark**.
 
 In simulation mode, click switches and input pins to toggle them, and hold push buttons.
 
+| ICs | Input |
+|---|---|
+| Open an IC (edit, or see live values while simulating) | Double-click it, or select it and press **Open IC** |
+| Back to the parent circuit (keeps the changes) | Esc with nothing selected, **Done**, or click a breadcrumb |
+| Throw away the changes | **Discard** in the breadcrumb bar |
+| Replace the selection with an IC | **Collapse** |
+| Replace an IC with its contents / give it its own copy | **Explode** / **Make unique** |
+
 ## MCP (Model Context Protocol)
 
 The app runs an MCP server at `http://127.0.0.1:8765/mcp` (Streamable HTTP, loopback only). Agents see and change
@@ -134,7 +171,9 @@ dotnet run --project Headless/LogicSim.McpServer -- --http 8765  # HTTP
 Tools include:
 - `build_circuit`: components and connections in one call, with automatic layout
 - `connect`, `set_inputs`, `run_simulation`, `read_signals`
-- `truth_table`, `create_subcircuit`
+- `truth_table`, `create_subcircuit`, `collapse_to_subcircuit`, `explode_subcircuit`, `make_subcircuit_unique`
+- `open_subcircuit` / `close_subcircuit`: edit an IC in place; read the live values of the instance it was opened through
+- `train_component`: learn neuron or neural block weights from targets, rows or another IC
 - `save_circuit` / `load_circuit`, `undo` / `redo`, `get_selection`
 - and more; `tools/list` returns the full list with JSON schemas.
 
@@ -162,14 +201,16 @@ The MCP port and on/off switch are in `Settings.json` in the player's persistent
 
 ```
 Assets/Scripts/
-  Simulation/        model, editing, compiler, kernel, managed backend, file format, truth tables (pure C#)
+  Simulation/        model, editing, IC hierarchy, neurons and training, compiler, kernel, managed backend,
+                     file format, truth tables (pure C#)
   Simulation.Jobs/   Unity Job System + Burst backend
   Mcp/               MCP protocol, tools, stdio and HTTP transports (pure C#)
   Core/              app services: settings, input, undo/redo, selection, document, simulation loop
   App/               bootstrap, simulation driver, MCP host for the running app
   Views/             component, pin and wire views
   Actions/           mouse and keyboard interaction
-  UI/                toolbar, palette, dialogs, status bar
+  UI/                toolbar, palette, inspector, IC breadcrumb, dialogs, status bar
+Assets/Resources/    examples, icons, NeuralLut.compute
 Assets/Tests/EditMode/   NUnit tests (Unity Test Runner and dotnet)
 Headless/            .NET solution: core library, MCP server, tests, benchmark
 ```
@@ -177,7 +218,7 @@ Headless/            .NET solution: core library, MCP server, tests, benchmark
 ## Building and testing
 
 - **Unity:** open the project with Unity 6000.4. Burst is optional; without it, the Jobs backend runs as managed jobs.
-- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 56 core/MCP tests plus the Jobs
+- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 85 core/MCP tests plus the Jobs
   backend run against a functional stand-in of the Unity job API. The same EditMode tests appear in Unity's Test
   Runner.
 - **CI:** GitHub Actions builds and tests the headless solution on every push.
@@ -189,3 +230,7 @@ Headless/            .NET solution: core library, MCP server, tests, benchmark
 - Flip-flops start with Q = 0. Power-on does not produce spurious clock edges.
 - A NOR or NAND latch whose inputs are both inactive at power-on oscillates symmetrically, as an ideal unit-delay
   circuit should, until one input is pulsed.
+- A spiking neuron's spike lasts one tick. Its potential snaps to 0 below 0.0001, so a neuron without input goes
+  idle after its potential has leaked away.
+- A neural block output is 1 when the network's sigmoid output is at least 0.5. GPU and CPU lookup tables can differ
+  only for patterns within float rounding of that boundary.

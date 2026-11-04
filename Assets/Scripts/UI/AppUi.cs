@@ -61,6 +61,7 @@ namespace LogicSim.UI
             BindSimulationToggle();
             BuildStatusBar();
             HierarchyBar.Create(_canvas);
+            InspectorPanel.Create(_canvas);
 
             SystemCore.AppStateService.StateChanged += OnStateChanged;
             SystemCore.CircuitService.Root.Library.Changed += RebuildSubcircuitEntries;
@@ -225,6 +226,9 @@ namespace LogicSim.UI
                 AddPaletteEntry(gates, ComponentKind.DFlipFlop, "D flip-flop", "D");
                 AddPaletteEntry(gates, ComponentKind.TFlipFlop, "T flip-flop", "T");
                 AddPaletteEntry(gates, ComponentKind.JKFlipFlop, "JK flip-flop", "JK");
+                AddPaletteEntry(gates, ComponentKind.Neuron, "Neuron", "N");
+                AddPaletteEntry(gates, ComponentKind.SpikingNeuron, "Spiking neuron", "LIF");
+                AddPaletteEntry(gates, ComponentKind.NeuralBlock, "Neural block", "NN");
                 FitSection(gates, 2, 100, 75, 50, 35);
             }
 

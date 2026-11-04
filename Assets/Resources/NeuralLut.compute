@@ -1,0 +1,67 @@
+// Evaluates a small neural network (LogicSim NeuralBlock) for every binary input pattern in parallel and
+// packs the output bits into lookup tables: one thread per input pattern, one bit per output.
+#pragma kernel BuildLut
+
+#define MAX_WIDTH 64
+
+StructuredBuffer<float> Weights;   // connection layers back to back, each row-major [to * from]
+StructuredBuffer<float> Biases;    // bias layers back to back
+StructuredBuffer<int> Layers;      // neurons per layer, inputs first
+RWStructuredBuffer<uint> Result;   // output m: words [m * WordsPerOutput, ...), bit p = pattern p
+
+int LayerCount;
+int PatternCount;
+int WordsPerOutput;
+int Activation; // 0 sigmoid, 1 tanh, 2 relu
+
+float Activate(float z)
+{
+    if (Activation == 1)
+        return tanh(z);
+    if (Activation == 2)
+        return max(z, 0.0);
+    return 1.0 / (1.0 + exp(-z));
+}
+
+[numthreads(64, 1, 1)]
+void BuildLut(uint3 id : SV_DispatchThreadID)
+{
+    uint pattern = id.x;
+    if (pattern >= (uint)PatternCount)
+        return;
+
+    float a[MAX_WIDTH];
+    float b[MAX_WIDTH];
+    int inputs = Layers[0];
+    [loop] for (int i = 0; i < inputs; i++)
+        a[i] = (float)((pattern >> i) & 1u);
+
+    int weightOffset = 0;
+    int biasOffset = 0;
+    [loop] for (int l = 0; l < LayerCount - 1; l++)
+    {
+        int from = Layers[l];
+        int to = Layers[l + 1];
+        bool last = l == LayerCount - 2;
+        [loop] for (int j = 0; j < to; j++)
+        {
+            float z = Biases[biasOffset + j];
+            int row = weightOffset + j * from;
+            [loop] for (int k = 0; k < from; k++)
+                z += Weights[row + k] * a[k];
+            // Output layer: sigmoid(z) >= 0.5 is z >= 0, so the raw value is kept.
+            b[j] = last ? z : Activate(z);
+        }
+        [loop] for (int c = 0; c < to; c++)
+            a[c] = b[c];
+        weightOffset += from * to;
+        biasOffset += to;
+    }
+
+    int outputs = Layers[LayerCount - 1];
+    [loop] for (int m = 0; m < outputs; m++)
+    {
+        if (a[m] >= 0.0)
+            InterlockedOr(Result[m * WordsPerOutput + (pattern >> 5)], 1u << (pattern & 31u));
+    }
+}

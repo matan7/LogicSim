@@ -451,6 +451,11 @@ namespace LogicSim.UI
             text.AppendLine("Esc goes back. While simulating, double-click shows the live values inside that instance.");
             text.AppendLine("Explode replaces an IC with its contents; Make unique gives one instance its own copy.");
             text.AppendLine();
+            text.AppendLine("<b>Neurons</b>");
+            text.AppendLine("Neuron: fires when the weighted sum of its high inputs reaches the threshold. Spiking neuron: inputs charge");
+            text.AppendLine("a leaking potential, at the threshold it spikes for one tick. Neural block: a small trained network.");
+            text.AppendLine("Select one to edit its weights, layers or to train it from a truth table or an IC in the inspector.");
+            text.AppendLine();
             text.AppendLine("<b>Simulation</b>");
             text.AppendLine("F5 or the play button toggles the simulation. Click switches, hold buttons.");
             text.AppendLine("P pause, . step one tick, [ and ] change the speed.");

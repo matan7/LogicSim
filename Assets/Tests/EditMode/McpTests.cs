@@ -293,5 +293,49 @@ namespace LogicSim.Tests
             Call("make_subcircuit_unique", new { component = (int)collapsed["instance"]["id"] });
             Call("delete_subcircuit", new { subcircuit = id });
         }
+
+        [Test]
+        public void Neurons_CanBeBuiltTrainedAndInspected()
+        {
+            Call("build_circuit", new
+            {
+                clear = true,
+                components = new object[]
+                {
+                    new { key = "A", type = "Switch" }, new { key = "B", type = "Switch" },
+                    new { key = "net", type = "NeuralBlock", layers = new[] { 2, 4, 1 }, activation = "tanh" },
+                    new { key = "n", type = "Neuron", weights = new[] { 1.0, 1.0 }, threshold = 0.5 },
+                    new { key = "Y", type = "Bulb" }, new { key = "Z", type = "Bulb" }
+                },
+                connections = new object[] { new[] { "A", "net" }, new[] { "B", "net" }, new[] { "net", "Y" }, new[] { "A", "n" }, new[] { "B", "n" }, new[] { "n", "Z" } }
+            });
+
+            // XOR for the block, AND for the neuron; pattern p has A = bit 0, B = bit 1.
+            var trained = Call("train_component", new { component = "net", targets = new[] { "0", "1", "1", "0" } });
+            Assert.That((double)trained["accuracy"], Is.EqualTo(1.0));
+            var neuron = Call("train_component", new { component = "n", targets = new[] { 0, 0, 0, 1 } });
+            Assert.That((double)neuron["accuracy"], Is.EqualTo(1.0));
+            var xor = Call("train_component", new { component = "n", targets = new[] { 0, 1, 1, 0 } });
+            Assert.That((double)xor["accuracy"], Is.LessThan(1.0));
+            Assert.That((string)xor["note"], Does.Contain("NeuralBlock"));
+            Call("undo");
+
+            var rows = (JArray)Call("truth_table", new { inputs = new[] { "B", "A" }, outputs = new[] { "Y", "Z" } })["rows"];
+            foreach (var row in rows)
+            {
+                int a = (int)row["A"], b = (int)row["B"];
+                Assert.That((int)row["Y"], Is.EqualTo(a ^ b));
+                Assert.That((int)row["Z"], Is.EqualTo(a & b));
+            }
+
+            // A spiking neuron reports its potential while simulating.
+            Call("add_component", new { type = "SpikingNeuron", label = "S", weights = new[] { 0.4 }, threshold = 5, leak = 1 });
+            Call("connect", new { from = "A", to = "S" });
+            Call("set_inputs", new { values = new JObject { ["A"] = 1 } });
+            Call("run_simulation", new { ticks = 5 });
+            var spiking = Call("get_circuit", new { include_values = true })["components"].First(c => (string)c["label"] == "S");
+            Assert.That((double)spiking["potential"], Is.GreaterThan(1.0));
+            Assert.That((double)spiking["leak"], Is.EqualTo(1.0));
+        }
     }
 }

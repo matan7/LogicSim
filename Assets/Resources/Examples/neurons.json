@@ -1,0 +1,242 @@
+{
+  "format": "logicsim",
+  "version": 1,
+  "name": "neurons",
+  "circuit": {
+    "components": [
+      {
+        "id": 1,
+        "type": "Switch",
+        "x": 0.0,
+        "y": 10.0,
+        "label": "A",
+        "value": false
+      },
+      {
+        "id": 2,
+        "type": "Switch",
+        "x": 0.0,
+        "y": 4.0,
+        "label": "B",
+        "value": false
+      },
+      {
+        "id": 3,
+        "type": "Switch",
+        "x": 0.0,
+        "y": -2.0,
+        "label": "C",
+        "value": false
+      },
+      {
+        "id": 4,
+        "type": "Neuron",
+        "x": 10.0,
+        "y": 14.0,
+        "label": "AND neuron",
+        "inputs": 2,
+        "neuron": {
+          "weights": [
+            1.0,
+            1.0
+          ],
+          "threshold": 1.5
+        }
+      },
+      {
+        "id": 5,
+        "type": "Neuron",
+        "x": 10.0,
+        "y": 6.0,
+        "label": "Majority neuron",
+        "inputs": 3,
+        "neuron": {
+          "weights": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "threshold": 2.0
+        }
+      },
+      {
+        "id": 6,
+        "type": "NeuralBlock",
+        "x": 10.0,
+        "y": -2.0,
+        "label": "XOR network",
+        "network": {
+          "layers": [
+            2,
+            4,
+            1
+          ],
+          "activation": "Tanh",
+          "weights": [
+            [
+              -2.3507564,
+              -2.6828709,
+              -0.4097925,
+              0.20839967,
+              2.2836323,
+              -0.7263211,
+              -1.6182132,
+              2.71492
+            ],
+            [
+              -2.7457573,
+              0.2492257,
+              -2.0057592,
+              -2.3402045
+            ]
+          ],
+          "biases": [
+            [
+              0.64949363,
+              -0.117215,
+              -0.12966281,
+              0.68600017
+            ],
+            [
+              -0.30762658
+            ]
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "type": "Bulb",
+        "x": 20.0,
+        "y": 14.0,
+        "label": "A and B"
+      },
+      {
+        "id": 8,
+        "type": "Bulb",
+        "x": 20.0,
+        "y": 6.0,
+        "label": "Majority"
+      },
+      {
+        "id": 9,
+        "type": "Bulb",
+        "x": 20.0,
+        "y": -2.0,
+        "label": "A xor B"
+      }
+    ],
+    "wires": [
+      {
+        "id": 1,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 4,
+          "pin": 0
+        }
+      },
+      {
+        "id": 2,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 4,
+          "pin": 1
+        }
+      },
+      {
+        "id": 3,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 5,
+          "pin": 0
+        }
+      },
+      {
+        "id": 4,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 5,
+          "pin": 1
+        }
+      },
+      {
+        "id": 5,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 5,
+          "pin": 2
+        }
+      },
+      {
+        "id": 6,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 0
+        }
+      },
+      {
+        "id": 7,
+        "from": {
+          "component": 2,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 1
+        }
+      },
+      {
+        "id": 8,
+        "from": {
+          "component": 4,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 0
+        }
+      },
+      {
+        "id": 9,
+        "from": {
+          "component": 5,
+          "pin": 0
+        },
+        "to": {
+          "component": 8,
+          "pin": 0
+        }
+      },
+      {
+        "id": 10,
+        "from": {
+          "component": 6,
+          "pin": 0
+        },
+        "to": {
+          "component": 9,
+          "pin": 0
+        }
+      }
+    ]
+  },
+  "subcircuits": []
+}

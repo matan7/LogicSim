@@ -24,7 +24,9 @@ namespace LogicSim.Mcp
             "open_subcircuit edits an IC in place: the editing tools then work on the IC's contents until close_subcircuit writes the " +
             "changes back to every instance (pins keep their wires when moved or renamed). The simulation always runs the whole " +
             "document; inside an IC opened through an instance, read_signals and get_circuit show the values of that instance. " +
-            "Edits are undoable with undo.";
+            "Neurons: Neuron (perceptron: weights + threshold), SpikingNeuron (leaky integrate-and-fire: weights, threshold, leak, reset, " +
+            "refractory; emits one-tick spikes) and NeuralBlock (small neural network given by 'layers', compiled to lookup tables). " +
+            "train_component learns their weights from a truth table, explicit rows or another IC. Edits are undoable with undo.";
 
         private readonly ILogicSimWorkspace _workspace;
 
@@ -93,7 +95,15 @@ namespace LogicSim.Mcp
                     Prop("rotation", "integer", "Quarter turns clockwise (0-3)."),
                     Prop("inputs", "integer", "Number of inputs for AND/OR/NAND/NOR/XOR/XNOR (1-8)."),
                     Prop("half_period", "integer", "Clock half period in ticks."),
-                    Prop("value", "boolean", "Value of a Constant (or initial state of a Switch).")),
+                    Prop("value", "boolean", "Value of a Constant (or initial state of a Switch)."),
+                    Prop("weights", ArrayOf(new JObject { ["type"] = "number" }), "Neuron weights, one per input (sets the input count)."),
+                    Prop("threshold", "number", "Neuron threshold."),
+                    Prop("leak", "number", "Spiking neuron: fraction of the potential kept per tick (0-1)."),
+                    Prop("reset", "number", "Spiking neuron: potential after a spike."),
+                    Prop("refractory", "integer", "Spiking neuron: ticks after a spike in which inputs are ignored."),
+                    Prop("layers", ArrayOf(new JObject { ["type"] = "integer" }), "Neural block: neurons per layer, e.g. [3, 8, 2] (inputs, hidden..., outputs). Re-initializes the weights."),
+                    Prop("activation", "string", "Neural block hidden activation: sigmoid, tanh or relu."),
+                    Prop("seed", "integer", "Neural block: random seed for new weights.")),
                 SetProperties));
             server.AddTool(new McpTool("connect", "Connect pins",
                 "Connects an output pin to an input pin. Each input accepts one driver; set replace=true to rewire a connected input.",
@@ -145,6 +155,22 @@ namespace LogicSim.Mcp
                     Prop("outputs", ArrayOf(AnyId()), "Output components (ids or labels)."),
                     Prop("max_ticks_per_row", "integer", "Settle limit per row.")),
                 TruthTableTool, readOnly: true));
+            server.AddTool(new McpTool("train_component", "Train neuron or neural block",
+                "Learns the weights of a Neuron (perceptron rule) or NeuralBlock (backpropagation) so it reproduces a truth table. " +
+                "Targets: 'subcircuit' (an IC with the same number of pins; a block is resized to match), 'targets' (one entry per input " +
+                "pattern p, where bit i of p is input i; each entry is a 0/1 string or array with one value per output) or 'rows' " +
+                "([{inputs:[..], outputs:[..]}]). Undoable. Spiking neurons cannot be trained this way.",
+                Schema(new[] { "component" },
+                    Prop("component", AnyId(), "Neuron or NeuralBlock (id or label)."),
+                    Prop("subcircuit", "string", "Learn the function of this IC (definition id or name)."),
+                    Prop("targets", ArrayOf(new JObject()), "Expected outputs for input patterns 0, 1, 2, ..."),
+                    Prop("rows", ArrayOf(new JObject()), "Explicit samples."),
+                    Prop("hidden", ArrayOf(new JObject { ["type"] = "integer" }), "Neural block: hidden layer sizes to start from (default keeps the current shape)."),
+                    Prop("activation", "string", "Neural block: hidden activation for a new shape (sigmoid, tanh, relu)."),
+                    Prop("epochs", "integer", "Training epochs (default 3000 for networks, 1000 for neurons)."),
+                    Prop("learning_rate", "number", "Step size (default 0.5 for networks, 0.1 for neurons)."),
+                    Prop("seed", "integer", "Random seed.")),
+                TrainComponent));
 
             // Subcircuits and files
             server.AddTool(new McpTool("create_subcircuit", "Create subcircuit",
@@ -299,6 +325,15 @@ namespace LogicSim.Mcp
                     entry["properties"] = "value (true/false)";
                 else if (spec.Kind == ComponentKind.Subcircuit)
                     entry["properties"] = "subcircuit (definition id); pins come from the definition";
+                else if (spec.Kind == ComponentKind.Neuron)
+                    entry["properties"] = "weights (one per input), threshold";
+                else if (spec.Kind == ComponentKind.SpikingNeuron)
+                    entry["properties"] = "weights, threshold, leak (0-1), reset, refractory (ticks)";
+                else if (spec.Kind == ComponentKind.NeuralBlock)
+                {
+                    entry["properties"] = "layers (e.g. [3, 8, 2]), activation (sigmoid/tanh/relu), seed; pins in0.. and out0.. follow the layers";
+                    entry["inputs"] = $"1-{NeuralNetwork.MaxInputs} (from layers)";
+                }
                 types.Add(entry);
             }
             return McpToolResult.Ok(new JObject { ["types"] = types });
@@ -466,7 +501,15 @@ namespace LogicSim.Mcp
                 properties.ClockHalfPeriod = (int)args["half_period"];
             if (args["value"] != null)
                 properties.Value = ParseBool(args["value"]);
-            _workspace.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
+            try
+            {
+                ApplyNeuralArguments(component, args, ref properties);
+                _workspace.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
             return McpToolResult.Ok(Describe(component, null));
         }
 
@@ -677,6 +720,157 @@ namespace LogicSim.Mcp
         private McpToolResult ListSubcircuits(JObject args)
         {
             return McpToolResult.Ok(new JObject { ["subcircuits"] = new JArray(Circuit.Library.Definitions.Select(DescribeDefinition)) });
+        }
+
+        /// <summary>Reads neuron / network arguments (weights, threshold, layers, ...) into <paramref name="properties"/>.</summary>
+        private static void ApplyNeuralArguments(CircuitComponent component, JObject args, ref ComponentProperties properties)
+        {
+            bool neuronArgs = args["weights"] != null || args["threshold"] != null || args["leak"] != null || args["reset"] != null || args["refractory"] != null;
+            bool networkArgs = args["layers"] != null || args["activation"] != null;
+            if (neuronArgs && !component.IsNeuron)
+                throw new McpToolException("weights/threshold/leak/reset/refractory only apply to Neuron and SpikingNeuron");
+            if (networkArgs && component.Kind != ComponentKind.NeuralBlock)
+                throw new McpToolException("layers/activation only apply to NeuralBlock");
+
+            if (component.IsNeuron)
+            {
+                var neuron = properties.Neuron ?? NeuronParameters.Default(component.Kind, properties.InputCount);
+                if (args["inputs"] != null && args["weights"] == null)
+                    neuron = neuron.WithInputCount((int)args["inputs"]);
+                if (args["weights"] is JArray weights)
+                {
+                    neuron = neuron.WithWeights(weights.Select(w => (float)w));
+                    properties.InputCount = neuron.Weights.Count;
+                }
+                if (args["threshold"] != null)
+                    neuron = neuron.WithThreshold((float)args["threshold"]);
+                if (args["leak"] != null)
+                    neuron = neuron.WithLeak((float)args["leak"]);
+                if (args["reset"] != null)
+                    neuron = neuron.WithReset((float)args["reset"]);
+                if (args["refractory"] != null)
+                    neuron = neuron.WithRefractory((int)args["refractory"]);
+                properties.Neuron = neuron;
+            }
+            else if (component.Kind == ComponentKind.NeuralBlock && networkArgs)
+            {
+                var current = properties.Network ?? NeuralNetwork.Default;
+                var activation = args["activation"] != null ? ParseActivation((string)args["activation"]) : current.Activation;
+                if (args["layers"] is JArray layers)
+                {
+                    var sizes = layers.Select(l => (int)l).ToList();
+                    if (sizes.Count < 2)
+                        throw new McpToolException("'layers' needs at least an input and an output size, e.g. [2, 4, 1]");
+                    int seed = args["seed"] != null ? (int)args["seed"] : 1;
+                    properties.Network = NeuralNetwork.Create(sizes[0], sizes.Skip(1).Take(sizes.Count - 2), sizes[sizes.Count - 1], activation, seed);
+                }
+                else
+                {
+                    properties.Network = current.WithActivation(activation);
+                }
+            }
+        }
+
+        private static NeuralActivation ParseActivation(string text)
+        {
+            if (Enum.TryParse(text?.Trim(), true, out NeuralActivation activation))
+                return activation;
+            throw new McpToolException($"Unknown activation '{text}' (use sigmoid, tanh or relu)");
+        }
+
+        private McpToolResult TrainComponent(JObject args)
+        {
+            var component = ResolveComponent(Required(args, "component"));
+            if (component.Kind == ComponentKind.SpikingNeuron)
+                throw new McpToolException("Spiking neurons react over time and are not trained from truth tables; adjust weights, threshold and leak instead");
+            if (component.Kind != ComponentKind.Neuron && component.Kind != ComponentKind.NeuralBlock)
+                throw new McpToolException($"{component} is not a Neuron or NeuralBlock");
+
+            List<NeuralTraining.Sample> samples;
+            try
+            {
+                if (args["subcircuit"] != null)
+                {
+                    var definition = ResolveDefinition(args["subcircuit"]);
+                    samples = NeuralTraining.SamplesFromCircuit(definition.Circuit);
+                }
+                else if (args["targets"] is JArray targets)
+                {
+                    samples = SamplesFromTargets(targets);
+                }
+                else if (args["rows"] is JArray rows)
+                {
+                    samples = rows.Select(r => new NeuralTraining.Sample(
+                        ((JArray)r["inputs"]).Select(ParseBool).ToArray(),
+                        ((JArray)r["outputs"]).Select(ParseBool).ToArray())).ToList();
+                }
+                else
+                {
+                    throw new McpToolException("Pass 'subcircuit', 'targets' or 'rows'");
+                }
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
+
+            var options = new NeuralTraining.Options
+            {
+                Epochs = args["epochs"] != null ? (int)args["epochs"] : (int?)null,
+                LearningRate = args["learning_rate"] != null ? (float)args["learning_rate"] : (float?)null,
+                Seed = args["seed"] != null ? (int)args["seed"] : 1,
+                Hidden = args["hidden"] is JArray hidden ? hidden.Select(v => (int)v).ToList() : null,
+                Activation = args["activation"] != null ? ParseActivation((string)args["activation"]) : (NeuralActivation?)null
+            };
+            NeuralTraining.Result result;
+            try
+            {
+                result = NeuralTraining.TrainComponent(component, samples, options, out var properties);
+                _workspace.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
+            }
+            catch (CircuitException exception)
+            {
+                throw new McpToolException(exception.Message);
+            }
+
+            var output = new JObject
+            {
+                ["component"] = component.Id,
+                ["accuracy"] = Math.Round(result.Accuracy, 4),
+                ["correct_rows"] = result.Correct,
+                ["rows"] = result.Total,
+                ["epochs"] = result.Epochs
+            };
+            if (component.Kind == ComponentKind.NeuralBlock)
+            {
+                output["loss"] = Math.Round(result.Loss, 5);
+                output["network"] = component.Network.Describe();
+            }
+            else
+            {
+                output["weights"] = new JArray(component.Neuron.Weights);
+                output["threshold"] = component.Neuron.Threshold;
+            }
+            if (!result.Perfect)
+                output["note"] = component.Kind == ComponentKind.Neuron
+                    ? "A single neuron can only learn linearly separable functions (not XOR); use a NeuralBlock."
+                    : "Not every row was learned; try more epochs, a larger hidden layer or another seed.";
+            return McpToolResult.Ok(output);
+        }
+
+        private static List<NeuralTraining.Sample> SamplesFromTargets(JArray targets)
+        {
+            var values = new List<bool[]>();
+            foreach (var token in targets)
+            {
+                if (token is JArray array)
+                    values.Add(array.Select(ParseBool).ToArray());
+                else if (token.Type == JTokenType.String && ((string)token).Length > 1)
+                    values.Add(((string)token).Where(c => c == '0' || c == '1').Select(c => c == '1').ToArray());
+                else
+                    values.Add(new[] { ParseBool(token) });
+            }
+            return NeuralTraining.SamplesFromTargets(values);
         }
 
         private SubcircuitDefinition ResolveDefinition(JToken token)
@@ -914,6 +1108,19 @@ namespace LogicSim.Mcp
                     clockHalfPeriod: spec["half_period"] != null ? (int)spec["half_period"] : (int?)null,
                     value: spec["value"] != null ? ParseBool(spec["value"]) : (bool?)null,
                     rotation: spec["rotation"] != null ? (int)spec["rotation"] : 0);
+                var properties = component.GetProperties();
+                try
+                {
+                    ApplyNeuralArguments(component, spec, ref properties);
+                }
+                catch (CircuitException exception)
+                {
+                    throw new McpToolException(exception.Message);
+                }
+                if (properties.Neuron != null && component.IsNeuron)
+                    ComponentFactory.SetNeuron(component, properties.Neuron);
+                if (properties.Network != null && kind == ComponentKind.NeuralBlock)
+                    ComponentFactory.SetNetwork(component, properties.Network);
             }
             return component;
         }
@@ -1085,6 +1292,24 @@ namespace LogicSim.Mcp
                 entry["value"] = component.Value ? 1 : 0;
             if (component.Kind == ComponentKind.Subcircuit)
                 entry["subcircuit"] = component.SubcircuitId;
+            if (component.IsNeuron && component.Neuron != null)
+            {
+                entry["weights"] = new JArray(component.Neuron.Weights);
+                entry["threshold"] = component.Neuron.Threshold;
+                if (component.Kind == ComponentKind.SpikingNeuron)
+                {
+                    entry["leak"] = component.Neuron.Leak;
+                    entry["reset"] = component.Neuron.Reset;
+                    entry["refractory"] = component.Neuron.Refractory;
+                }
+                if (signals != null && signals.TryGetNeuronPotential(component, out float potential))
+                    entry["potential"] = Math.Round(potential, 4);
+            }
+            if (component.Kind == ComponentKind.NeuralBlock && component.Network != null)
+            {
+                entry["layers"] = new JArray(component.Network.LayerSizes);
+                entry["activation"] = component.Network.Activation.ToString().ToLowerInvariant();
+            }
 
             int inputCount = Circuit.GetInputCount(component);
             if (inputCount > 0)
@@ -1241,6 +1466,12 @@ namespace LogicSim.Mcp
             props.Add(Prop("value", "boolean", "Constant value or initial switch state."));
             props.Add(Prop("rotation", "integer", "Quarter turns clockwise."));
             props.Add(Prop("subcircuit", "string", "Definition id for type Subcircuit."));
+            props.Add(Prop("weights", ArrayOf(new JObject { ["type"] = "number" }), "Neuron/SpikingNeuron weights (one per input)."));
+            props.Add(Prop("threshold", "number", "Neuron/SpikingNeuron threshold."));
+            props.Add(Prop("leak", "number", "SpikingNeuron: fraction of the potential kept per tick."));
+            props.Add(Prop("refractory", "integer", "SpikingNeuron: ticks ignored after a spike."));
+            props.Add(Prop("layers", ArrayOf(new JObject { ["type"] = "integer" }), "NeuralBlock layer sizes, e.g. [2, 4, 1]."));
+            props.Add(Prop("activation", "string", "NeuralBlock hidden activation (sigmoid, tanh, relu)."));
             var schema = Schema(required, props.ToArray());
             if (required == null)
                 schema["required"] = new JArray("type");

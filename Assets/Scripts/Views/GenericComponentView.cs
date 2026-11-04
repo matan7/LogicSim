@@ -96,7 +96,8 @@ namespace LogicSim.Views
             // Generic gate inputs (in0, in1...) and single pins are self-explanatory.
             if (count <= 1 && component.Kind != ComponentKind.Subcircuit)
                 return false;
-            return !(name.StartsWith("in") && component.Spec.Category == ComponentCategory.Gate);
+            var category = component.Spec.Category;
+            return !((name.StartsWith("in") || name.StartsWith("out")) && (category == ComponentCategory.Gate || category == ComponentCategory.Neural));
         }
 
         private TextMeshPro CreateText(string objectName, Vector2 position, Vector2 size, float maxFontSize)
@@ -168,22 +169,43 @@ namespace LogicSim.Views
                     return name;
                 case ComponentKind.Subcircuit:
                     return Circuit.Library.TryGet(c.SubcircuitId, out var definition) ? definition.Name : "? " + c.SubcircuitId;
+                case ComponentKind.Neuron:
+                {
+                    var threshold = c.Neuron != null ? c.Neuron.Threshold : 0f;
+                    if (session != null && session.TryGetNeuronPotential(c, out float sum))
+                        return Format(sum) + " / " + Format(threshold);
+                    return "N >= " + Format(threshold);
+                }
+                case ComponentKind.SpikingNeuron:
+                    if (session != null && session.TryGetNeuronPotential(c, out float potential))
+                        return "V " + potential.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                    return "LIF";
+                case ComponentKind.NeuralBlock:
+                    return c.Network != null ? "NN " + string.Join("-", c.Network.LayerSizes) : "NN";
                 default:
                     return c.Spec.DisplayName;
             }
         }
 
+        private static string Format(float value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
         public override void ShowValues(ISignalReader session)
         {
             base.ShowValues(session);
             var kind = Component.Kind;
-            if (kind == ComponentKind.HexDisplay || kind == ComponentKind.PinIn || kind == ComponentKind.PinOut)
-                _label.text = BodyText(session);
+            if (kind == ComponentKind.HexDisplay || kind == ComponentKind.PinIn || kind == ComponentKind.PinOut
+                || kind == ComponentKind.Neuron || kind == ComponentKind.SpikingNeuron)
+            {
+                var text = BodyText(session);
+                if (_label.text != text)
+                    _label.text = text;
+            }
 
             bool? value = null;
             if (session != null)
             {
-                if (kind == ComponentKind.Clock || kind == ComponentKind.Button || kind == ComponentKind.PinIn)
+                if (kind == ComponentKind.Clock || kind == ComponentKind.Button || kind == ComponentKind.PinIn
+                    || kind == ComponentKind.Neuron || kind == ComponentKind.SpikingNeuron)
                     value = session.GetOutputValue(ComponentId, 0);
                 else if (kind == ComponentKind.PinOut)
                     value = session.GetInputPinValue(ComponentId, 0);

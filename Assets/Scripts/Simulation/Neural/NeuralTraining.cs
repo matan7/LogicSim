@@ -55,6 +55,106 @@ namespace LogicSim.Simulation
             return table.Rows.Select(r => new Sample(r.Inputs.ToArray(), r.Outputs.ToArray())).ToList();
         }
 
+        public sealed class Options
+        {
+            public int? Epochs;
+            public float? LearningRate;
+            public int Seed = 1;
+
+            /// <summary>Neural block: hidden layer sizes to start from (null keeps the current shape when the pins match).</summary>
+            public IReadOnlyList<int> Hidden;
+
+            public NeuralActivation? Activation;
+        }
+
+        /// <summary>
+        /// Samples for input patterns 0, 1, 2, ... (bit i of the pattern is input i); <paramref name="targets"/>[p] holds the
+        /// expected outputs for pattern p.
+        /// </summary>
+        public static List<Sample> SamplesFromTargets(IReadOnlyList<bool[]> targets)
+        {
+            int count = targets?.Count ?? 0;
+            int bits = 0;
+            while ((1 << bits) < count)
+                bits++;
+            if (count < 2 || (1 << bits) != count || bits > NeuralNetwork.MaxInputs)
+                throw new CircuitException("Give one target per input pattern (2, 4, 8, ... entries)");
+            if (targets.Select(t => t.Length).Distinct().Count() != 1 || targets[0].Length == 0)
+                throw new CircuitException("Every target needs the same number of outputs");
+            return Enumerable.Range(0, count)
+                .Select(p => new Sample(Enumerable.Range(0, bits).Select(i => (p >> i & 1) != 0).ToArray(), targets[p]))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Parses targets such as "0110" (one output, one digit per pattern) or "00 01 01 10" (several outputs, one group
+        /// per pattern, output 0 first).
+        /// </summary>
+        public static List<Sample> SamplesFromText(string text)
+        {
+            var groups = (text ?? string.Empty).Split(new[] { ' ', ',', ';', '\t', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            List<bool[]> targets;
+            if (groups.Length == 1)
+                targets = groups[0].Select(c => new[] { ParseBit(c) }).ToList();
+            else
+                targets = groups.Select(g => g.Select(ParseBit).ToArray()).ToList();
+            return SamplesFromTargets(targets);
+        }
+
+        private static bool ParseBit(char c)
+        {
+            if (c == '0')
+                return false;
+            if (c == '1')
+                return true;
+            throw new CircuitException($"Targets are written with 0 and 1 (found '{c}')");
+        }
+
+        /// <summary>
+        /// Trains a Neuron (perceptron rule) or NeuralBlock (backpropagation; the block is resized when the samples have
+        /// another number of inputs or outputs) and returns the properties to apply with a <see cref="SetPropertiesEdit"/>.
+        /// </summary>
+        public static Result TrainComponent(CircuitComponent component, IReadOnlyList<Sample> samples, Options options, out ComponentProperties properties)
+        {
+            options = options ?? new Options();
+            if (samples == null || samples.Count == 0)
+                throw new CircuitException("No training samples");
+            int inputs = samples[0].Inputs.Length;
+            int outputs = samples[0].Outputs.Length;
+            properties = component.GetProperties();
+            Result result;
+            switch (component.Kind)
+            {
+                case ComponentKind.Neuron:
+                    if (outputs != 1)
+                        throw new CircuitException("A neuron has one output; use a neural block for several");
+                    result = TrainPerceptron(component.Neuron.WithInputCount(inputs), samples, options.Epochs ?? 1000, options.LearningRate ?? 0.1f);
+                    properties.Neuron = result.Neuron;
+                    properties.InputCount = inputs;
+                    return result;
+                case ComponentKind.NeuralBlock:
+                {
+                    var current = component.Network;
+                    var activation = options.Activation ?? current.Activation;
+                    var start = current;
+                    if (options.Hidden != null || current.InputCount != inputs || current.OutputCount != outputs || activation != current.Activation)
+                    {
+                        var hidden = options.Hidden ?? (current.InputCount == inputs
+                            ? (IReadOnlyList<int>)current.LayerSizes.Skip(1).Take(current.LayerSizes.Count - 2).ToList()
+                            : new[] { Math.Min(NeuralNetwork.MaxLayerSize, Math.Max(4, inputs * 2)) });
+                        start = NeuralNetwork.Create(inputs, hidden, outputs, activation, options.Seed);
+                    }
+                    result = TrainNetwork(start, samples, options.Epochs ?? 3000, options.LearningRate ?? 0.5f, options.Seed);
+                    properties.Network = result.Network;
+                    return result;
+                }
+                case ComponentKind.SpikingNeuron:
+                    throw new CircuitException("Spiking neurons react over time and are not trained from truth tables; adjust weights, threshold and leak instead");
+                default:
+                    throw new CircuitException($"{component} cannot be trained");
+            }
+        }
+
         private static void Check(IReadOnlyList<Sample> samples, int inputs, int outputs)
         {
             if (samples == null || samples.Count == 0)

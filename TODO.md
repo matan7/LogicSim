@@ -4,7 +4,7 @@ Open work on branch `claude/optimistic-noether-1l3qr9`. Items are removed from t
 Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Without the Unity editor
-- [ ] Selection model keyed by component ids with a `Changed` event, instead of selection keyed by views (the inspector polls every frame).
+- [ ] Selection still stores views (`ISelectable`). Storing component/wire ids would let undo and MCP restore a selection without views. Optional; the inspector no longer polls.
 - [ ] Per-kind component behaviors so a new component kind does not touch ~8 files (largest item).
 
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)

@@ -60,6 +60,8 @@ namespace LogicSim.UI
         private void Awake()
         {
             SystemCore.CircuitService.LevelChanged += MarkDirty;
+            SystemCore.SelectingService.Changed += MarkDirty;
+            SystemCore.AppStateService.StateChanged += OnStateChanged;
         }
 
         private void OnDestroy()
@@ -67,9 +69,15 @@ namespace LogicSim.UI
             Unsubscribe();
             if (SystemCore.CircuitService != null)
                 SystemCore.CircuitService.LevelChanged -= MarkDirty;
+            if (SystemCore.SelectingService != null)
+                SystemCore.SelectingService.Changed -= MarkDirty;
+            if (SystemCore.AppStateService != null)
+                SystemCore.AppStateService.StateChanged -= OnStateChanged;
         }
 
         private void MarkDirty() => _dirty = true;
+
+        private void OnStateChanged(Core.AppState.ApplicationState state) => _dirty = true;
 
         private void OnPropertiesChanged(CircuitComponent component)
         {
@@ -96,12 +104,11 @@ namespace LogicSim.UI
             _shownCircuit = null;
         }
 
-        // Polled: the selection service has no change event.
+        // Rebuilt after selection, mode, level or property changes (see the subscriptions above).
         private void Update()
         {
-            int id = SelectedId();
-            if (id != _shownId || _dirty)
-                Rebuild(id);
+            if (_dirty)
+                Rebuild(SelectedId());
         }
 
         private static int SelectedId()

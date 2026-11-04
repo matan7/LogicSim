@@ -93,6 +93,8 @@ Use Play mode with screenshots. Fix what is broken, and give the user a short re
 **Neurons** (Ctrl+O, examples `neurons` and `spiking-neuron`)
 - Select a Neuron. The inspector on the right shows Label, Inputs, Weights, Threshold and Train. Change a weight, then
   undo.
+- The inspector is event driven (`SelectingService.Changed`, mode and level changes). It must follow click, Shift+click,
+  box selection, Esc, delete and undo of a delete, and hide when the simulation starts.
 - Train field: type `0001` (AND) on the neuron and `0110` (XOR) on the neural block. A toast reports the accuracy, and
   XOR on the single neuron reports that it is not linearly separable.
 - Neural block: Layers `2 6 1`, the Activation button, New weights, and "Learn an IC..." with the half adder.

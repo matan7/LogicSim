@@ -371,13 +371,13 @@ namespace LogicSim.Views
         private static bool IsSelected(Component view)
         {
             var selectable = view.GetComponent<Core.Selecting.ISelectable>();
-            return selectable != null && SystemCore.SelectingService.SelectionList.Contains(selectable);
+            return selectable != null && SystemCore.SelectingService.Contains(selectable);
         }
 
         private static void DeselectView(Component view)
         {
             var selectable = view.GetComponent<Core.Selecting.ISelectable>();
-            if (selectable != null && SystemCore.SelectingService.SelectionList.Contains(selectable))
+            if (selectable != null)
                 SystemCore.SelectingService.Deselect(selectable);
         }
 

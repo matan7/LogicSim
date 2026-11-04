@@ -54,7 +54,7 @@ namespace Actions
                 ISelectable selectable = RayCast();
                 if (selectable != null)
                 {
-                    if (!_selectingService.SelectionList.Exists(s => ReferenceEquals(s, selectable)))
+                    if (!_selectingService.Contains(selectable))
                     {
                         _selectingService.Select(selectable);
                     }

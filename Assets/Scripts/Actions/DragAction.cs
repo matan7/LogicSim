@@ -73,7 +73,7 @@ namespace Actions
             _startPositions.Clear();
 
             var selectionList = _selectingService.SelectionList;
-            bool dragSelection = view.TryGetComponent(out ISelectable selectable) && selectionList.Contains(selectable) && selectionList.Count > 1;
+            bool dragSelection = view.TryGetComponent(out ISelectable selectable) && _selectingService.Contains(selectable) && selectionList.Count > 1;
             if (dragSelection)
             {
                 foreach (var item in selectionList)

@@ -18,28 +18,7 @@ namespace LogicSim.Simulation
             return new Builder(circuit).Build();
         }
 
-        public static OpCode? GetOpCode(ComponentKind kind)
-        {
-            switch (kind)
-            {
-                case ComponentKind.Buffer: return OpCode.Buffer;
-                case ComponentKind.Not: return OpCode.Not;
-                case ComponentKind.And: return OpCode.And;
-                case ComponentKind.Or: return OpCode.Or;
-                case ComponentKind.Nand: return OpCode.Nand;
-                case ComponentKind.Nor: return OpCode.Nor;
-                case ComponentKind.Xor: return OpCode.Xor;
-                case ComponentKind.Xnor: return OpCode.Xnor;
-                case ComponentKind.Clock: return OpCode.Clock;
-                case ComponentKind.Constant: return OpCode.Constant;
-                case ComponentKind.DFlipFlop: return OpCode.DFlipFlop;
-                case ComponentKind.TFlipFlop: return OpCode.TFlipFlop;
-                case ComponentKind.JKFlipFlop: return OpCode.JKFlipFlop;
-                case ComponentKind.Neuron: return OpCode.Perceptron;
-                case ComponentKind.SpikingNeuron: return OpCode.Spiking;
-                default: return null;
-            }
-        }
+        public static OpCode? GetOpCode(ComponentKind kind) => ComponentSpec.Get(kind).SimulationOp;
 
         private sealed class Builder
         {

@@ -221,7 +221,7 @@ docs/UNITY_SESSION.md  checklist for verifying and continuing the work inside th
 ## Building and testing
 
 - **Unity:** open the project with Unity 6000.4. Burst is optional; without it, the Jobs backend runs as managed jobs.
-- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 88 core/MCP tests plus the Jobs
+- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 89 core/MCP tests plus the Jobs
   backend run against a functional stand-in of the Unity job API. The same EditMode tests appear in Unity's Test
   Runner.
 - **CI:** GitHub Actions builds and tests the headless solution on every push.

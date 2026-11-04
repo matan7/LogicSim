@@ -5,7 +5,11 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Without the Unity editor
 - [ ] Selection still stores views (`ISelectable`). Storing component/wire ids would let undo and MCP restore a selection without views. Optional; the inspector no longer polls.
-- [ ] Per-kind component behaviors so a new component kind does not touch ~8 files (largest item).
+- [ ] Per-kind component behaviors. Done: opcode, aliases and property help live in `ComponentSpec`. Still spread
+  per kind: property editors (`UI/InspectorPanel.cs`), labels and visuals (`Views/GenericComponentView.cs`), MCP
+  property arguments (`Mcp/LogicSimTools.Helpers.cs`, `LogicSimTools.Neurons.cs`), DTO fields in
+  `CircuitSerializer`, pin counts of NeuralBlock/Subcircuit in `Circuit`. Next step: one behavior object per kind for
+  properties (parse, serialize, describe); the view part needs the Unity editor to verify.
 
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)
 - [ ] Step 1: fix compile errors against the real packages (code was only compiled against 2021.3 reference DLLs + stubs); check the Burst version.

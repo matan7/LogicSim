@@ -232,6 +232,21 @@ namespace LogicSim.Tests
             Assert.That(CircuitSerializer.TryParseKind(text, out var kind), Is.True);
             Assert.That(kind, Is.EqualTo(expected));
         }
+
+        [Test]
+        public void ComponentAliases_AreUniqueAndDoNotShadowTypeNames()
+        {
+            var aliases = ComponentSpec.All.SelectMany(s => s.Aliases).ToList();
+            Assert.That(aliases, Is.Unique);
+            var typeNames = System.Enum.GetNames(typeof(ComponentKind)).Select(n => n.ToLowerInvariant());
+            Assert.That(aliases.Intersect(typeNames), Is.Empty);
+            foreach (var spec in ComponentSpec.All)
+                foreach (var alias in spec.Aliases)
+                {
+                    Assert.That(CircuitSerializer.TryParseKind(alias, out var kind), Is.True, alias);
+                    Assert.That(kind, Is.EqualTo(spec.Kind), alias);
+                }
+        }
     }
 
     public class PerformanceTests

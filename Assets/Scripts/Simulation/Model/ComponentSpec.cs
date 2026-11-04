@@ -28,6 +28,18 @@ namespace LogicSim.Simulation
 
         public bool HasVariableInputs => MinInputs != MaxInputs;
 
+        /// <summary>
+        /// Kernel opcode when the component compiles to one primitive gate; null for pins, displays, subcircuits and
+        /// neural blocks, which the compiler handles separately.
+        /// </summary>
+        public OpCode? SimulationOp { get; private set; }
+
+        /// <summary>Extra names accepted for this kind in files and MCP calls (lower case, no separators).</summary>
+        public IReadOnlyList<string> Aliases { get; private set; } = Array.Empty<string>();
+
+        /// <summary>Short description of the configurable properties (for agents), or null.</summary>
+        public string PropertiesHelp { get; private set; }
+
         private readonly string[] _inputNames;
         private readonly string[] _outputNames;
 
@@ -65,6 +77,24 @@ namespace LogicSim.Simulation
 
         public const int MaxGateInputs = 8;
 
+        private ComponentSpec Op(OpCode op)
+        {
+            SimulationOp = op;
+            return this;
+        }
+
+        private ComponentSpec Alias(params string[] names)
+        {
+            Aliases = names;
+            return this;
+        }
+
+        private ComponentSpec Props(string help)
+        {
+            PropertiesHelp = help;
+            return this;
+        }
+
         private static readonly Dictionary<ComponentKind, ComponentSpec> _specs = Build();
 
         public static IEnumerable<ComponentSpec> All => _specs.Values;
@@ -81,42 +111,42 @@ namespace LogicSim.Simulation
             var output = new[] { "out" };
             var list = new[]
             {
-                new ComponentSpec(ComponentKind.Buffer, "Buffer", ComponentCategory.Gate, "Copies its input to the output.", 1, 1, 1, new[] { "in" }, output),
-                new ComponentSpec(ComponentKind.Not, "NOT", ComponentCategory.Gate, "Inverts its input.", 1, 1, 1, new[] { "in" }, output),
-                new ComponentSpec(ComponentKind.And, "AND", ComponentCategory.Gate, "1 when all inputs are 1.", 1, MaxGateInputs, 2, null, output),
-                new ComponentSpec(ComponentKind.Or, "OR", ComponentCategory.Gate, "1 when any input is 1.", 1, MaxGateInputs, 2, null, output),
-                new ComponentSpec(ComponentKind.Nand, "NAND", ComponentCategory.Gate, "0 when all inputs are 1.", 1, MaxGateInputs, 2, null, output),
-                new ComponentSpec(ComponentKind.Nor, "NOR", ComponentCategory.Gate, "1 when all inputs are 0.", 1, MaxGateInputs, 2, null, output),
-                new ComponentSpec(ComponentKind.Xor, "XOR", ComponentCategory.Gate, "1 when an odd number of inputs is 1.", 1, MaxGateInputs, 2, null, output),
-                new ComponentSpec(ComponentKind.Xnor, "XNOR", ComponentCategory.Gate, "1 when an even number of inputs is 1.", 1, MaxGateInputs, 2, null, output),
+                new ComponentSpec(ComponentKind.Buffer, "Buffer", ComponentCategory.Gate, "Copies its input to the output.", 1, 1, 1, new[] { "in" }, output).Op(OpCode.Buffer),
+                new ComponentSpec(ComponentKind.Not, "NOT", ComponentCategory.Gate, "Inverts its input.", 1, 1, 1, new[] { "in" }, output).Op(OpCode.Not).Alias("inverter"),
+                new ComponentSpec(ComponentKind.And, "AND", ComponentCategory.Gate, "1 when all inputs are 1.", 1, MaxGateInputs, 2, null, output).Op(OpCode.And),
+                new ComponentSpec(ComponentKind.Or, "OR", ComponentCategory.Gate, "1 when any input is 1.", 1, MaxGateInputs, 2, null, output).Op(OpCode.Or),
+                new ComponentSpec(ComponentKind.Nand, "NAND", ComponentCategory.Gate, "0 when all inputs are 1.", 1, MaxGateInputs, 2, null, output).Op(OpCode.Nand),
+                new ComponentSpec(ComponentKind.Nor, "NOR", ComponentCategory.Gate, "1 when all inputs are 0.", 1, MaxGateInputs, 2, null, output).Op(OpCode.Nor),
+                new ComponentSpec(ComponentKind.Xor, "XOR", ComponentCategory.Gate, "1 when an odd number of inputs is 1.", 1, MaxGateInputs, 2, null, output).Op(OpCode.Xor),
+                new ComponentSpec(ComponentKind.Xnor, "XNOR", ComponentCategory.Gate, "1 when an even number of inputs is 1.", 1, MaxGateInputs, 2, null, output).Op(OpCode.Xnor),
 
-                new ComponentSpec(ComponentKind.Switch, "Switch", ComponentCategory.Input, "Toggle input. Becomes an input pin when used inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true),
+                new ComponentSpec(ComponentKind.Switch, "Switch", ComponentCategory.Input, "Toggle input. Becomes an input pin when used inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true).Alias("toggle", "input"),
                 new ComponentSpec(ComponentKind.Button, "Button", ComponentCategory.Input, "Momentary input, 1 only while pressed. Becomes an input pin inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true),
-                new ComponentSpec(ComponentKind.Clock, "Clock", ComponentCategory.Input, "Square wave that toggles every 'halfPeriod' ticks.", 0, 0, 0, null, output),
-                new ComponentSpec(ComponentKind.Constant, "Constant", ComponentCategory.Input, "Constant 0 or 1.", 0, 0, 0, null, output),
+                new ComponentSpec(ComponentKind.Clock, "Clock", ComponentCategory.Input, "Square wave that toggles every 'halfPeriod' ticks.", 0, 0, 0, null, output).Op(OpCode.Clock).Props("half_period (ticks, default " + CircuitComponent.DefaultClockHalfPeriod + ")"),
+                new ComponentSpec(ComponentKind.Constant, "Constant", ComponentCategory.Input, "Constant 0 or 1.", 0, 0, 0, null, output).Op(OpCode.Constant).Props("value (true/false)"),
 
-                new ComponentSpec(ComponentKind.Bulb, "Bulb", ComponentCategory.Output, "Lights up when its input is 1. Becomes an output pin inside a subcircuit.", 1, 1, 1, new[] { "in" }, Array.Empty<string>(), isInterfaceOutput: true),
-                new ComponentSpec(ComponentKind.HexDisplay, "Hex display", ComponentCategory.Output, "Shows a 4-bit value (b0 is the least significant bit).", 4, 4, 4, new[] { "b0", "b1", "b2", "b3" }, Array.Empty<string>()),
+                new ComponentSpec(ComponentKind.Bulb, "Bulb", ComponentCategory.Output, "Lights up when its input is 1. Becomes an output pin inside a subcircuit.", 1, 1, 1, new[] { "in" }, Array.Empty<string>(), isInterfaceOutput: true).Alias("led", "lamp", "output"),
+                new ComponentSpec(ComponentKind.HexDisplay, "Hex display", ComponentCategory.Output, "Shows a 4-bit value (b0 is the least significant bit).", 4, 4, 4, new[] { "b0", "b1", "b2", "b3" }, Array.Empty<string>()).Alias("hex", "display"),
 
-                new ComponentSpec(ComponentKind.DFlipFlop, "D flip-flop", ComponentCategory.Sequential, "Stores D on the rising edge of CLK.", 2, 2, 2, new[] { "D", "CLK" }, new[] { "Q", "nQ" }),
-                new ComponentSpec(ComponentKind.TFlipFlop, "T flip-flop", ComponentCategory.Sequential, "Toggles on the rising edge of CLK when T is 1.", 2, 2, 2, new[] { "T", "CLK" }, new[] { "Q", "nQ" }),
-                new ComponentSpec(ComponentKind.JKFlipFlop, "JK flip-flop", ComponentCategory.Sequential, "J sets, K resets, both toggle on the rising edge of CLK.", 3, 3, 3, new[] { "J", "K", "CLK" }, new[] { "Q", "nQ" }),
+                new ComponentSpec(ComponentKind.DFlipFlop, "D flip-flop", ComponentCategory.Sequential, "Stores D on the rising edge of CLK.", 2, 2, 2, new[] { "D", "CLK" }, new[] { "Q", "nQ" }).Op(OpCode.DFlipFlop).Alias("dff"),
+                new ComponentSpec(ComponentKind.TFlipFlop, "T flip-flop", ComponentCategory.Sequential, "Toggles on the rising edge of CLK when T is 1.", 2, 2, 2, new[] { "T", "CLK" }, new[] { "Q", "nQ" }).Op(OpCode.TFlipFlop).Alias("tff"),
+                new ComponentSpec(ComponentKind.JKFlipFlop, "JK flip-flop", ComponentCategory.Sequential, "J sets, K resets, both toggle on the rising edge of CLK.", 3, 3, 3, new[] { "J", "K", "CLK" }, new[] { "Q", "nQ" }).Op(OpCode.JKFlipFlop).Alias("jkff"),
 
                 new ComponentSpec(ComponentKind.PinIn, "Input pin", ComponentCategory.Subcircuit, "Subcircuit input. At the top level it behaves like an externally driven input.", 0, 0, 0, null, output, isInterfaceInput: true),
                 new ComponentSpec(ComponentKind.PinOut, "Output pin", ComponentCategory.Subcircuit, "Subcircuit output. At the top level it behaves like a probe.", 1, 1, 1, new[] { "in" }, Array.Empty<string>(), isInterfaceOutput: true),
-                new ComponentSpec(ComponentKind.Subcircuit, "Subcircuit", ComponentCategory.Subcircuit, "Instance of a custom circuit. Pins come from its definition.", 0, 0, 0, null, Array.Empty<string>()),
+                new ComponentSpec(ComponentKind.Subcircuit, "Subcircuit", ComponentCategory.Subcircuit, "Instance of a custom circuit. Pins come from its definition.", 0, 0, 0, null, Array.Empty<string>()).Alias("ic").Props("subcircuit (definition id); pins come from the definition"),
 
                 new ComponentSpec(ComponentKind.Neuron, "Neuron", ComponentCategory.Neural,
                     "Perceptron: 1 when the weighted sum of its inputs reaches the threshold. Properties: weights, threshold.",
-                    1, NeuronParameters.MaxInputs, 2, null, output),
+                    1, NeuronParameters.MaxInputs, 2, null, output).Op(OpCode.Perceptron).Alias("perceptron").Props("weights (one per input), threshold"),
                 new ComponentSpec(ComponentKind.SpikingNeuron, "Spiking neuron", ComponentCategory.Neural,
                     "Leaky integrate-and-fire neuron: high inputs add their weight to a potential that leaks every tick; " +
                     "reaching the threshold emits a one-tick spike, resets the potential and ignores inputs for 'refractory' ticks.",
-                    1, NeuronParameters.MaxInputs, 2, null, output),
+                    1, NeuronParameters.MaxInputs, 2, null, output).Op(OpCode.Spiking).Alias("lif", "spiking", "spike").Props("weights, threshold, leak (0-1), reset, refractory (ticks)"),
                 new ComponentSpec(ComponentKind.NeuralBlock, "Neural block", ComponentCategory.Neural,
                     "Small neural network (MLP) on binary inputs. Pins come from its layers; it is compiled into lookup tables, " +
                     "so it costs one gate per output. Train it from a truth table or another IC.",
-                    0, 0, 0, null, new[] { "out0" }),
+                    0, 0, 0, null, new[] { "out0" }).Alias("mlp", "nn", "network", "neuralnetwork").Props("layers (e.g. [3, 8, 2]), activation (sigmoid/tanh/relu), seed; pins in0.. and out0.. follow the layers"),
             };
 
             var dict = new Dictionary<ComponentKind, ComponentSpec>();

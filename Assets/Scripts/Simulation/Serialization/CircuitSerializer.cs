@@ -375,28 +375,17 @@ namespace LogicSim.Simulation
                     return true;
                 }
             }
-            switch (normalized.ToLowerInvariant())
+            var alias = normalized.ToLowerInvariant();
+            foreach (var spec in ComponentSpec.All)
             {
-                case "dff": kind = ComponentKind.DFlipFlop; return true;
-                case "tff": kind = ComponentKind.TFlipFlop; return true;
-                case "jkff": kind = ComponentKind.JKFlipFlop; return true;
-                case "led":
-                case "lamp":
-                case "output": kind = ComponentKind.Bulb; return true;
-                case "toggle":
-                case "input": kind = ComponentKind.Switch; return true;
-                case "inverter": kind = ComponentKind.Not; return true;
-                case "hex":
-                case "display": kind = ComponentKind.HexDisplay; return true;
-                case "ic": kind = ComponentKind.Subcircuit; return true;
-                case "perceptron": kind = ComponentKind.Neuron; return true;
-                case "lif":
-                case "spiking":
-                case "spike": kind = ComponentKind.SpikingNeuron; return true;
-                case "mlp":
-                case "nn":
-                case "network":
-                case "neuralnetwork": kind = ComponentKind.NeuralBlock; return true;
+                foreach (var name in spec.Aliases)
+                {
+                    if (name == alias)
+                    {
+                        kind = spec.Kind;
+                        return true;
+                    }
+                }
             }
             return false;
         }

@@ -94,21 +94,12 @@ namespace LogicSim.Mcp
                 {
                     entry["inputs"] = new JArray(Enumerable.Range(0, spec.DefaultInputs).Select(spec.GetInputName));
                 }
-                if (spec.Kind == ComponentKind.Clock)
-                    entry["properties"] = "half_period (ticks, default " + CircuitComponent.DefaultClockHalfPeriod + ")";
-                else if (spec.Kind == ComponentKind.Constant)
-                    entry["properties"] = "value (true/false)";
-                else if (spec.Kind == ComponentKind.Subcircuit)
-                    entry["properties"] = "subcircuit (definition id); pins come from the definition";
-                else if (spec.Kind == ComponentKind.Neuron)
-                    entry["properties"] = "weights (one per input), threshold";
-                else if (spec.Kind == ComponentKind.SpikingNeuron)
-                    entry["properties"] = "weights, threshold, leak (0-1), reset, refractory (ticks)";
-                else if (spec.Kind == ComponentKind.NeuralBlock)
-                {
-                    entry["properties"] = "layers (e.g. [3, 8, 2]), activation (sigmoid/tanh/relu), seed; pins in0.. and out0.. follow the layers";
+                if (spec.PropertiesHelp != null)
+                    entry["properties"] = spec.PropertiesHelp;
+                if (spec.Aliases.Count > 0)
+                    entry["aliases"] = new JArray(spec.Aliases);
+                if (spec.Kind == ComponentKind.NeuralBlock)
                     entry["inputs"] = $"1-{NeuralNetwork.MaxInputs} (from layers)";
-                }
                 types.Add(entry);
             }
             return McpToolResult.Ok(new JObject { ["types"] = types });

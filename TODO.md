@@ -4,8 +4,6 @@ Open work on branch `claude/optimistic-noether-1l3qr9`. Items are removed from t
 Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Without the Unity editor
-- [ ] Batch scope for `Circuit` events (like `SubcircuitLibrary.BatchUpdate`) for paste and collapse.
-- [ ] Split `Mcp/LogicSimTools.cs` (~1500 lines) by area: inspection, editing, simulation, subcircuits, neurons.
 - [ ] Optional token for the MCP HTTP transport.
 - [ ] Selection model keyed by component ids with a `Changed` event, instead of selection keyed by views (the inspector polls every frame).
 - [ ] Per-kind component behaviors so a new component kind does not touch ~8 files (largest item).

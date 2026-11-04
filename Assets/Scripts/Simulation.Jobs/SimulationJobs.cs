@@ -23,6 +23,10 @@ namespace LogicSim.Simulation.Jobs
         [ReadOnly] public NativeArray<int> FanoutStart;
         [ReadOnly] public NativeArray<int> FanoutGates;
         [ReadOnly] public NativeArray<int> ClockGates;
+        public int NeuronCount;
+        [ReadOnly] public NativeArray<float> Weights;
+        [ReadOnly] public NativeArray<float> NeuronParams;
+        [ReadOnly] public NativeArray<ulong> Lut;
 
         internal unsafe void Fill(ref KernelData d)
         {
@@ -38,6 +42,10 @@ namespace LogicSim.Simulation.Jobs
             d.FanoutStart = (int*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(FanoutStart);
             d.FanoutGates = (int*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(FanoutGates);
             d.ClockGates = (int*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(ClockGates);
+            d.NeuronCount = NeuronCount;
+            d.Weights = (float*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Weights);
+            d.NeuronParams = (float*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(NeuronParams);
+            d.Lut = (ulong*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Lut);
         }
     }
 
@@ -46,7 +54,8 @@ namespace LogicSim.Simulation.Jobs
     /// thread renders; Burst compiles the shared <see cref="SimulationKernel"/> to native code.
     /// </summary>
 #if LOGICSIM_BURST
-    [BurstCompile(CompileSynchronously = true)]
+    // Strict float mode keeps neuron sums identical to the managed backend.
+    [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Strict)]
 #endif
     public struct EventDrivenJob : IJob
     {
@@ -59,6 +68,9 @@ namespace LogicSim.Simulation.Jobs
         public NativeArray<int> NextActive;
         public NativeArray<int> StageNet;
         public NativeArray<byte> StageValue;
+        public NativeArray<float> NeuronV;
+        public NativeArray<int> NeuronCounter;
+        public NativeArray<int> Requeue;
         public NativeArray<KernelStatus> Status;
         public long Ticks;
         public bool StopWhenStable;
@@ -76,6 +88,9 @@ namespace LogicSim.Simulation.Jobs
             d.NextActive = (int*)NextActive.GetUnsafePtr();
             d.StageNet = (int*)StageNet.GetUnsafePtr();
             d.StageValue = (byte*)StageValue.GetUnsafePtr();
+            d.NeuronV = (float*)NeuronV.GetUnsafePtr();
+            d.NeuronCounter = (int*)NeuronCounter.GetUnsafePtr();
+            d.Requeue = (int*)Requeue.GetUnsafePtr();
 
             var status = Status[0];
             if (ActivateAllFirst)
@@ -89,7 +104,7 @@ namespace LogicSim.Simulation.Jobs
     /// One tick of a full sweep, parallelized over chunks of gates. Chained jobs alternate the two value buffers.
     /// </summary>
 #if LOGICSIM_BURST
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Strict)]
 #endif
     public struct SweepChunkJob : IJobParallelFor
     {
@@ -99,6 +114,10 @@ namespace LogicSim.Simulation.Jobs
         [NativeDisableParallelForRestriction] public NativeArray<byte> Next;
         [NativeDisableParallelForRestriction] public NativeArray<byte> GateState;
         [NativeDisableParallelForRestriction] public NativeArray<byte> Changed;
+
+        // Each neuron is written only by the work item that owns its gate.
+        [NativeDisableParallelForRestriction] public NativeArray<float> NeuronV;
+        [NativeDisableParallelForRestriction] public NativeArray<int> NeuronCounter;
         public int ChunkSize;
         public int TickIndex;
         public long Tick;
@@ -109,6 +128,8 @@ namespace LogicSim.Simulation.Jobs
             Netlist.Fill(ref d);
             d.Inputs = (byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Inputs);
             d.GateState = (byte*)GateState.GetUnsafePtr();
+            d.NeuronV = (float*)NeuronV.GetUnsafePtr();
+            d.NeuronCounter = (int*)NeuronCounter.GetUnsafePtr();
             byte* current = (byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Current);
             byte* next = (byte*)Next.GetUnsafePtr();
 

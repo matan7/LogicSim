@@ -52,6 +52,80 @@ namespace LogicSim.Simulation
         }
 
         /// <summary>
+        /// Random mix of gates, perceptrons, spiking neurons and neural blocks with feedback (for backend parity tests).
+        /// </summary>
+        public static Circuit RandomNeural(int seed, int components, int switches)
+        {
+            var random = new Random(seed);
+            var circuit = new Circuit();
+            var outputs = new List<CircuitComponent>();
+            for (int i = 0; i < switches; i++)
+            {
+                var sw = new CircuitComponent(ComponentKind.Switch, 0, -i);
+                circuit.AddComponent(sw);
+                outputs.Add(sw);
+            }
+
+            var networks = new List<NeuralNetwork>
+            {
+                NeuralNetwork.Create(3, new[] { 5 }, 2, NeuralActivation.Tanh, seed),
+                NeuralNetwork.Create(4, new[] { 6, 4 }, 3, NeuralActivation.Relu, seed + 1),
+                NeuralNetwork.Default
+            };
+            var list = new List<CircuitComponent>();
+            for (int i = 0; i < components; i++)
+            {
+                CircuitComponent component;
+                double roll = random.NextDouble();
+                if (roll < 0.3)
+                {
+                    int inputs = random.Next(1, 5);
+                    var weights = new float[inputs];
+                    for (int k = 0; k < inputs; k++)
+                        weights[k] = (float)Math.Round(random.NextDouble() * 2 - 0.5, 2);
+                    component = ComponentFactory.Create(ComponentKind.SpikingNeuron, 5, -i);
+                    ComponentFactory.SetNeuron(component, new NeuronParameters(weights, (float)Math.Round(0.5 + random.NextDouble(), 2),
+                        (float)Math.Round(random.NextDouble(), 2), random.Next(2) == 0 ? 0 : -0.25f, random.Next(0, 4)));
+                }
+                else if (roll < 0.55)
+                {
+                    int inputs = random.Next(1, 6);
+                    var weights = new float[inputs];
+                    for (int k = 0; k < inputs; k++)
+                        weights[k] = (float)Math.Round(random.NextDouble() * 2 - 1, 2);
+                    component = ComponentFactory.Create(ComponentKind.Neuron, 5, -i);
+                    ComponentFactory.SetNeuron(component, new NeuronParameters(weights, (float)Math.Round(random.NextDouble() - 0.25, 2)));
+                }
+                else if (roll < 0.65)
+                {
+                    component = ComponentFactory.Create(ComponentKind.NeuralBlock, 5, -i);
+                    ComponentFactory.SetNetwork(component, networks[random.Next(networks.Count)]);
+                }
+                else
+                {
+                    var kind = RandomKinds[random.Next(RandomKinds.Length)];
+                    component = ComponentFactory.Create(kind, 5, -i, clockHalfPeriod: random.Next(2, 20));
+                }
+                circuit.AddComponent(component);
+                list.Add(component);
+                outputs.Add(component);
+            }
+
+            foreach (var component in list)
+            {
+                for (int pin = 0; pin < circuit.GetInputCount(component); pin++)
+                {
+                    if (random.NextDouble() < 0.05)
+                        continue;
+                    var source = outputs[random.Next(outputs.Count)];
+                    int outPin = random.Next(circuit.GetOutputCount(source));
+                    circuit.Connect(new PinRef(source.Id, outPin), new PinRef(component.Id, pin));
+                }
+            }
+            return circuit;
+        }
+
+        /// <summary>
         /// Many independent ripple-carry adders: realistic combinational logic that settles after each input change.
         /// </summary>
         public static Circuit AdderBank(int adders, int bits)

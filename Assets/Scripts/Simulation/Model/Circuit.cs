@@ -75,6 +75,8 @@ namespace LogicSim.Simulation
         {
             if (component.Kind == ComponentKind.Subcircuit)
                 return Library.TryGet(component.SubcircuitId, out var def) ? def.InputComponentIds.Count : 0;
+            if (component.Kind == ComponentKind.NeuralBlock)
+                return component.Network?.InputCount ?? 0;
             var spec = component.Spec;
             return spec.HasVariableInputs ? component.InputCount : spec.DefaultInputs;
         }
@@ -83,6 +85,8 @@ namespace LogicSim.Simulation
         {
             if (component.Kind == ComponentKind.Subcircuit)
                 return Library.TryGet(component.SubcircuitId, out var def) ? def.OutputComponentIds.Count : 0;
+            if (component.Kind == ComponentKind.NeuralBlock)
+                return component.Network?.OutputCount ?? 0;
             return component.Spec.OutputCount;
         }
 
@@ -222,6 +226,15 @@ namespace LogicSim.Simulation
                         throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
                 }
             }
+            if (component.Kind == ComponentKind.NeuralBlock && properties.Network != null)
+            {
+                for (int pin = properties.Network.InputCount; pin < GetInputCount(component); pin++)
+                    if (GetWireInto(id, pin) != null)
+                        throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
+                for (int pin = properties.Network.OutputCount; pin < GetOutputCount(component); pin++)
+                    if (GetWiresFrom(id, pin).Any())
+                        throw new CircuitException($"Disconnect output {pin} of {component} before removing it");
+            }
 
             var before = component.GetProperties();
             component.ApplyProperties(properties);
@@ -231,7 +244,9 @@ namespace LogicSim.Simulation
 
             bool structural = before.InputCount != after.InputCount
                 || before.ClockHalfPeriod != after.ClockHalfPeriod
-                || (component.Kind == ComponentKind.Constant && before.Value != after.Value);
+                || (component.Kind == ComponentKind.Constant && before.Value != after.Value)
+                || !Equals(before.Neuron, after.Neuron)
+                || !Equals(before.Network, after.Network);
 
             ComponentPropertiesChanged?.Invoke(component);
             if (before.Value != after.Value && spec.IsInterfaceInput)
@@ -274,6 +289,7 @@ namespace LogicSim.Simulation
                 component.InputCount = spec.DefaultInputs;
             else
                 component.InputCount = Math.Max(spec.MinInputs, Math.Min(spec.MaxInputs, component.InputCount));
+            component.NormalizeNeuralState();
         }
 
         #endregion

@@ -16,6 +16,11 @@ namespace LogicSim.Simulation
 
         /// <summary>Unsigned value of all input pins, pin 0 being the least significant bit.</summary>
         int GetInputBits(CircuitComponent component);
+
+        /// <summary>
+        /// Spiking neuron: membrane potential. Perceptron: weighted sum of the high inputs. False for other components.
+        /// </summary>
+        bool TryGetNeuronPotential(CircuitComponent component, out float potential);
     }
 
     /// <summary>Shared implementation of the derived queries.</summary>
@@ -25,6 +30,23 @@ namespace LogicSim.Simulation
 
         public abstract bool GetOutputValue(int componentId, int pin);
         public abstract bool GetInputPinValue(int componentId, int pin);
+
+        /// <summary>Potential of the spiking neuron with this component id, if the netlist has it.</summary>
+        protected abstract bool TryGetSpikingPotential(int componentId, out float potential);
+
+        public bool TryGetNeuronPotential(CircuitComponent component, out float potential)
+        {
+            potential = 0;
+            if (component.Kind == ComponentKind.SpikingNeuron)
+                return TryGetSpikingPotential(component.Id, out potential);
+            if (component.Kind != ComponentKind.Neuron || component.Neuron == null)
+                return false;
+            var weights = component.Neuron.Weights;
+            for (int pin = 0; pin < weights.Count; pin++)
+                if (GetInputPinValue(component.Id, pin))
+                    potential += weights[pin];
+            return true;
+        }
 
         public bool GetWireValue(Wire wire) => GetOutputValue(wire.From.ComponentId, wire.From.Pin);
 
@@ -100,6 +122,16 @@ namespace LogicSim.Simulation
         {
             var scope = Scope;
             return scope != null && _session.Engine.GetNet(_session.Compiled.GetInputNet(scope, componentId, pin));
+        }
+
+        protected override bool TryGetSpikingPotential(int componentId, out float potential)
+        {
+            potential = 0;
+            var scope = Scope;
+            if (scope == null || !scope.TryGetNeuron(componentId, out int neuron))
+                return false;
+            potential = _session.Engine.GetNeuronPotential(neuron);
+            return true;
         }
     }
 }

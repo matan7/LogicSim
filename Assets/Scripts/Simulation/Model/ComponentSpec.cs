@@ -105,6 +105,18 @@ namespace LogicSim.Simulation
                 new ComponentSpec(ComponentKind.PinIn, "Input pin", ComponentCategory.Subcircuit, "Subcircuit input. At the top level it behaves like an externally driven input.", 0, 0, 0, null, output, isInterfaceInput: true),
                 new ComponentSpec(ComponentKind.PinOut, "Output pin", ComponentCategory.Subcircuit, "Subcircuit output. At the top level it behaves like a probe.", 1, 1, 1, new[] { "in" }, Array.Empty<string>(), isInterfaceOutput: true),
                 new ComponentSpec(ComponentKind.Subcircuit, "Subcircuit", ComponentCategory.Subcircuit, "Instance of a custom circuit. Pins come from its definition.", 0, 0, 0, null, Array.Empty<string>()),
+
+                new ComponentSpec(ComponentKind.Neuron, "Neuron", ComponentCategory.Neural,
+                    "Perceptron: 1 when the weighted sum of its inputs reaches the threshold. Properties: weights, threshold.",
+                    1, NeuronParameters.MaxInputs, 2, null, output),
+                new ComponentSpec(ComponentKind.SpikingNeuron, "Spiking neuron", ComponentCategory.Neural,
+                    "Leaky integrate-and-fire neuron: high inputs add their weight to a potential that leaks every tick; " +
+                    "reaching the threshold emits a one-tick spike, resets the potential and ignores inputs for 'refractory' ticks.",
+                    1, NeuronParameters.MaxInputs, 2, null, output),
+                new ComponentSpec(ComponentKind.NeuralBlock, "Neural block", ComponentCategory.Neural,
+                    "Small neural network (MLP) on binary inputs. Pins come from its layers; it is compiled into lookup tables, " +
+                    "so it costs one gate per output. Train it from a truth table or another IC.",
+                    0, 0, 0, null, new[] { "out0" }),
             };
 
             var dict = new Dictionary<ComponentKind, ComponentSpec>();

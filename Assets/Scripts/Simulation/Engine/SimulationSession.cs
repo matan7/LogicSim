@@ -92,6 +92,25 @@ namespace LogicSim.Simulation
 
         public bool GetWireValue(Wire wire) => GetOutputValue(wire.From.ComponentId, wire.From.Pin);
 
+        public bool TryGetNeuronPotential(CircuitComponent component, out float potential)
+        {
+            potential = 0;
+            if (component.Kind == ComponentKind.SpikingNeuron)
+            {
+                if (Compiled?.RootScope == null || !Compiled.RootScope.TryGetNeuron(component.Id, out int neuron))
+                    return false;
+                potential = Engine.GetNeuronPotential(neuron);
+                return true;
+            }
+            if (component.Kind != ComponentKind.Neuron || component.Neuron == null)
+                return false;
+            var weights = component.Neuron.Weights;
+            for (int pin = 0; pin < weights.Count; pin++)
+                if (GetInputPinValue(component.Id, pin))
+                    potential += weights[pin];
+            return true;
+        }
+
         /// <summary>Value shown by a component: input pin 0 for sinks, otherwise output pin 0.</summary>
         public bool GetDisplayValue(CircuitComponent component)
         {

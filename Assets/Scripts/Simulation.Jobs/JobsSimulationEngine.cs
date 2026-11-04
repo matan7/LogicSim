@@ -35,6 +35,9 @@ namespace LogicSim.Simulation.Jobs
         private NativeArray<byte> _stageValue;
         private NativeArray<KernelStatus> _status;
         private NativeArray<byte> _sweepChanged;
+        private NativeArray<float> _neuronV;
+        private NativeArray<int> _neuronCounter;
+        private NativeArray<int> _requeue;
 
         private JobHandle _handle;
         private bool _running;
@@ -93,7 +96,11 @@ namespace LogicSim.Simulation.Jobs
                 Out1 = Copy(circuit.Out1),
                 FanoutStart = Copy(circuit.FanoutStart),
                 FanoutGates = Copy(circuit.FanoutGates),
-                ClockGates = Copy(circuit.ClockGates)
+                ClockGates = Copy(circuit.ClockGates),
+                NeuronCount = circuit.NeuronCount,
+                Weights = Copy(circuit.Weights),
+                NeuronParams = Copy(circuit.NeuronParams),
+                Lut = Copy(circuit.Lut)
             };
 
             int gates = circuit.GateCount;
@@ -108,6 +115,9 @@ namespace LogicSim.Simulation.Jobs
             _stageValue = new NativeArray<byte>(Math.Max(1, gates * 2), Allocator.Persistent);
             _status = new NativeArray<KernelStatus>(1, Allocator.Persistent);
             _sweepChanged = new NativeArray<byte>(1, Allocator.Persistent);
+            _neuronV = new NativeArray<float>(Math.Max(1, circuit.NeuronCount), Allocator.Persistent);
+            _neuronCounter = new NativeArray<int>(Math.Max(1, circuit.NeuronCount), Allocator.Persistent);
+            _requeue = new NativeArray<int>(Math.Max(1, gates), Allocator.Persistent);
             Reset();
         }
 
@@ -117,6 +127,8 @@ namespace LogicSim.Simulation.Jobs
             Complete();
             Clear(_values);
             Clear(_gateState);
+            Clear(_neuronV);
+            Clear(_neuronCounter);
             for (int i = 0; i < _circuit.InputSlotCount; i++)
                 _inputs[i] = _circuit.InitialInputs[i];
             for (int i = 0; i < _stamp.Length; i++)
@@ -160,6 +172,14 @@ namespace LogicSim.Simulation.Jobs
             if (net < 0 || net >= _values.Length)
                 return false;
             return _values[net] != 0;
+        }
+
+        public float GetNeuronPotential(int neuron)
+        {
+            Complete();
+            if (_circuit == null || neuron < 0 || neuron >= _circuit.NeuronCount)
+                return 0;
+            return _neuronV[neuron];
         }
 
         public void Schedule(long ticks)
@@ -243,6 +263,9 @@ namespace LogicSim.Simulation.Jobs
                 NextActive = _nextActive,
                 StageNet = _stageNet,
                 StageValue = _stageValue,
+                NeuronV = _neuronV,
+                NeuronCounter = _neuronCounter,
+                Requeue = _requeue,
                 Status = _status,
                 Ticks = ticks,
                 StopWhenStable = stopWhenStable,
@@ -278,6 +301,8 @@ namespace LogicSim.Simulation.Jobs
                     Next = next,
                     GateState = _gateState,
                     Changed = _sweepChanged,
+                    NeuronV = _neuronV,
+                    NeuronCounter = _neuronCounter,
                     ChunkSize = chunkSize,
                     TickIndex = (int)k,
                     Tick = tick + k
@@ -335,6 +360,9 @@ namespace LogicSim.Simulation.Jobs
             d.NextActive = (int*)_nextActive.GetUnsafePtr();
             d.StageNet = (int*)_stageNet.GetUnsafePtr();
             d.StageValue = (byte*)_stageValue.GetUnsafePtr();
+            d.NeuronV = (float*)_neuronV.GetUnsafePtr();
+            d.NeuronCounter = (int*)_neuronCounter.GetUnsafePtr();
+            d.Requeue = (int*)_requeue.GetUnsafePtr();
             return d;
         }
 
@@ -370,6 +398,12 @@ namespace LogicSim.Simulation.Jobs
             _netlist.FanoutStart.Dispose();
             _netlist.FanoutGates.Dispose();
             _netlist.ClockGates.Dispose();
+            _netlist.Weights.Dispose();
+            _netlist.NeuronParams.Dispose();
+            _netlist.Lut.Dispose();
+            _neuronV.Dispose();
+            _neuronCounter.Dispose();
+            _requeue.Dispose();
             _inputs.Dispose();
             _gateState.Dispose();
             _values.Dispose();

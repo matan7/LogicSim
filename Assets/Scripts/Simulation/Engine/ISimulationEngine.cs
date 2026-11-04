@@ -48,6 +48,9 @@ namespace LogicSim.Simulation
 
         bool GetNet(int net);
 
+        /// <summary>Membrane potential of a spiking neuron (index from the compiled circuit).</summary>
+        float GetNeuronPotential(int neuron);
+
         /// <summary>Starts simulating <paramref name="ticks"/> ticks. May run asynchronously.</summary>
         void Schedule(long ticks);
 

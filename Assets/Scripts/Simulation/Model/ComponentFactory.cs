@@ -1,3 +1,5 @@
+using System;
+
 namespace LogicSim.Simulation
 {
     /// <summary>Creates detached components (not yet part of a circuit) with their initial properties.</summary>
@@ -21,7 +23,25 @@ namespace LogicSim.Simulation
             if (value.HasValue)
                 component.Value = value.Value;
             component.Rotation = ((rotation % 4) + 4) % 4;
+            component.NormalizeNeuralState();
             return component;
+        }
+
+        /// <summary>Sets the neuron settings of a detached Neuron/SpikingNeuron (the input count follows the weights).</summary>
+        public static void SetNeuron(CircuitComponent component, NeuronParameters neuron)
+        {
+            if (!component.IsNeuron)
+                throw new CircuitException($"{component} is not a neuron");
+            component.InputCount = neuron.Weights.Count;
+            component.Neuron = neuron;
+        }
+
+        /// <summary>Sets the network of a detached NeuralBlock.</summary>
+        public static void SetNetwork(CircuitComponent component, NeuralNetwork network)
+        {
+            if (component.Kind != ComponentKind.NeuralBlock)
+                throw new CircuitException($"{component} is not a neural block");
+            component.Network = network ?? throw new ArgumentNullException(nameof(network));
         }
 
         public static CircuitComponent CreateSubcircuit(string subcircuitId, float x, float y, string label = null)

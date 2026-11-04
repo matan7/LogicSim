@@ -33,7 +33,12 @@ namespace LogicSim.Simulation
         // Subcircuit interface and instances
         PinIn,
         PinOut,
-        Subcircuit
+        Subcircuit,
+
+        // Neurons
+        Neuron,
+        SpikingNeuron,
+        NeuralBlock
     }
 
     public enum ComponentCategory
@@ -42,6 +47,7 @@ namespace LogicSim.Simulation
         Input,
         Output,
         Sequential,
-        Subcircuit
+        Subcircuit,
+        Neural
     }
 }

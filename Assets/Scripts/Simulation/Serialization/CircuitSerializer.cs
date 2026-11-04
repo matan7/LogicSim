@@ -65,6 +65,25 @@ namespace LogicSim.Simulation
             public int? HalfPeriod;
             public bool? Value;
             public string Subcircuit;
+            public NeuronDto Neuron;
+            public NetworkDto Network;
+        }
+
+        private sealed class NeuronDto
+        {
+            public List<float> Weights;
+            public float Threshold;
+            public float? Leak;
+            public float? Reset;
+            public int? Refractory;
+        }
+
+        private sealed class NetworkDto
+        {
+            public List<int> Layers;
+            public string Activation;
+            public List<List<float>> Weights;
+            public List<List<float>> Biases;
         }
 
         private sealed class WireDto
@@ -246,8 +265,49 @@ namespace LogicSim.Simulation
                 Inputs = spec.HasVariableInputs ? c.InputCount : (int?)null,
                 HalfPeriod = c.Kind == ComponentKind.Clock ? c.ClockHalfPeriod : (int?)null,
                 Value = c.Kind == ComponentKind.Switch || c.Kind == ComponentKind.Constant || c.Kind == ComponentKind.PinIn ? c.Value : (bool?)null,
-                Subcircuit = c.Kind == ComponentKind.Subcircuit ? c.SubcircuitId : null
+                Subcircuit = c.Kind == ComponentKind.Subcircuit ? c.SubcircuitId : null,
+                Neuron = c.IsNeuron && c.Neuron != null ? ToDto(c.Neuron, c.Kind == ComponentKind.SpikingNeuron) : null,
+                Network = c.Kind == ComponentKind.NeuralBlock && c.Network != null ? ToDto(c.Network) : null
             };
+        }
+
+        private static NeuronDto ToDto(NeuronParameters neuron, bool spiking)
+        {
+            return new NeuronDto
+            {
+                Weights = neuron.Weights.ToList(),
+                Threshold = neuron.Threshold,
+                Leak = spiking ? neuron.Leak : (float?)null,
+                Reset = spiking ? neuron.Reset : (float?)null,
+                Refractory = spiking ? neuron.Refractory : (int?)null
+            };
+        }
+
+        private static NetworkDto ToDto(NeuralNetwork network)
+        {
+            return new NetworkDto
+            {
+                Layers = network.LayerSizes.ToList(),
+                Activation = network.Activation.ToString(),
+                Weights = Enumerable.Range(0, network.ConnectionCount).Select(l => network.GetWeights(l).ToList()).ToList(),
+                Biases = Enumerable.Range(0, network.ConnectionCount).Select(l => network.GetBiases(l).ToList()).ToList()
+            };
+        }
+
+        private static NeuronParameters FromDto(NeuronDto dto, ComponentKind kind)
+        {
+            var defaults = NeuronParameters.Default(kind, Math.Max(1, dto.Weights?.Count ?? 1));
+            return new NeuronParameters(dto.Weights != null && dto.Weights.Count > 0 ? dto.Weights : defaults.Weights,
+                dto.Threshold, dto.Leak ?? defaults.Leak, dto.Reset ?? defaults.Reset, dto.Refractory ?? defaults.Refractory);
+        }
+
+        private static NeuralNetwork FromDto(NetworkDto dto)
+        {
+            if (!Enum.TryParse(dto.Activation ?? "Sigmoid", true, out NeuralActivation activation))
+                activation = NeuralActivation.Sigmoid;
+            return new NeuralNetwork(dto.Layers ?? new List<int>(), activation,
+                (dto.Weights ?? new List<List<float>>()).Select(l => (IEnumerable<float>)l),
+                (dto.Biases ?? new List<List<float>>()).Select(l => (IEnumerable<float>)l));
         }
 
         private static List<CircuitComponent> FromDto(List<ComponentDto> dtos, List<string> warnings)
@@ -271,6 +331,18 @@ namespace LogicSim.Simulation
                 };
                 if (dto.Inputs.HasValue)
                     component.InputCount = dto.Inputs.Value;
+                try
+                {
+                    if (dto.Neuron != null && component.IsNeuron)
+                        ComponentFactory.SetNeuron(component, FromDto(dto.Neuron, kind));
+                    if (dto.Network != null && kind == ComponentKind.NeuralBlock)
+                        ComponentFactory.SetNetwork(component, FromDto(dto.Network));
+                }
+                catch (CircuitException exception)
+                {
+                    warnings.Add($"Component {dto.Id}: {exception.Message}; default settings used");
+                }
+                component.NormalizeNeuralState();
                 if (kind == ComponentKind.Subcircuit && string.IsNullOrEmpty(component.SubcircuitId))
                 {
                     warnings.Add($"Subcircuit component {dto.Id} without definition skipped");
@@ -317,6 +389,14 @@ namespace LogicSim.Simulation
                 case "hex":
                 case "display": kind = ComponentKind.HexDisplay; return true;
                 case "ic": kind = ComponentKind.Subcircuit; return true;
+                case "perceptron": kind = ComponentKind.Neuron; return true;
+                case "lif":
+                case "spiking":
+                case "spike": kind = ComponentKind.SpikingNeuron; return true;
+                case "mlp":
+                case "nn":
+                case "network":
+                case "neuralnetwork": kind = ComponentKind.NeuralBlock; return true;
             }
             return false;
         }

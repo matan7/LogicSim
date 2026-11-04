@@ -42,6 +42,43 @@ namespace LogicSim.JobsTests
             Assert.That(Unity.Collections.Tracker.Allocated, Is.EqualTo(0), "all native arrays disposed");
         }
 
+        [TestCase(SimulationMode.EventDriven, 11)]
+        [TestCase(SimulationMode.FullSweep, 12)]
+        [TestCase(SimulationMode.Auto, 13)]
+        public void JobsEngine_MatchesManagedEngine_WithNeurons(SimulationMode mode, int seed)
+        {
+            var circuit = BenchmarkCircuits.RandomNeural(seed, components: 300, switches: 6);
+            var compiled = CircuitCompiler.Compile(circuit);
+            Assert.That(compiled.NeuronCount, Is.GreaterThan(0));
+            var random = new System.Random(seed);
+
+            using (var reference = new ManagedSimulationEngine { Mode = SimulationMode.EventDriven })
+            using (var jobs = new JobsSimulationEngine { Mode = mode, ParallelSweepMinGates = 50, ParallelSweepActivity = 0.05f, ChunkSize = 64 })
+            {
+                reference.Load(compiled);
+                jobs.Load(compiled);
+                for (int step = 0; step < 120; step++)
+                {
+                    if (random.NextDouble() < 0.3)
+                    {
+                        int slot = random.Next(compiled.InputSlotCount);
+                        bool value = random.Next(2) == 1;
+                        reference.SetInput(slot, value);
+                        jobs.SetInput(slot, value);
+                    }
+                    long ticks = random.Next(1, 6);
+                    reference.Run(ticks);
+                    jobs.Schedule(ticks);
+                    jobs.Complete();
+                    for (int net = 0; net < compiled.NetCount; net++)
+                        Assert.That(jobs.GetNet(net), Is.EqualTo(reference.GetNet(net)), $"net {net} at step {step} ({jobs.ActiveMode})");
+                    for (int n = 0; n < compiled.NeuronCount; n++)
+                        Assert.That(jobs.GetNeuronPotential(n), Is.EqualTo(reference.GetNeuronPotential(n)), $"neuron {n} at step {step}");
+                }
+            }
+            Assert.That(Unity.Collections.Tracker.Allocated, Is.EqualTo(0), "all native arrays disposed");
+        }
+
         [Test]
         public void Settle_MatchesManagedEngine_OnAdderBank()
         {

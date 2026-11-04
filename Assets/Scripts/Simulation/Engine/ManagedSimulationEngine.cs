@@ -20,6 +20,9 @@ namespace LogicSim.Simulation
         private int[] _nextActive;
         private int[] _stageNet;
         private byte[] _stageValue;
+        private float[] _neuronV;
+        private int[] _neuronCounter;
+        private int[] _requeue;
 
         private readonly List<GCHandle> _handles = new List<GCHandle>();
         private KernelData _data;
@@ -57,6 +60,9 @@ namespace LogicSim.Simulation
             _nextActive = new int[gates];
             _stageNet = new int[gates * 2];
             _stageValue = new byte[gates * 2];
+            _neuronV = new float[Math.Max(1, circuit.NeuronCount)];
+            _neuronCounter = new int[Math.Max(1, circuit.NeuronCount)];
+            _requeue = new int[Math.Max(1, gates)];
 
             _data = new KernelData
             {
@@ -72,6 +78,13 @@ namespace LogicSim.Simulation
                 FanoutStart = (int*)Pin(circuit.FanoutStart),
                 FanoutGates = (int*)Pin(circuit.FanoutGates),
                 ClockGates = (int*)Pin(circuit.ClockGates),
+                NeuronCount = circuit.NeuronCount,
+                Weights = (float*)Pin(circuit.Weights),
+                NeuronParams = (float*)Pin(circuit.NeuronParams),
+                Lut = (ulong*)Pin(circuit.Lut),
+                NeuronV = (float*)Pin(_neuronV),
+                NeuronCounter = (int*)Pin(_neuronCounter),
+                Requeue = (int*)Pin(_requeue),
                 Inputs = (byte*)Pin(_inputs),
                 GateState = (byte*)Pin(_gateState),
                 Values = (byte*)Pin(_values),
@@ -91,6 +104,8 @@ namespace LogicSim.Simulation
             Array.Clear(_values, 0, _values.Length);
             Array.Clear(_sweepBuffer, 0, _sweepBuffer.Length);
             Array.Clear(_gateState, 0, _gateState.Length);
+            Array.Clear(_neuronV, 0, _neuronV.Length);
+            Array.Clear(_neuronCounter, 0, _neuronCounter.Length);
             Array.Copy(_circuit.InitialInputs, _inputs, _inputs.Length);
             for (int i = 0; i < _stamp.Length; i++)
                 _stamp[i] = -1;
@@ -126,6 +141,13 @@ namespace LogicSim.Simulation
             if (net < 0 || net >= _values.Length)
                 return false;
             return _values[net] != 0;
+        }
+
+        public float GetNeuronPotential(int neuron)
+        {
+            if (_neuronV == null || neuron < 0 || neuron >= _circuit.NeuronCount)
+                return 0;
+            return _neuronV[neuron];
         }
 
         public void Schedule(long ticks)

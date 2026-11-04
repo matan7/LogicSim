@@ -21,10 +21,20 @@ namespace LogicSim.Simulation
         public int* FanoutGates;
         public int* ClockGates;
 
+        // Neurons (read-only)
+        public int NeuronCount;
+        public float* Weights;
+        public float* NeuronParams;
+        public ulong* Lut;
+
         // State
         public byte* Inputs;
         public byte* GateState;
         public byte* Values;
+
+        /// <summary>Membrane potential and remaining refractory ticks of every spiking neuron.</summary>
+        public float* NeuronV;
+        public int* NeuronCounter;
 
         // Event-driven work buffers (each GateCount long, Stage buffers 2 * GateCount)
         public int* Active;
@@ -32,6 +42,9 @@ namespace LogicSim.Simulation
         public long* Stamp;
         public int* StageNet;
         public byte* StageValue;
+
+        /// <summary>Spiking neurons that have to be evaluated again next tick (GateCount long).</summary>
+        public int* Requeue;
     }
 
     /// <summary>Counters shared between the kernel and its host.</summary>
@@ -106,6 +119,27 @@ namespace LogicSim.Simulation
                     out0 = EvaluateFlipFlop(ref d, current, gate, start);
                     out1 = (byte)(out0 ^ 1);
                     return;
+                case (byte)OpCode.Perceptron:
+                {
+                    float sum = 0;
+                    for (int i = start; i < end; i++)
+                        if (current[d.InNets[i]] != 0)
+                            sum += d.Weights[i];
+                    out0 = sum >= d.NeuronParams[d.Param[gate] * 4] ? (byte)1 : (byte)0;
+                    return;
+                }
+                case (byte)OpCode.Spiking:
+                    out0 = EvaluateSpiking(ref d, current, gate, start, end);
+                    return;
+                case (byte)OpCode.Lut:
+                {
+                    int index = 0;
+                    for (int i = start; i < end; i++)
+                        index |= current[d.InNets[i]] << (i - start);
+                    ulong word = d.Lut[d.Param[gate] + (index >> 6)];
+                    out0 = (byte)((word >> (index & 63)) & 1);
+                    return;
+                }
                 default:
                     out0 = 0;
                     return;
@@ -148,6 +182,56 @@ namespace LogicSim.Simulation
 
             d.GateState[gate] = (byte)(q | (clock << 1));
             return q;
+        }
+
+        /// <summary>
+        /// Leaky integrate-and-fire step: V = V * leak + sum of the weights of high inputs; at the threshold the neuron
+        /// spikes (output 1 for this tick), V drops to the reset value and inputs are ignored for the refractory period.
+        /// </summary>
+        private static byte EvaluateSpiking(ref KernelData d, byte* current, int gate, int start, int end)
+        {
+            int n = d.Param[gate];
+            float* p = d.NeuronParams + n * 4;
+            float v = d.NeuronV[n];
+            int refractory = d.NeuronCounter[n];
+            byte spike = 0;
+            if (refractory > 0)
+            {
+                refractory--;
+            }
+            else
+            {
+                float input = 0;
+                for (int i = start; i < end; i++)
+                    if (current[d.InNets[i]] != 0)
+                        input += d.Weights[i];
+                v = v * p[1] + input;
+                if (v >= p[0])
+                {
+                    spike = 1;
+                    v = p[2];
+                    refractory = (int)p[3];
+                }
+            }
+            // Snap tiny potentials to rest so an idle neuron stops needing evaluation.
+            if (v < 1e-4f && v > -1e-4f)
+                v = 0;
+            d.NeuronV[n] = v;
+            d.NeuronCounter[n] = refractory;
+            return spike;
+        }
+
+        /// <summary>A spiking neuron changes over time on its own while charged, refractory, spiking or driven.</summary>
+        private static bool NeedsRequeue(ref KernelData d, byte* current, int gate, byte output)
+        {
+            int n = d.Param[gate];
+            if (output != 0 || d.NeuronV[n] != 0 || d.NeuronCounter[n] > 0)
+                return true;
+            int end = d.InStart[gate + 1];
+            for (int i = d.InStart[gate]; i < end; i++)
+                if (current[d.InNets[i]] != 0)
+                    return true;
+            return false;
         }
 
         /// <summary>
@@ -232,11 +316,14 @@ namespace LogicSim.Simulation
 
                 // Evaluate against the current values, stage the changes, then apply them all at once.
                 int staged = 0;
+                int requeued = 0;
                 int activeCount = status.ActiveCount;
                 for (int i = 0; i < activeCount; i++)
                 {
                     int gate = d.Active[i];
                     Evaluate(ref d, d.Values, gate, tick, out byte o0, out byte o1);
+                    if (d.Op[gate] == (byte)OpCode.Spiking && NeedsRequeue(ref d, d.Values, gate, o0))
+                        d.Requeue[requeued++] = gate;
                     int n0 = d.Out0[gate];
                     if (n0 >= 0 && d.Values[n0] != o0)
                     {
@@ -268,6 +355,15 @@ namespace LogicSim.Simulation
                             d.Stamp[gate] = nextTick;
                             d.NextActive[nextCount++] = gate;
                         }
+                    }
+                }
+                for (int r = 0; r < requeued; r++)
+                {
+                    int gate = d.Requeue[r];
+                    if (d.Stamp[gate] != nextTick)
+                    {
+                        d.Stamp[gate] = nextTick;
+                        d.NextActive[nextCount++] = gate;
                     }
                 }
 

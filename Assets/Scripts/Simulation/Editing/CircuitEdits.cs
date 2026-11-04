@@ -297,14 +297,32 @@ namespace LogicSim.Simulation
         public void Apply()
         {
             _removedWires.Clear();
-            // Inputs that disappear must be disconnected first.
-            for (int pin = _after.InputCount; pin < _before.InputCount; pin++)
+            var component = _circuit.GetComponent(_id);
+            // Pins that disappear must be disconnected first.
+            int inputsAfter = component.Kind == ComponentKind.NeuralBlock ? (_after.Network ?? component.Network).InputCount : _after.InputCount;
+            int inputsBefore = _circuit.GetInputCount(component);
+            if (component.Spec.HasVariableInputs || component.Kind == ComponentKind.NeuralBlock)
             {
-                var wire = _circuit.GetWireInto(_id, pin);
-                if (wire != null && _circuit.GetComponent(_id).Spec.HasVariableInputs)
+                for (int pin = inputsAfter; pin < inputsBefore; pin++)
                 {
-                    _circuit.RemoveWire(wire.Id);
-                    _removedWires.Add(wire);
+                    var wire = _circuit.GetWireInto(_id, pin);
+                    if (wire != null)
+                    {
+                        _circuit.RemoveWire(wire.Id);
+                        _removedWires.Add(wire);
+                    }
+                }
+            }
+            if (component.Kind == ComponentKind.NeuralBlock)
+            {
+                int outputsAfter = (_after.Network ?? component.Network).OutputCount;
+                for (int pin = outputsAfter; pin < _circuit.GetOutputCount(component); pin++)
+                {
+                    foreach (var wire in _circuit.GetWiresFrom(_id, pin).ToList())
+                    {
+                        _circuit.RemoveWire(wire.Id);
+                        _removedWires.Add(wire);
+                    }
                 }
             }
             _circuit.SetProperties(_id, _after);

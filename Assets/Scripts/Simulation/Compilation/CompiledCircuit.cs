@@ -18,7 +18,16 @@ namespace LogicSim.Simulation
         Constant = 10,
         DFlipFlop = 11,
         TFlipFlop = 12,
-        JKFlipFlop = 13
+        JKFlipFlop = 13,
+
+        /// <summary>Weighted sum of the inputs compared with a threshold.</summary>
+        Perceptron = 14,
+
+        /// <summary>Leaky integrate-and-fire neuron with state in <see cref="CompiledCircuit.NeuronParams"/>.</summary>
+        Spiking = 15,
+
+        /// <summary>Table lookup: the inputs form an index into <see cref="CompiledCircuit.Lut"/> (neural blocks).</summary>
+        Lut = 16
     }
 
     public enum DiagnosticSeverity
@@ -83,6 +92,17 @@ namespace LogicSim.Simulation
 
         /// <summary>Initial values of the input slots (switch states).</summary>
         public byte[] InitialInputs;
+
+        /// <summary>Neuron weight of every input connection (parallel to <see cref="InNets"/>; length 1 without neurons).</summary>
+        public float[] Weights;
+
+        /// <summary>Four values per neuron: threshold, leak, reset potential, refractory ticks.</summary>
+        public float[] NeuronParams;
+
+        public int NeuronCount;
+
+        /// <summary>Lookup tables of neural blocks; a Lut gate's Param is its first word.</summary>
+        public ulong[] Lut;
 
         // Mapping of the top-level circuit to nets and slots.
         public readonly Dictionary<int, int[]> OutputNets = new Dictionary<int, int[]>();
@@ -180,6 +200,11 @@ namespace LogicSim.Simulation
         internal readonly Dictionary<int, CompiledScope> Children = new Dictionary<int, CompiledScope>();
         internal Dictionary<int, int[]> PrimitiveOutputs = new Dictionary<int, int[]>();
         internal Dictionary<(int component, int pin, bool input), int> Memo;
+
+        /// <summary>Neuron index of each Neuron/SpikingNeuron in this scope.</summary>
+        internal readonly Dictionary<int, int> Neurons = new Dictionary<int, int>();
+
+        public bool TryGetNeuron(int componentId, out int neuron) => Neurons.TryGetValue(componentId, out neuron);
 
         internal CompiledScope(int index, Circuit circuit, CompiledScope parent, int instanceId, SubcircuitDefinition definition)
         {

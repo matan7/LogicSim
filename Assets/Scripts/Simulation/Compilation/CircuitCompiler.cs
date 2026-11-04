@@ -35,6 +35,8 @@ namespace LogicSim.Simulation
                 case ComponentKind.DFlipFlop: return OpCode.DFlipFlop;
                 case ComponentKind.TFlipFlop: return OpCode.TFlipFlop;
                 case ComponentKind.JKFlipFlop: return OpCode.JKFlipFlop;
+                case ComponentKind.Neuron: return OpCode.Perceptron;
+                case ComponentKind.SpikingNeuron: return OpCode.Spiking;
                 default: return null;
             }
         }
@@ -56,6 +58,11 @@ namespace LogicSim.Simulation
             private readonly List<int> _clockGates = new List<int>();
             private readonly List<int> _slotGates = new List<int>();
             private readonly List<byte> _initialInputs = new List<byte>();
+            private readonly List<float> _weights = new List<float>();
+            private readonly List<float> _neuronParams = new List<float>();
+            private readonly List<ulong> _lut = new List<ulong>();
+            private readonly Dictionary<NeuralNetwork, int> _lutOffsets = new Dictionary<NeuralNetwork, int>();
+            private int _neuronCount;
 
             public Builder(Circuit root)
             {
@@ -125,7 +132,7 @@ namespace LogicSim.Simulation
 
             private static bool IsPrimitive(CompiledScope scope, CircuitComponent component)
             {
-                if (GetOpCode(component.Kind).HasValue)
+                if (GetOpCode(component.Kind).HasValue || component.Kind == ComponentKind.NeuralBlock)
                     return true;
                 // Interface inputs are real inputs only at the top level; inside a subcircuit they alias the parent net.
                 return scope.IsRoot && component.Spec.IsInterfaceInput;
@@ -152,6 +159,11 @@ namespace LogicSim.Simulation
                 {
                     if (!scope.PrimitiveOutputs.TryGetValue(component.Id, out var outNets))
                         continue;
+                    if (component.Kind == ComponentKind.NeuralBlock)
+                    {
+                        EmitNeuralBlock(scope, component, outNets);
+                        continue;
+                    }
 
                     int gate = _op.Count;
                     OpCode op;
@@ -169,6 +181,11 @@ namespace LogicSim.Simulation
                         {
                             param = component.Value ? 1 : 0;
                         }
+                        else if (op == OpCode.Perceptron || op == OpCode.Spiking)
+                        {
+                            param = AddNeuron(component);
+                            scope.Neurons[component.Id] = param;
+                        }
                     }
                     else
                     {
@@ -183,10 +200,59 @@ namespace LogicSim.Simulation
                     _param.Add(param);
                     _inStart.Add(_inNets.Count);
                     int inputs = circuit.GetInputCount(component);
+                    if (op == OpCode.Perceptron || op == OpCode.Spiking)
+                        PadWeights();
                     for (int pin = 0; pin < inputs; pin++)
+                    {
                         _inNets.Add(_resolver.ResolveInput(scope, component.Id, pin));
+                        if (op == OpCode.Perceptron || op == OpCode.Spiking)
+                            _weights.Add(pin < component.Neuron.Weights.Count ? component.Neuron.Weights[pin] : 0f);
+                    }
                     _out0.Add(outNets.Length > 0 ? outNets[0] : -1);
                     _out1.Add(outNets.Length > 1 ? outNets[1] : -1);
+                }
+            }
+
+            private int AddNeuron(CircuitComponent component)
+            {
+                var neuron = component.Neuron ?? NeuronParameters.Default(component.Kind, component.InputCount);
+                _neuronParams.Add(neuron.Threshold);
+                _neuronParams.Add(neuron.Leak);
+                _neuronParams.Add(neuron.Reset);
+                _neuronParams.Add(neuron.Refractory);
+                return _neuronCount++;
+            }
+
+            /// <summary>Weights are stored parallel to the input nets once the first neuron appears.</summary>
+            private void PadWeights()
+            {
+                while (_weights.Count < _inNets.Count)
+                    _weights.Add(0f);
+            }
+
+            /// <summary>A neural block becomes one lookup gate per output; equal networks share their tables.</summary>
+            private void EmitNeuralBlock(CompiledScope scope, CircuitComponent component, int[] outNets)
+            {
+                var network = component.Network;
+                if (!_lutOffsets.TryGetValue(network, out int offset))
+                {
+                    offset = _lut.Count;
+                    _lut.AddRange(network.GetLut());
+                    _lutOffsets.Add(network, offset);
+                }
+                int inputs = scope.Circuit.GetInputCount(component);
+                var inputNets = new int[inputs];
+                for (int pin = 0; pin < inputs; pin++)
+                    inputNets[pin] = _resolver.ResolveInput(scope, component.Id, pin);
+                int words = network.LutWordsPerOutput;
+                for (int m = 0; m < outNets.Length; m++)
+                {
+                    _op.Add((byte)OpCode.Lut);
+                    _param.Add(offset + m * words);
+                    _inStart.Add(_inNets.Count);
+                    _inNets.AddRange(inputNets);
+                    _out0.Add(outNets[m]);
+                    _out1.Add(-1);
                 }
             }
 
@@ -229,6 +295,19 @@ namespace LogicSim.Simulation
                 r.InputSlotCount = _slotGates.Count;
                 r.InputSlotGate = _slotGates.ToArray();
                 r.InitialInputs = _initialInputs.ToArray();
+                if (_neuronCount > 0)
+                {
+                    PadWeights();
+                    r.Weights = _weights.ToArray();
+                    r.NeuronParams = _neuronParams.ToArray();
+                }
+                else
+                {
+                    r.Weights = new float[1];
+                    r.NeuronParams = new float[4];
+                }
+                r.NeuronCount = _neuronCount;
+                r.Lut = _lut.Count > 0 ? _lut.ToArray() : new ulong[1];
                 r.SourceVersion = _root.StructureVersion;
                 r.LibraryVersion = _root.Library.Version;
                 BuildFanout(r);

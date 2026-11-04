@@ -16,6 +16,7 @@ namespace LogicSim.McpServer
 Usage: logicsim-mcp [options]
 
   --http <port>     Serve MCP over HTTP at http://127.0.0.1:<port>/mcp instead of stdio
+  --token <secret>  With --http: require 'Authorization: Bearer <secret>' (default: $LOGICSIM_MCP_TOKEN)
   --dir <path>      Directory for saved circuits (default: ./circuits)
   --open <file>     Load a circuit file (*.lsim.json) at start-up
   --help            Show this help
@@ -28,6 +29,7 @@ Without --http the server speaks MCP over stdin/stdout, e.g. for Claude Desktop 
             int? httpPort = null;
             string directory = Path.Combine(Environment.CurrentDirectory, "circuits");
             string openFile = null;
+            string token = Environment.GetEnvironmentVariable("LOGICSIM_MCP_TOKEN");
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -35,6 +37,9 @@ Without --http the server speaks MCP over stdin/stdout, e.g. for Claude Desktop 
                 {
                     case "--http" when i + 1 < args.Length:
                         httpPort = int.Parse(args[++i]);
+                        break;
+                    case "--token" when i + 1 < args.Length:
+                        token = args[++i];
                         break;
                     case "--dir" when i + 1 < args.Length:
                         directory = Path.GetFullPath(args[++i]);
@@ -71,7 +76,7 @@ Without --http the server speaks MCP over stdin/stdout, e.g. for Claude Desktop 
 
             if (httpPort.HasValue)
             {
-                using var transport = new StreamableHttpTransport(httpPort.Value, body => Task.FromResult(Handle(body)));
+                using var transport = new StreamableHttpTransport(httpPort.Value, body => Task.FromResult(Handle(body))) { Token = token };
                 transport.Log += message => Console.Error.WriteLine(message);
                 transport.Start();
                 Console.Error.WriteLine("Press Ctrl+C to stop.");

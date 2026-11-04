@@ -49,10 +49,10 @@ namespace LogicSim.App
         {
             var settings = SettingsService.Settings;
             if (settings != null && settings.McpEnabled)
-                StartServer(settings.McpPort);
+                StartServer(settings.McpPort, settings.McpToken);
         }
 
-        public void StartServer(int port)
+        public void StartServer(int port, string token = null)
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             LastError = "MCP is not available in WebGL builds";
@@ -61,7 +61,7 @@ namespace LogicSim.App
             StopServer();
             try
             {
-                _transport = new StreamableHttpTransport(port, Enqueue);
+                _transport = new StreamableHttpTransport(port, Enqueue) { Token = token };
                 _transport.Log += message => Debug.Log("[LogicSim MCP] " + message);
                 _transport.Start();
                 LastError = null;

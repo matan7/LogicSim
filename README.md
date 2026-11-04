@@ -194,8 +194,10 @@ Example request an agent can send:
 }
 ```
 
-The MCP port and on/off switch are in `Settings.json` in the player's persistent data folder (`McpEnabled`,
-`McpPort`). The server is not available in WebGL builds.
+The MCP port, on/off switch and an optional token are in `Settings.json` in the player's persistent data folder
+(`McpEnabled`, `McpPort`, `McpToken`). With a token, clients must send `Authorization: Bearer <token>`, e.g.
+`claude mcp add --transport http logicsim http://127.0.0.1:8765/mcp --header "Authorization: Bearer <token>"`. The
+headless server takes `--token <secret>` or `LOGICSIM_MCP_TOKEN`. The server is not available in WebGL builds.
 
 ## Project layout
 
@@ -219,7 +221,7 @@ docs/UNITY_SESSION.md  checklist for verifying and continuing the work inside th
 ## Building and testing
 
 - **Unity:** open the project with Unity 6000.4. Burst is optional; without it, the Jobs backend runs as managed jobs.
-- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 85 core/MCP tests plus the Jobs
+- **Tests without Unity:** `dotnet test Headless/LogicSim.Headless.sln`. This covers 88 core/MCP tests plus the Jobs
   backend run against a functional stand-in of the Unity job API. The same EditMode tests appear in Unity's Test
   Runner.
 - **CI:** GitHub Actions builds and tests the headless solution on every push.

@@ -9,6 +9,7 @@ namespace LogicSim.Mcp
     /// <summary>
     /// MCP "Streamable HTTP" transport without server-initiated streams: POST /mcp carries JSON-RPC messages
     /// and gets a JSON response. Listens on the loopback interface only and rejects foreign browser origins.
+    /// With a <see cref="Token"/>, every request needs the header <c>Authorization: Bearer &lt;token&gt;</c>.
     /// </summary>
     public sealed class StreamableHttpTransport : IDisposable
     {
@@ -19,6 +20,9 @@ namespace LogicSim.Mcp
         public string Path { get; }
         public bool IsListening => _listener != null && _listener.IsListening;
         public string Endpoint => $"http://127.0.0.1:{Port}{Path}";
+
+        /// <summary>Optional shared secret; null or empty accepts every local client.</summary>
+        public string Token { get; set; }
 
         public event Action<string> Log;
 
@@ -92,6 +96,12 @@ namespace LogicSim.Mcp
                     await Respond(response, 403, "Forbidden origin").ConfigureAwait(false);
                     return;
                 }
+                if (!IsAuthorized(request.Headers["Authorization"]))
+                {
+                    response.AddHeader("WWW-Authenticate", "Bearer");
+                    await Respond(response, 401, "Missing or wrong bearer token").ConfigureAwait(false);
+                    return;
+                }
                 if (!string.Equals(request.Url.AbsolutePath.TrimEnd('/'), Path.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
                 {
                     await Respond(response, 404, "Not found; the MCP endpoint is " + Path).ConfigureAwait(false);
@@ -149,6 +159,27 @@ namespace LogicSim.Mcp
                     // The client went away.
                 }
             }
+        }
+
+        private bool IsAuthorized(string header)
+        {
+            var token = Token;
+            if (string.IsNullOrEmpty(token))
+                return true;
+            const string scheme = "Bearer ";
+            if (header == null || !header.StartsWith(scheme, StringComparison.OrdinalIgnoreCase))
+                return false;
+            return FixedTimeEquals(header.Substring(scheme.Length).Trim(), token);
+        }
+
+        private static bool FixedTimeEquals(string a, string b)
+        {
+            var x = Encoding.UTF8.GetBytes(a);
+            var y = Encoding.UTF8.GetBytes(b);
+            int difference = x.Length ^ y.Length;
+            for (int i = 0; i < Math.Min(x.Length, y.Length); i++)
+                difference |= x[i] ^ y[i];
+            return difference == 0;
         }
 
         private static bool IsAllowedOrigin(string origin)

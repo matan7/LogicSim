@@ -33,6 +33,8 @@ namespace Core.Settings
         // MCP server (Model Context Protocol) for AI agents
         public bool McpEnabled = true;
         public int McpPort = 8765;
+        // Optional bearer token; empty accepts every local client.
+        public string McpToken = "";
 
         // System
         public int UndoHistoryMoves = 100;

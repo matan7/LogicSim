@@ -12,7 +12,7 @@ decision.
   to this branch. Do not open a pull request unless the user asks.
 - Unity: 6000.4.1f1 (`ProjectSettings/ProjectVersion.txt`).
 - What exists: see `README.md`. The pure C# parts (`Assets/Scripts/Simulation`, `Assets/Scripts/Mcp`) are covered by
-  85 NUnit tests that pass with `dotnet test Headless/LogicSim.Headless.sln`. The Jobs backend has 9 parity tests
+  88 NUnit tests that pass with `dotnet test Headless/LogicSim.Headless.sln`. The Jobs backend has 9 parity tests
   against a stand-in of the Unity job API (`Headless/LogicSim.JobsTests`).
 - **Never run in Unity yet.** Everything under `Assets/Scripts/{Core,App,UI,Views,Actions,Behaviours,Editor}` and
   `Simulation.Jobs` was only compiled outside Unity, against UnityEngine 2021.3 reference assemblies plus hand-written
@@ -40,7 +40,7 @@ Language: answer the user in Croatian; code, comments, commits and docs in Engli
 
 ## Step 2: tests in the Unity Test Runner
 
-1. Run all EditMode tests (`LogicSim.Tests.EditMode`). They are the same 85 tests as the dotnet run. All must pass.
+1. Run all EditMode tests (`LogicSim.Tests.EditMode`). They are the same 88 tests as the dotnet run. All must pass.
 2. Add Jobs parity tests that use the real Job System and Burst:
    - Create `Assets/Tests/EditMode/Jobs/LogicSim.Tests.Jobs.asmdef` (Editor only; references `LogicSim.Simulation`,
      `LogicSim.Simulation.Jobs`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`; `nunit.framework.dll`).

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Measures the managed (single-threaded) backend. The Jobs/Burst backend is measured in Unity:
+       Tools > LogicSim > Run Simulation Benchmark. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Optimize>true</Optimize>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../LogicSim.Core/LogicSim.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles the engine-independent Unity sources (simulation + MCP) as a .NET Standard 2.1 library,
+       the same API surface Unity offers. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>LogicSim.Core</AssemblyName>
+    <RootNamespace>LogicSim</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(AssetsDir)Scripts/Simulation/**/*.cs" />
+    <Compile Include="$(AssetsDir)Scripts/Mcp/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

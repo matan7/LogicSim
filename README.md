@@ -213,6 +213,7 @@ Assets/Scripts/
 Assets/Resources/    examples, icons, NeuralLut.compute
 Assets/Tests/EditMode/   NUnit tests (Unity Test Runner and dotnet)
 Headless/            .NET solution: core library, MCP server, tests, benchmark
+docs/UNITY_SESSION.md  checklist for verifying and continuing the work inside the Unity editor
 ```
 
 ## Building and testing

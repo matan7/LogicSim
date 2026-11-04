@@ -4,7 +4,6 @@ Open work on branch `claude/optimistic-noether-1l3qr9`. Items are removed from t
 Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Without the Unity editor
-- [ ] Move `CircuitDocumentStore` from `Mcp/ILogicSimWorkspace.cs` to `Simulation/Serialization`; drop Core's reference to `LogicSim.Mcp`.
 - [ ] Replace `CircuitHierarchy.IsModified` (full circuit comparison, called every frame inside an IC while simulating) with a version counter of the working copy.
 - [ ] Batch scope for `Circuit` events (like `SubcircuitLibrary.BatchUpdate`) for paste and collapse.
 - [ ] Split `Mcp/LogicSimTools.cs` (~1500 lines) by area: inspection, editing, simulation, subcircuits, neurons.

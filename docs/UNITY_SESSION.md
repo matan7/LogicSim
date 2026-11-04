@@ -146,18 +146,7 @@ Do these only after steps 1–4 pass, in this order, each as its own commit with
 
 ## Can also be done without Unity
 
-These items from the architecture review do not need the editor (cheaper in a headless session):
-
-- Move `CircuitDocumentStore` from `Mcp/ILogicSimWorkspace.cs` to `Simulation/Serialization`, and drop Core's
-  reference to `LogicSim.Mcp`.
-- Replace `CircuitHierarchy.IsModified` (full circuit comparison, called every frame inside an IC while simulating)
-  with a version counter of the working copy.
-- Add a batch scope to `Circuit` events (like `SubcircuitLibrary.BatchUpdate`) for paste and collapse.
-- Split `Mcp/LogicSimTools.cs` (about 1500 lines) by area: inspection, editing, simulation, subcircuits, neurons.
-- Add an optional token for the MCP HTTP transport.
-- Use a selection model keyed by component ids, with a `Changed` event, instead of selection keyed by views (the
-  inspector currently rebuilds the id list every frame).
-- Per-kind component behaviors, so a new component kind does not touch about 8 files. This is the largest item.
+The open items that do not need the editor are listed in `TODO.md`.
 
 ## Leftover outside this branch
 

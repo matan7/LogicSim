@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Core.AppState;
 using Core.Command;
-using LogicSim.Mcp;
 using LogicSim.Simulation;
 using UnityEngine;
 

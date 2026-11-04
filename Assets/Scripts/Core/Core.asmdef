@@ -4,8 +4,7 @@
     "references": [
         "GUID:75469ad4d38634e559750d17036d5f7c",
         "LogicSim.Simulation",
-        "LogicSim.Simulation.Jobs",
-        "LogicSim.Mcp"
+        "LogicSim.Simulation.Jobs"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

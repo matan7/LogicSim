@@ -27,6 +27,9 @@ namespace LogicSim.Simulation
         /// <summary>Incremented on every change that requires recompiling the netlist.</summary>
         public int StructureVersion { get; private set; }
 
+        /// <summary>Incremented on every change, including moves, labels and input values.</summary>
+        public int ContentVersion { get; private set; }
+
         public IEnumerable<CircuitComponent> Components => _components.Values;
         public IEnumerable<Wire> Wires => _wires.Values;
         public int ComponentCount => _components.Count;
@@ -199,6 +202,7 @@ namespace LogicSim.Simulation
                 return;
             component.X = x;
             component.Y = y;
+            ContentVersion++;
             ComponentMoved?.Invoke(component);
         }
 
@@ -234,6 +238,7 @@ namespace LogicSim.Simulation
             var after = component.GetProperties();
             if (before.Equals(after))
                 return;
+            ContentVersion++;
 
             bool structural = before.InputCount != after.InputCount
                 || before.ClockHalfPeriod != after.ClockHalfPeriod
@@ -257,6 +262,7 @@ namespace LogicSim.Simulation
             if (component.Value == value)
                 return;
             component.Value = value;
+            ContentVersion++;
             InputValueChanged?.Invoke(component);
         }
 
@@ -470,6 +476,7 @@ namespace LogicSim.Simulation
         private void MarkStructureChanged()
         {
             StructureVersion++;
+            ContentVersion++;
             StructureChanged?.Invoke();
         }
     }

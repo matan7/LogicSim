@@ -363,5 +363,30 @@ namespace LogicSim.Tests
             Assert.That(library.Get("full-adder").Circuit.FindByLabel("carry"), Is.Not.Null);
             Assert.That(hierarchy.GetInstancePath(level), Is.EqualTo(new[] { instance.Id }));
         }
+
+        [Test]
+        public void IsModified_FollowsMovesUndoAndApply()
+        {
+            var library = new SubcircuitLibrary();
+            var t = FullAdderInstance(library, out var instance);
+            var editor = new DirectCircuitEditor(t.Circuit);
+            var hierarchy = new CircuitHierarchy(t.Circuit, editor);
+            var level = hierarchy.OpenInstance(instance.Id);
+            Assert.That(hierarchy.IsModified(level), Is.False);
+
+            var or = level.Circuit.Components.First(c => c.Kind == ComponentKind.Or);
+            hierarchy.Editor.Apply(MoveComponentsEdit.To(level.Circuit, new[] { or.Id }, new[] { (or.X + 1, or.Y) }));
+            Assert.That(hierarchy.IsModified(level), Is.True);
+            editor.Undo();
+            Assert.That(hierarchy.IsModified(level), Is.False);
+            editor.Redo();
+            Assert.That(hierarchy.IsModified(level), Is.True);
+
+            hierarchy.Apply(level);
+            Assert.That(hierarchy.IsModified(level), Is.False);
+            // Undoing the apply restores the old definition: the copy differs again.
+            editor.Undo();
+            Assert.That(hierarchy.IsModified(level), Is.True);
+        }
     }
 }

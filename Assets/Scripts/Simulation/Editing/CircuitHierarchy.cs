@@ -39,6 +39,12 @@ namespace LogicSim.Simulation
 
         public bool IsRoot => DefinitionId == null;
 
+        // Cache of CircuitHierarchy.IsModified, keyed by the versions it was computed for.
+        internal int CheckedVersion = -1;
+        internal SubcircuitDefinition CheckedDefinition;
+        internal int CheckedDefinitionVersion;
+        internal bool Modified;
+
         internal HierarchyLevel(string definitionId, Circuit circuit, int instanceId)
         {
             DefinitionId = definitionId;
@@ -132,14 +138,27 @@ namespace LogicSim.Simulation
 
         #region Apply and close
 
-        /// <summary>True when the working copy differs from the definition in the library.</summary>
+        /// <summary>
+        /// True when the working copy differs from the definition in the library. Cheap to call every frame: the
+        /// comparison only runs again after the copy or the definition changed.
+        /// </summary>
         public bool IsModified(HierarchyLevel level)
         {
             if (level.IsRoot)
                 return false;
             if (!Library.TryGet(level.DefinitionId, out var definition))
                 return true;
-            return !CircuitComparer.SameContents(level.Circuit, definition.Circuit);
+            int version = level.Circuit.ContentVersion;
+            int definitionVersion = definition.Circuit.ContentVersion;
+            if (level.CheckedVersion != version || !ReferenceEquals(level.CheckedDefinition, definition)
+                || level.CheckedDefinitionVersion != definitionVersion)
+            {
+                level.Modified = !CircuitComparer.SameContents(level.Circuit, definition.Circuit);
+                level.CheckedVersion = version;
+                level.CheckedDefinition = definition;
+                level.CheckedDefinitionVersion = definitionVersion;
+            }
+            return level.Modified;
         }
 
         /// <summary>Writes the working copy of <paramref name="level"/> back to the library, recorded in the current scope.</summary>

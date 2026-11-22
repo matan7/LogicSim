@@ -95,8 +95,18 @@ font atlas. They are shown only above a zoom threshold.
 
 The template exists: `Art/Symbols/Symbols.psd` (3100 × 1600) has one artboard per symbol with unit guides. The gate,
 switch and bulb bodies were taken over from `Assets/Textures/GraphicAssets.psd` as vector shapes, scaled 4 times
-(16 px inside strokes), without pin stubs and pin dots. Still to draw (empty `outline` and `fill` layers):
-`io.button`, `io.clock`, `io.constant`, `icon.neuron`, `icon.lif`, `icon.network`, `mark.bubble`, `mark.clock`.
+(16 px inside strokes), without pin stubs and pin dots. First drafts of the new symbols, same stroke:
+
+| Symbol | Outline | Fill |
+|---|---|---|
+| `io.button` | rounded body and a round cap | the cap |
+| `io.clock` | rounded body and a square wave | the body |
+| `io.constant` | rounded body with a second, inset border (the 0/1 glyph is drawn separately) | the inner area |
+| `icon.neuron` | soma, three dendrites, axon with a fork | the soma |
+| `icon.lif` | circle and a spike trace (round joins) | the circle, filled bottom-up by the potential |
+| `icon.network` | 3-2-1 network: node rings and edges | the nodes |
+| `mark.bubble` | circle of the gates' bubble size (0.96 units) | none |
+| `mark.clock` | edge triangle open to the left, its tip 0.58 units into the box | none |
 
 ## Atlas builder (Unity editor)
 

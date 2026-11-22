@@ -88,14 +88,15 @@ font atlas. They are shown only above a zoom threshold.
 - Scale: **100 px per unit** (4 times the current 25). A 5 × 4 gate is 500 × 400 px.
 - One artboard per symbol, named with its symbol id, sized to the symbol in whole units, with the origin at the top
   left. Guides every 100 px; pin positions from the geometry table.
-- Layers in each artboard: `outline`, `fill` and optionally `glow`. White shapes on transparency (only alpha is used).
-  Prefer vector shapes.
+- Layers in each artboard: `outline`, `fill` and optionally `glow`. Shapes on transparency in any color: only alpha is
+  used. In the template the outlines are white and the fills gray, so that both stay visible. Prefer vector shapes.
 - Do not draw pin stubs or text.
 - Export every layer as PNG to `Art/Symbols/export/<symbol id>_<layer>.png`.
 
-The current gate shapes in `Assets/Textures/GraphicAssets.psd` are vector shapes; they only need to be scaled 4 times
-and split into `outline` and `fill`. New art: `io.button`, `io.clock`, `io.constant`, the three icons and the two
-markers.
+The template exists: `Art/Symbols/Symbols.psd` (3100 × 1600) has one artboard per symbol with unit guides. The gate,
+switch and bulb bodies were taken over from `Assets/Textures/GraphicAssets.psd` as vector shapes, scaled 4 times
+(16 px inside strokes), without pin stubs and pin dots. Still to draw (empty `outline` and `fill` layers):
+`io.button`, `io.clock`, `io.constant`, `icon.neuron`, `icon.lif`, `icon.network`, `mark.bubble`, `mark.clock`.
 
 ## Atlas builder (Unity editor)
 

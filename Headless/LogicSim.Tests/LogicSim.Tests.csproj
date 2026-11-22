@@ -6,8 +6,8 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The Jobs tests need the job API; LogicSim.JobsTests runs them against a stand-in. -->
-    <Compile Include="$(AssetsDir)Tests/EditMode/**/*.cs" Exclude="$(AssetsDir)Tests/EditMode/Jobs/**" />
+    <!-- The Jobs tests need the job API (LogicSim.JobsTests runs them against a stand-in); the App tests need Unity. -->
+    <Compile Include="$(AssetsDir)Tests/EditMode/**/*.cs" Exclude="$(AssetsDir)Tests/EditMode/Jobs/**;$(AssetsDir)Tests/EditMode/App/**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

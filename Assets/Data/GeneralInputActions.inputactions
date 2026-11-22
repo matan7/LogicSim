@@ -1021,7 +1021,7 @@
                 {
                     "name": "binding",
                     "id": "53b8c405-c2a8-4f79-83a7-96be71596049",
-                    "path": "<Keyboard>/y",
+                    "path": "<Keyboard>/#(Y)",
                     "interactions": "",
                     "processors": "",
                     "groups": "",

@@ -97,6 +97,7 @@ namespace Unity.Jobs
     {
         public static int Scheduled;
         public void Complete() { }
+        public static void ScheduleBatchedJobs() { }
     }
 
     public static class IJobExtensions

@@ -196,6 +196,9 @@ namespace LogicSim.Simulation.Jobs
                 ScheduleSweep(ticks);
             else
                 ScheduleEventDriven(ticks, false);
+            // Scheduled jobs wait in a batch until this call (or Complete). Without it the work would only start in
+            // Complete, on the calling thread, instead of running on a worker while the frame renders.
+            JobHandle.ScheduleBatchedJobs();
         }
 
         public void Complete()

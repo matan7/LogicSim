@@ -22,6 +22,10 @@ decision.
   commands, UI buttons (`onClick`), inspector fields and the in-app MCP server, with screenshots. Fixed on the way:
   framing right after opening a document or IC, captions on prefab components, framing next to the tool panel, the
   IC breadcrumb layout, Ctrl+Z/Ctrl+Y on QWERTZ keyboards, and quick clicks on switches in the simulation.
+- **Step 4 is done** (2026-11-22). Benchmark numbers are in the README. The Profiler capture of a 10k-gate circuit
+  showed about 1 s per frame: the simulation job ran on the main thread inside `JobHandle.Complete` (no
+  `ScheduleBatchedJobs`), and a circuit slower than the requested speed got 0.25 s worth of requested ticks per frame.
+  Both are fixed; the frame is now about 120 ms and limited by the views (see `TODO.md`).
 - **Simulated input**: the Game view needs OS focus ("Pointers and keyboards respect Game View focus"); ask the user
   to keep the editor in front. Do not use `runtime simulate_pointer` / `simulate_key` for drags or shortcuts: each
   event copies the device state from the editor buffer, which drops held buttons and modifiers. Queue complete

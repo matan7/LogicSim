@@ -111,16 +111,33 @@ Simulation is two-valued and **unit-delay**.
   tables with 1024 or more patterns are built by a compute shader (`Assets/Resources/NeuralLut.compute`, one GPU
   thread per pattern); elsewhere they are built in parallel on the CPU.
 
-Managed backend, single thread, Intel Xeon 2.8 GHz (`dotnet run --project Headless/LogicSim.Benchmark -c Release`):
+### Benchmarks
+
+Ticks per second on an Intel Core i7-5820K (6 cores, 12 threads, 3.3 GHz).
+
+In the Unity editor (**Tools > LogicSim > Run Simulation Benchmark**), median of three runs. Code optimization was set to
+Release; Burst safety checks, the job debugger and leak detection were off. The managed column is the same kernel on Mono.
+
+| Circuit | Gates | Managed (Mono) | Jobs + Burst, event-driven | Jobs + Burst, full sweep (all cores) |
+|---|---:|---:|---:|---:|
+| 64 × 32-bit ripple adders, inputs toggled | 14,336 | 1.14M | 1.26M | 14.3k |
+| Random feedback circuit (always active) | 10,032 | 7.9k | 11.9k | 12.7k |
+| Random feedback circuit (always active) | 200,064 | 204 | 354 | 1,604 |
+
+The always-active 200k circuit is where the parallel full sweep pays off: 337 M gate evaluations per second, 7.9 times
+the managed backend. Circuits that settle are faster event-driven, because idle ticks are skipped.
+
+Headless .NET 8, single thread (`dotnet run --project Headless/LogicSim.Benchmark -c Release`, one run). Its adder
+benchmark toggles the inputs in a different pattern, so that row is not comparable with the table above.
 
 | Circuit | Gates | Event-driven | Full sweep |
 |---|---:|---:|---:|
-| 64 × 32-bit ripple adders, inputs toggled | 14,336 | 735k ticks/s | 6.7k ticks/s |
-| Random feedback circuit (always active) | 10,032 | 11.3k ticks/s | 4.5k ticks/s |
-| Random feedback circuit (always active) | 200,064 | 179 ticks/s | 213 ticks/s |
+| 64 × 32-bit ripple adders, inputs toggled | 14,336 | 2.39M | 6.2k |
+| Random feedback circuit (always active) | 10,032 | 7.6k | 4.7k |
+| Random feedback circuit (always active) | 200,064 | 289 | 252 |
 
-The Jobs + Burst numbers depend on the machine. Measure them in the editor with **Tools > LogicSim > Run Simulation
-Benchmark**.
+In the app, each frame gets at most about 1/30 s of simulation work. When a circuit cannot keep up with the requested
+speed, the status bar shows the speed that is actually simulated.
 
 ## Controls
 

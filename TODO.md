@@ -21,5 +21,14 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 - [ ] ReLU blocks often fail to learn small tables (XOR, 2-6-1: 5 of 10 seeds; sigmoid 2-4-1: 10 of 10). Try He
   initialisation and a small positive bias for ReLU, or retry training from a few seeds and keep the best.
 - [ ] Make unique on the only instance of an IC still asks for a name and makes a copy; say it is already unique.
-- [ ] Step 4: Jobs + Burst benchmark numbers in the README; Profiler capture of a large circuit.
-- [ ] Step 5: asmdefs for the app code, no string lookups (generated input class, serialized UI references), PlayMode tests, wire mesh batching if views are the bottleneck.
+- [ ] Step 5: asmdefs for the app code, no string lookups (generated input class, serialized UI references), PlayMode
+  tests, then view performance (below).
+- [ ] View performance for large circuits (step 4 found views to be the bottleneck). Play mode with
+  `BenchmarkCircuits.Random(1, 10000, 16)` (10,016 components, 15,197 wires), editor, i7-5820K: about 120 ms per frame.
+  - `CircuitView.Update` + `LateUpdate`: about 23 ms (per-view value and color updates).
+  - TextMeshPro: about 5,900 labels re-laid out per frame, about 21 ms. Likely the label color changes of clocks and
+    other toggling parts (`GenericComponentView.ShowValues`); a TMP color change rebuilds the mesh. Show the value
+    without touching the TMP color, or only for visible views.
+  - Loading the circuit creates 25k GameObjects in about 10 s.
+  - Wires: draw them as one mesh and use a spatial index for pointer hit tests instead of one `EdgeCollider2D` each.
+  - Editor only: the Scene view's gizmos for 25k colliders took about 33 ms; close the Scene view when profiling.

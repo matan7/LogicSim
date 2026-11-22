@@ -24,6 +24,7 @@ namespace LogicSim.UI
         private const float SectionPadding = 20f;
 
         private Canvas _canvas;
+        private AppUiReferences _refs;
         private readonly Stack<ModalPanel> _panels = new Stack<ModalPanel>();
         private TextMeshProUGUI _status;
         private string _toast;
@@ -53,13 +54,19 @@ namespace LogicSim.UI
                 Debug.LogWarning("[LogicSim] No canvas found; toolbar and dialogs are disabled.");
                 return;
             }
+            _refs = _canvas.GetComponent<AppUiReferences>();
+            if (_refs == null)
+            {
+                Debug.LogWarning("[LogicSim] The root canvas has no AppUiReferences; toolbar and dialogs are disabled.");
+                return;
+            }
 
             RegisterPalettePrefabs();
             BuildToolbar();
             BuildPalette();
             MakeToolPanelScrollable();
             if (Behaviours.CameraControl.Instance != null)
-                Behaviours.CameraControl.Instance.LeftPanel = FindDeep("ToolsPanel") as RectTransform;
+                Behaviours.CameraControl.Instance.LeftPanel = _refs.ToolsPanel;
             BindSimulationToggle();
             BuildStatusBar();
             HierarchyBar.Create(_canvas);
@@ -95,21 +102,6 @@ namespace LogicSim.UI
             return null;
         }
 
-        private Transform FindDeep(string name, Transform root = null)
-        {
-            root = root ?? _canvas.transform;
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-                if (t.name == name)
-                    return t;
-            return null;
-        }
-
-        private RectTransform IconContainerOf(string sectionName)
-        {
-            var section = FindDeep(sectionName);
-            return section != null ? section.Find("IconContainer") as RectTransform : null;
-        }
-
         #endregion
 
         #region Palette and toolbar
@@ -123,27 +115,26 @@ namespace LogicSim.UI
 
         private void BuildToolbar()
         {
-            var undo = FindDeep("UndoButton");
+            var undo = _refs.UndoButton;
             if (undo == null)
             {
-                Debug.LogWarning("[LogicSim] UndoButton template not found; toolbar buttons are not created.");
+                Debug.LogWarning("[LogicSim] AppUiReferences.UndoButton is not set; toolbar buttons are not created.");
                 return;
             }
             // Pristine, inactive copy: the scene's undo/redo buttons get restyled below.
-            _buttonTemplate = Instantiate(undo.gameObject, transform);
+            _buttonTemplate = Instantiate(undo, transform);
             _buttonTemplate.SetActive(false);
             foreach (var behaviour in _buttonTemplate.GetComponentsInChildren<MonoBehaviour>(true))
                 if (behaviour is UndoButton || behaviour is RedoButton)
                     DestroyImmediate(behaviour);
             var icons = UiIconSet.Instance;
 
-            var edit = IconContainerOf("Edit");
+            var edit = _refs.EditIcons;
             if (edit != null)
             {
-                StyleTextButton(undo.gameObject, "UNDO");
-                var redo = FindDeep("RedoButton");
-                if (redo != null)
-                    StyleTextButton(redo.gameObject, "REDO");
+                StyleTextButton(undo, "UNDO");
+                if (_refs.RedoButton != null)
+                    StyleTextButton(_refs.RedoButton, "REDO");
                 AddToolbarButton(edit, "Cut", icons != null ? icons.Cut : null, null, () => Actions.EditCommands.Cut());
                 AddToolbarButton(edit, "Copy", icons != null ? icons.Copy : null, null, () => Actions.EditCommands.Copy());
                 AddToolbarButton(edit, "Paste", icons != null ? icons.Paste : null, null, () => Actions.EditCommands.Paste());
@@ -153,7 +144,7 @@ namespace LogicSim.UI
                 FitSection(edit, 3, 80, 70, 10, 25);
             }
 
-            var menu = IconContainerOf("Menu");
+            var menu = _refs.MenuIcons;
             if (menu != null)
             {
                 AddToolbarButton(menu, "New", icons != null ? icons.New : null, null, AppCommands.New);
@@ -222,7 +213,7 @@ namespace LogicSim.UI
             if (_paletteTemplate == null)
                 return;
 
-            var gates = IconContainerOf("LogicGates");
+            var gates = _refs.LogicGatesIcons;
             if (gates != null)
             {
                 AddPaletteEntry(gates, ComponentKind.DFlipFlop, "D flip-flop", "D");
@@ -234,7 +225,7 @@ namespace LogicSim.UI
                 FitSection(gates, 2, 100, 75, 50, 35);
             }
 
-            var io = IconContainerOf("ToolsIO");
+            var io = _refs.InputOutputIcons;
             if (io != null)
             {
                 AddPaletteEntry(io, ComponentKind.Button, "Push button", "BTN");
@@ -244,7 +235,7 @@ namespace LogicSim.UI
                 FitSection(io, 2, 100, 75, 50, 35);
             }
 
-            _customContainer = IconContainerOf("CustomCircuits");
+            _customContainer = _refs.CustomCircuitIcons;
             if (_customContainer != null)
             {
                 var icons = UiIconSet.Instance;
@@ -357,8 +348,8 @@ namespace LogicSim.UI
         /// <summary>The tool panel content is taller than the screen: scroll it with the mouse wheel.</summary>
         private void MakeToolPanelScrollable()
         {
-            var main = FindDeep("MainContainer") as RectTransform;
-            var content = FindDeep("ExpandableContainer") as RectTransform;
+            var main = _refs.ScrollViewport;
+            var content = _refs.ScrollContent;
             if (main == null || content == null)
                 return;
             if (main.GetComponent<RectMask2D>() == null)
@@ -376,8 +367,8 @@ namespace LogicSim.UI
 
         private void BindSimulationToggle()
         {
-            var toggleTransform = FindDeep("StartSimButton");
-            if (toggleTransform == null || !toggleTransform.TryGetComponent(out _simulationToggle))
+            _simulationToggle = _refs.SimulationToggle;
+            if (_simulationToggle == null)
                 return;
             _simulationToggle.onValueChanged.AddListener(isOn =>
             {

@@ -166,8 +166,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 49d1668c149b7ff40ae232b81d47fcee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SystemManager
-  _defaultInputActions: {fileID: -944628639613478452, guid: 3dac410f4fcacdc4eaff9b1a147fc762,
-    type: 3}
 --- !u!224 &124127191 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8927006375979111617, guid: 60824e8f6b35c8a4f83afd2146e033a5,
@@ -289,6 +287,7 @@ GameObject:
   - component: {fileID: 321495605}
   - component: {fileID: 321495604}
   - component: {fileID: 321495603}
+  - component: {fileID: 321495607}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -381,6 +380,29 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &321495607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 321495602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 966df08ed0b1863409fa72cfa5965d6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: LogicSim.App::LogicSim.UI.AppUiReferences
+  ToolsPanel: {fileID: 969912698}
+  ScrollViewport: {fileID: 504344610}
+  ScrollContent: {fileID: 1841009598}
+  MenuIcons: {fileID: 1956231992}
+  EditIcons: {fileID: 986433186}
+  LogicGatesIcons: {fileID: 411110302}
+  InputOutputIcons: {fileID: 759631466}
+  CustomCircuitIcons: {fileID: 1738944797}
+  UndoButton: {fileID: 1418505886925789707}
+  RedoButton: {fileID: 1418505887760557088}
+  SimulationToggle: {fileID: 2137413223}
 --- !u!224 &357944103 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4879341109903924159, guid: 5686249856bb70648b38536099ebf9c2,

@@ -454,7 +454,11 @@ namespace LogicSim.UI
             {
                 var engine = simulation.Engine;
                 string state = simulation.Paused ? "<color=#FFD24A>PAUSED</color>" : "<color=#5CFF73>SIMULATING</color>";
-                parts.Add($"{state} {FormatSpeed(simulation.TicksPerSecond)}  tick {engine.Tick:N0}");
+                // The circuit cannot keep up with the requested speed: show what is actually simulated.
+                string behind = !simulation.Paused && simulation.ActualTicksPerSecond < simulation.TicksPerSecond * 0.8
+                    ? $" <color=#FFD24A>(actual {FormatSpeed(simulation.ActualTicksPerSecond)})</color>"
+                    : string.Empty;
+                parts.Add($"{state} {FormatSpeed(simulation.TicksPerSecond)}{behind}  tick {engine.Tick:N0}");
                 parts.Add($"{engine.Name}, {engine.ActiveMode}");
             }
             else

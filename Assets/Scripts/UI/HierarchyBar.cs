@@ -13,6 +13,8 @@ namespace LogicSim.UI
     /// </summary>
     public class HierarchyBar : MonoBehaviour
     {
+        private const float CrumbSpacing = 4;
+
         private RectTransform _root;
         private RectTransform _crumbs;
         private TextMeshProUGUI _state;
@@ -26,8 +28,9 @@ namespace LogicSim.UI
             rect.anchorMin = new Vector2(0, 1);
             rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(0.5f, 1);
-            rect.offsetMin = new Vector2(330, -58);
-            rect.offsetMax = new Vector2(-20, -10);
+            // Right of the tool panel, below the simulation button and left of the inspector.
+            rect.offsetMin = new Vector2(330, -122);
+            rect.offsetMax = new Vector2(-(30 + InspectorPanel.Width), -74);
             var bar = rect.gameObject.AddComponent<HierarchyBar>();
             bar.Build(rect);
             return bar;
@@ -42,10 +45,10 @@ namespace LogicSim.UI
             var group = row.GetComponent<HorizontalLayoutGroup>();
             group.childAlignment = TextAnchor.MiddleLeft;
 
-            _crumbs = UiFactory.CreateHorizontalGroup(row, 4);
+            // Sized in Rebuild: a ContentSizeFitter inside the row's layout group grows around its pivot and overlaps
+            // the neighbours.
+            _crumbs = UiFactory.CreateHorizontalGroup(row, CrumbSpacing);
             _crumbs.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
-            var crumbFitter = _crumbs.gameObject.AddComponent<ContentSizeFitter>();
-            crumbFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             _crumbs.sizeDelta = new Vector2(10, 36);
 
             _state = UiFactory.CreateText(row, string.Empty, 16, UiFactory.MutedText, TextAlignmentOptions.MidlineLeft);
@@ -81,6 +84,7 @@ namespace LogicSim.UI
                 return;
 
             var levels = hierarchy.Levels;
+            float width = 0;
             for (int i = 0; i < levels.Count; i++)
             {
                 if (i > 0)
@@ -88,15 +92,20 @@ namespace LogicSim.UI
                     var separator = UiFactory.CreateText(_crumbs, ">", 18, UiFactory.MutedText, TextAlignmentOptions.Center);
                     separator.rectTransform.sizeDelta = new Vector2(16, 36);
                     _crumbObjects.Add(separator.gameObject);
+                    width += 16 + CrumbSpacing;
                 }
                 int depth = i;
                 var name = hierarchy.GetName(levels[i]);
                 bool current = i == levels.Count - 1;
+                float buttonWidth = Mathf.Clamp(24 + name.Length * 10, 70, 220);
                 var button = UiFactory.CreateButton(_crumbs, name, current ? (System.Action)null : () => AppCommands.CloseTo(depth, apply: true),
-                    Mathf.Clamp(24 + name.Length * 10, 70, 220), 36);
+                    buttonWidth, 36);
                 button.interactable = !current;
                 _crumbObjects.Add(button.gameObject);
+                width += buttonWidth + (i < levels.Count - 1 ? CrumbSpacing : 0);
             }
+            _crumbs.sizeDelta = new Vector2(width, 36);
+            LayoutRebuilder.MarkLayoutForRebuild(_root);
             RefreshState();
         }
 

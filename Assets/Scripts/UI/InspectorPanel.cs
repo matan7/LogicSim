@@ -16,7 +16,7 @@ namespace LogicSim.UI
     /// </summary>
     public class InspectorPanel : MonoBehaviour
     {
-        private const float Width = 340;
+        public const float Width = 340;
         private const float LabelWidth = 110;
 
         private RectTransform _root;

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: SymbolSet
   m_EditorClassIdentifier: LogicSim.App::LogicSim.Views.SymbolSet
   Atlas: {fileID: 2800000, guid: 7f7c537f6a1ccdd4aa0d4fadd6bedca5, type: 3}
+  Shader: {fileID: 4800000, guid: 97c50e6fedb97634bb01bb5b4fc5c468, type: 3}
   TexelsPerUnit: 32
   Spread: 0.25
   Padding: 0.28125
@@ -25,6 +26,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.99
+    - 0.99
+    - 0.99
+    - 0.99
+    - 0.99
+    Right:
+    - 1.3
+    - 4.01
+    - 4.32
+    - 4.01
+    - 1.3
   - Id: gate.buf
     Uv:
       serializedVersion: 2
@@ -33,6 +46,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.99
+    - 0.99
+    - 0.99
+    - 0.99
+    - 0.99
+    Right:
+    - 1
+    - 2.66
+    - 4.31
+    - 2.66
+    - 1
   - Id: gate.nand
     Uv:
       serializedVersion: 2
@@ -41,6 +66,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.67
+    - 0.67
+    - 0.67
+    - 0.67
+    - 0.67
+    Right:
+    - 0.98
+    - 3.6
+    - 4.68
+    - 3.6
+    - 0.98
   - Id: gate.nor
     Uv:
       serializedVersion: 2
@@ -49,6 +86,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0
+    - 0.71
+    - 0.84
+    - 0.71
+    - 0
+    Right:
+    - 0.29
+    - 3.27
+    - 4.68
+    - 3.27
+    - 0.29
   - Id: gate.not
     Uv:
       serializedVersion: 2
@@ -57,6 +106,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.71
+    - 0.71
+    - 0.71
+    - 0.71
+    - 0.71
+    Right:
+    - 0.72
+    - 2.3
+    - 4.68
+    - 2.3
+    - 0.72
   - Id: gate.or
     Uv:
       serializedVersion: 2
@@ -65,6 +126,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.44
+    - 1.15
+    - 1.28
+    - 1.15
+    - 0.44
+    Right:
+    - 0.73
+    - 3.71
+    - 4.32
+    - 3.71
+    - 0.73
   - Id: gate.xnor
     Uv:
       serializedVersion: 2
@@ -73,6 +146,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.11
+    - 0.81
+    - 0.97
+    - 0.81
+    - 0.11
+    Right:
+    - 1.71
+    - 3.52
+    - 4.76
+    - 3.52
+    - 1.71
   - Id: gate.xor
     Uv:
       serializedVersion: 2
@@ -81,6 +166,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0.55
+    - 1.25
+    - 1.41
+    - 1.25
+    - 0.55
+    Right:
+    - 2.15
+    - 3.96
+    - 4.4
+    - 3.96
+    - 2.15
   - Id: icon.lif
     Uv:
       serializedVersion: 2
@@ -89,6 +186,14 @@ MonoBehaviour:
       width: 0.080078125
       height: 0.080078125
     Size: {x: 2, y: 2}
+    Left:
+    - -1
+    - 0.07
+    - -1
+    Right:
+    - -1
+    - 1.93
+    - -1
   - Id: icon.network
     Uv:
       serializedVersion: 2
@@ -97,6 +202,14 @@ MonoBehaviour:
       width: 0.080078125
       height: 0.080078125
     Size: {x: 2, y: 2}
+    Left:
+    - -1
+    - 0.03
+    - -1
+    Right:
+    - -1
+    - 1.97
+    - -1
   - Id: icon.neuron
     Uv:
       serializedVersion: 2
@@ -105,6 +218,14 @@ MonoBehaviour:
       width: 0.080078125
       height: 0.080078125
     Size: {x: 2, y: 2}
+    Left:
+    - -1
+    - 0.06
+    - -1
+    Right:
+    - -1
+    - 1.9
+    - -1
   - Id: io.bulb
     Uv:
       serializedVersion: 2
@@ -113,6 +234,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 2.86
+    - 1.26
+    - 1
+    - 1.26
+    - 2.86
+    Right:
+    - 3.14
+    - 4.74
+    - 5
+    - 4.74
+    - 3.14
   - Id: io.button
     Uv:
       serializedVersion: 2
@@ -121,6 +254,18 @@ MonoBehaviour:
       width: 0.14257812
       height: 0.14257812
     Size: {x: 4, y: 4}
+    Left:
+    - -1
+    - 0.2
+    - 0.2
+    - 0.2
+    - -1
+    Right:
+    - -1
+    - 3.2
+    - 3.2
+    - 3.2
+    - -1
   - Id: io.clock
     Uv:
       serializedVersion: 2
@@ -129,6 +274,18 @@ MonoBehaviour:
       width: 0.14257812
       height: 0.14257812
     Size: {x: 4, y: 4}
+    Left:
+    - -1
+    - 0.12
+    - 0.12
+    - 0.12
+    - -1
+    Right:
+    - -1
+    - 3.28
+    - 3.28
+    - 3.28
+    - -1
   - Id: io.constant
     Uv:
       serializedVersion: 2
@@ -137,6 +294,18 @@ MonoBehaviour:
       width: 0.14257812
       height: 0.14257812
     Size: {x: 4, y: 4}
+    Left:
+    - -1
+    - 0.2
+    - 0.2
+    - 0.2
+    - -1
+    Right:
+    - -1
+    - 3.2
+    - 3.2
+    - 3.2
+    - -1
   - Id: io.switch
     Uv:
       serializedVersion: 2
@@ -145,6 +314,18 @@ MonoBehaviour:
       width: 0.17382812
       height: 0.14257812
     Size: {x: 5, y: 4}
+    Left:
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    Right:
+    - 4
+    - 4
+    - 4
+    - 4
+    - 4
   - Id: mark.bubble
     Uv:
       serializedVersion: 2
@@ -153,6 +334,12 @@ MonoBehaviour:
       width: 0.048828125
       height: 0.048828125
     Size: {x: 1, y: 1}
+    Left:
+    - -1
+    - -1
+    Right:
+    - -1
+    - -1
   - Id: mark.clock
     Uv:
       serializedVersion: 2
@@ -161,3 +348,9 @@ MonoBehaviour:
       width: 0.048828125
       height: 0.048828125
     Size: {x: 1, y: 1}
+    Left:
+    - -1
+    - -1
+    Right:
+    - -1
+    - -1

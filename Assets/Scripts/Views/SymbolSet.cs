@@ -19,9 +19,18 @@ namespace LogicSim.Views
             public Rect Uv;
             /// <summary>Size of the symbol (its artboard) in world units.</summary>
             public Vector2 Size;
+            /// <summary>
+            /// Per row r, r units below the top edge (0 to Size.y): distance from the left edge to where the outline
+            /// starts, in units, or -1 where the row misses the outline. Input pin stubs end here.
+            /// </summary>
+            public float[] Left;
+            /// <summary>Per row: distance from the left edge to where the outline ends, or -1. Output pin stubs start here.</summary>
+            public float[] Right;
         }
 
         public Texture2D Atlas;
+        /// <summary>The shader that draws the symbols (referenced here so that builds include it).</summary>
+        public Shader Shader;
         /// <summary>Atlas texels per world unit.</summary>
         public float TexelsPerUnit = 32;
         /// <summary>Distance range of the fields on each side of an edge, in world units: a channel value v means
@@ -31,17 +40,25 @@ namespace LogicSim.Views
         public float Padding;
         public List<Symbol> Symbols = new List<Symbol>();
 
-        private Dictionary<string, Symbol> _byId;
+        private Dictionary<string, int> _byId;
 
-        public bool TryGet(string id, out Symbol symbol)
+        /// <summary>Index of the symbol in <see cref="Symbols"/>, or -1.</summary>
+        public int IndexOf(string id)
         {
             if (_byId == null || _byId.Count != Symbols.Count)
             {
-                _byId = new Dictionary<string, Symbol>(StringComparer.Ordinal);
-                foreach (var s in Symbols)
-                    _byId[s.Id] = s;
+                _byId = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (int i = 0; i < Symbols.Count; i++)
+                    _byId[Symbols[i].Id] = i;
             }
-            return _byId.TryGetValue(id, out symbol);
+            return id != null && _byId.TryGetValue(id, out int index) ? index : -1;
+        }
+
+        public bool TryGet(string id, out Symbol symbol)
+        {
+            int index = IndexOf(id);
+            symbol = index >= 0 ? Symbols[index] : default;
+            return index >= 0;
         }
 
         private void OnValidate() => _byId = null;

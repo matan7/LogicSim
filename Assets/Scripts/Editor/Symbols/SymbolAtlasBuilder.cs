@@ -16,7 +16,9 @@ namespace LogicSim.EditorTools.Symbols
     {
         public const string SourcePath = "Art/Symbols/Symbols.psd";
         public const string AtlasPath = "Assets/Art/Symbols/SymbolAtlas.png";
-        public const string SetPath = "Assets/Art/Symbols/SymbolSet.asset";
+        /// <summary>In Resources so that the app can load it; it references the atlas and the shader.</summary>
+        public const string SetPath = "Assets/Resources/SymbolSet.asset";
+        public const string ShaderPath = "Assets/Shaders/Symbols.shader";
 
         /// <summary>Pixels per world unit in the PSD.</summary>
         public const int SourcePixelsPerUnit = 100;
@@ -36,6 +38,8 @@ namespace LogicSim.EditorTools.Symbols
             public int Width, Height;   // texels, padding included
             public int X, Y;            // position in the atlas (bottom-left origin)
             public Color32[] Pixels;    // row 0 = bottom
+            /// <summary>Per row (0 to UnitsY from the top): outline start and end in units from the left, or -1.</summary>
+            public float[] Left, Right;
         }
 
         public sealed class Result
@@ -110,6 +114,8 @@ namespace LogicSim.EditorTools.Symbols
                 Height = unitsY * TexelsPerUnit + 2 * PaddingTexels,
             };
             cell.Pixels = new Color32[cell.Width * cell.Height];
+            cell.Left = Enumerable.Repeat(-1f, unitsY + 1).ToArray();
+            cell.Right = Enumerable.Repeat(-1f, unitsY + 1).ToArray();
             for (int i = 0; i < cell.Pixels.Length; i++)
                 cell.Pixels[i] = new Color32(0, 0, 0, 255);
 
@@ -146,6 +152,8 @@ namespace LogicSim.EditorTools.Symbols
                 if (!covered)
                     continue;
                 any = true;
+                if (channel == 0)
+                    MeasureRows(cell, mask, regionWidth, regionHeight, (int)Math.Round(board.ArtboardLeft) - left, (int)Math.Round(board.ArtboardTop) - top);
                 var field = DistanceField.FromMask(mask, regionWidth, regionHeight);
                 float spreadSource = SpreadTexels * sourcePerTexel;
                 for (int ty = 0; ty < cell.Height; ty++)
@@ -168,6 +176,37 @@ namespace LogicSim.EditorTools.Symbols
             if (!any)
                 warnings.Add($"'{board.Name}' has no visible outline, fill or glow layer with pixels.");
             return cell;
+        }
+
+        /// <summary>
+        /// Where the outline starts and ends along every unit row (the rows pins sit on), so that the renderer can draw
+        /// pin stubs from the pins to the body. A row is the boundary between two pixel rows; both are checked.
+        /// </summary>
+        private static void MeasureRows(Cell cell, bool[] mask, int width, int height, int boardX, int boardY)
+        {
+            int boardWidth = cell.UnitsX * SourcePixelsPerUnit;
+            for (int row = 0; row <= cell.UnitsY; row++)
+            {
+                int first = int.MaxValue, last = int.MinValue;
+                int center = boardY + row * SourcePixelsPerUnit;
+                for (int y = center - 1; y <= center; y++)
+                {
+                    if (y < 0 || y >= height)
+                        continue;
+                    for (int x = 0; x < boardWidth; x++)
+                    {
+                        int sx = boardX + x;
+                        if (sx < 0 || sx >= width || !mask[y * width + sx])
+                            continue;
+                        first = Math.Min(first, x);
+                        last = Math.Max(last, x);
+                    }
+                }
+                if (first > last)
+                    continue;
+                cell.Left[row] = (float)first / SourcePixelsPerUnit;
+                cell.Right[row] = (float)(last + 1) / SourcePixelsPerUnit;
+            }
         }
 
         /// <summary>Shelf packing, tallest first, into the smallest power-of-two square that fits.</summary>
@@ -211,6 +250,7 @@ namespace LogicSim.EditorTools.Symbols
         private static void Save(Result result)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(AtlasPath) ?? "Assets");
+            Directory.CreateDirectory(Path.GetDirectoryName(SetPath) ?? "Assets");
             var texture = new Texture2D(result.Size, result.Size, TextureFormat.RGBA32, false, true);
             texture.SetPixels32(result.Pixels);
             texture.Apply();
@@ -240,6 +280,9 @@ namespace LogicSim.EditorTools.Symbols
                 AssetDatabase.CreateAsset(set, SetPath);
             }
             set.Atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasPath);
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPath);
+            if (shader != null)
+                set.Shader = shader;
             set.TexelsPerUnit = TexelsPerUnit;
             set.Spread = (float)SpreadTexels / TexelsPerUnit;
             set.Padding = (float)PaddingTexels / TexelsPerUnit;
@@ -248,6 +291,8 @@ namespace LogicSim.EditorTools.Symbols
                 Id = c.Id,
                 Uv = new Rect((float)c.X / result.Size, (float)c.Y / result.Size, (float)c.Width / result.Size, (float)c.Height / result.Size),
                 Size = new Vector2(c.UnitsX, c.UnitsY),
+                Left = c.Left,
+                Right = c.Right,
             }).ToList();
             EditorUtility.SetDirty(set);
             AssetDatabase.SaveAssets();

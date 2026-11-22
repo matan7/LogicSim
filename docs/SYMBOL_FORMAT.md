@@ -4,8 +4,10 @@ Format of the component graphics for GPU-instanced rendering: one draw call for 
 on/off state read from a buffer of net values on the GPU instead of updated per GameObject on the CPU. See "View
 performance" in `TODO.md` for why.
 
-Status: agreed on 2026-11-22. The source art and the atlas builder exist; the instanced renderer does not yet. Wires
-(one mesh, colors from the same net buffer) are separate work and need no art.
+Status: agreed on 2026-11-22. The source art, the atlas builder and the instanced renderer for the gates and the
+inputs/outputs with a fixed footprint exist (see "Renderer" at the end). Boxes, gates with more inputs, the net-bit
+buffer and chunk culling do not yet. Wires (one mesh, colors from the same net buffer) are separate work and need no
+art.
 
 ## Geometry
 
@@ -125,8 +127,10 @@ power-of-two square, and the builder writes:
 
 - `Assets/Art/Symbols/SymbolAtlas.png`: linear (not sRGB), mipmaps, trilinear, clamp, uncompressed RGBA32. With the
   18 symbols it is 1024 × 1024 and takes about 3 seconds to build.
-- `Assets/Art/Symbols/SymbolSet.asset` (`LogicSim.Views.SymbolSet`): per symbol id the UV rect (padding included) and
-  the size in units; also the texels per unit, the spread and the padding in units.
+- `Assets/Resources/SymbolSet.asset` (`LogicSim.Views.SymbolSet`): per symbol id the UV rect (padding included), the
+  size in units, and per unit row where the outline starts and ends (the pin stubs run to there); also the texels per
+  unit, the spread, the padding in units, the atlas and the shader `Assets/Shaders/Symbols.shader`. It is in
+  Resources so that the app loads it and builds include the atlas and the shader.
 
 Run it again after every change to the PSD and commit both outputs. `SymbolAtlasTests` checks the reader, the distance
 field and the packed atlas.
@@ -142,3 +146,26 @@ field and the packed atlas.
 - Shaders are plain unlit HLSL without a `LightMode` tag, so they run in the built-in pipeline and in URP.
 - Interaction first keeps one GameObject with a collider per component for picking, dragging and selection, without
   renderers or text. A spatial grid can replace these later.
+
+## Renderer
+
+What exists (`Views/SymbolRenderer.cs`, `Views/SymbolComponentView.cs`, `Shaders/Symbols.shader`):
+
+- Components whose kind and pin count match a symbol get a `SymbolComponentView`: the 2-input gates, NOT, Buffer,
+  Switch, Bulb, Button, Clock and Constant. It has no renderer, only a box collider of the footprint, the pin objects
+  and, for the constant, its 0/1 text. Everything else keeps the sprite prefabs or `GenericComponentView`; so does
+  everything when the GPU has no compute buffers in vertex shaders or the symbol set is missing (a warning is logged).
+- One `Graphics.RenderPrimitives` call draws all instances: 6 vertices per instance, the quad built in the vertex
+  shader from three structured buffers: symbols (UV rect, size, row edges), instances (16 bytes: position, symbol, quarter
+  turns, selected, pin rows) and states (one word per instance: lit, values shown, the value of each pin row).
+- Instances change only when components are added, removed, moved, dragged, rotated or (de)selected. States are
+  computed on the CPU from the signal reader when the values change (about 1.2 microseconds per component) and
+  uploaded as one buffer. The net-bit buffer from the contract above is the next step when this shows up in the
+  profiler.
+- The shader draws, back to front: the glow when lit, the pin stubs (colored like the wires, from the pin to the
+  outline edge of that row), the fill (lit or off color), the outline (selection color and a little wider when
+  selected), and below about 5 to 3 pixels per unit a solid rectangle that fades in.
+- Draw order with the sprites works through the transparent queue: the draw call has sorting order 0, so it lands
+  above the wires (-1) and below labels and pin dots.
+- No chunks yet: the draw call's bounds cover all instances, and the vertex shader cost is negligible at 10k
+  instances. Chunks pay off from hundreds of thousands.

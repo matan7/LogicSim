@@ -50,6 +50,7 @@ namespace LogicSim.Views
         private Transform _componentRoot;
         private Transform _wireRoot;
         private bool _valuesDirty;
+        private SymbolRenderer _symbols;
 
         private void Awake()
         {
@@ -58,6 +59,9 @@ namespace LogicSim.Views
             _componentRoot.SetParent(transform, false);
             _wireRoot = new GameObject("Wires").transform;
             _wireRoot.SetParent(transform, false);
+            _symbols = SymbolRenderer.TryCreate();
+            if (_symbols == null)
+                Debug.LogWarning("[LogicSim] Symbol rendering is not available (no SymbolSet in Resources or no GPU support); drawing component sprites.");
 
             SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
@@ -70,6 +74,8 @@ namespace LogicSim.Views
             if (Instance == this)
                 Instance = null;
             UnbindCircuit();
+            _symbols?.Dispose();
+            _symbols = null;
             if (SystemCore.SimulationService != null)
                 SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
             if (SystemCore.AppStateService != null)
@@ -80,6 +86,9 @@ namespace LogicSim.Views
 
         /// <summary>The circuit shown: the document or the IC opened for editing.</summary>
         public Circuit Circuit => _circuit;
+
+        /// <summary>Draws the bodies of the components that have a symbol; null when sprites are used instead.</summary>
+        public SymbolRenderer Symbols => _symbols;
 
         /// <summary>Raised after the view switched to another circuit level and rebuilt itself.</summary>
         public event System.Action Rebound;
@@ -170,7 +179,7 @@ namespace LogicSim.Views
         {
             SystemCore.SelectingService.DeselectAll();
             foreach (var view in _components.Values)
-                Destroy(view.gameObject);
+                DestroyView(view);
             foreach (var view in _wires.Values)
                 Destroy(view.gameObject);
             _components.Clear();
@@ -196,7 +205,7 @@ namespace LogicSim.Views
                 return;
             DeselectView(view);
             _components.Remove(component.Id);
-            Destroy(view.gameObject);
+            DestroyView(view);
         }
 
         private void OnComponentMoved(CircuitComponent component)
@@ -213,6 +222,8 @@ namespace LogicSim.Views
         /// </summary>
         public void NotifyViewMoved(int componentId)
         {
+            if (_components.TryGetValue(componentId, out var view) && view is SymbolComponentView symbol)
+                symbol.SyncTransform();
             foreach (var wire in _circuit.GetWiresOf(componentId))
                 _dirtyWires.Add(wire.Id);
         }
@@ -221,7 +232,7 @@ namespace LogicSim.Views
         {
             if (!_components.TryGetValue(component.Id, out var view))
                 return;
-            if (!view.CanDisplay(component, _circuit) || (ComponentPrefabRegistry.Get(component) != null) != !(view is GenericComponentView))
+            if (!view.CanDisplay(component, _circuit) || view.GetType() != ViewTypeFor(component))
             {
                 RecreateComponentView(component);
                 return;
@@ -264,11 +275,29 @@ namespace LogicSim.Views
 
         #region View creation
 
+        /// <summary>The view class that shows the component: a symbol, a prefab with sprites, or a generated box.</summary>
+        private System.Type ViewTypeFor(CircuitComponent component)
+        {
+            if (SymbolComponentView.CanShow(component, _circuit, _symbols))
+                return typeof(SymbolComponentView);
+            var prefab = ComponentPrefabRegistry.Get(component);
+            var prefabView = prefab != null ? prefab.GetComponent<ComponentView>() : null;
+            return prefabView != null ? prefabView.GetType() : typeof(GenericComponentView);
+        }
+
         private void CreateComponentView(CircuitComponent component)
         {
             ComponentView view;
             var prefab = ComponentPrefabRegistry.Get(component);
-            if (prefab != null)
+            if (SymbolComponentView.CanShow(component, _circuit, _symbols))
+            {
+                var go = new GameObject();
+                go.transform.SetParent(_componentRoot, false);
+                var symbol = go.AddComponent<SymbolComponentView>();
+                symbol.Renderer = _symbols;
+                view = symbol;
+            }
+            else if (prefab != null)
             {
                 var instance = Instantiate(prefab, _componentRoot);
                 view = instance.GetComponent<ComponentView>();
@@ -292,9 +321,7 @@ namespace LogicSim.Views
                 wasSelected = IsSelected(old);
                 DeselectView(old);
                 _components.Remove(component.Id);
-                // Destroy at the end of the frame; detach now so lookups find the new view only.
-                old.gameObject.SetActive(false);
-                Destroy(old.gameObject);
+                DestroyView(old);
             }
             CreateComponentView(component);
             if (wasSelected && _components.TryGetValue(component.Id, out var view))
@@ -306,6 +333,16 @@ namespace LogicSim.Views
             foreach (var wire in _circuit.GetWiresOf(component.Id))
                 _dirtyWires.Add(wire.Id);
             _valuesDirty = true;
+        }
+
+        /// <summary>
+        /// Destroys a view at the end of the frame, and disables it now: lookups and physics queries find only its
+        /// replacement, and the symbol renderer stops drawing it in this frame.
+        /// </summary>
+        private static void DestroyView(ComponentView view)
+        {
+            view.gameObject.SetActive(false);
+            Destroy(view.gameObject);
         }
 
         private void CreateWireView(Wire wire)
@@ -341,6 +378,7 @@ namespace LogicSim.Views
                         RouteWire(wire, view);
                 _dirtyWires.Clear();
             }
+            _symbols?.Render();
         }
 
         private void OnValuesUpdated() => _valuesDirty = true;

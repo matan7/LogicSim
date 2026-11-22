@@ -109,10 +109,16 @@ namespace LogicSim.Views
             _caption.gameObject.SetActive(true);
             _caption.text = Component.Label;
             // Upright above the body whatever the rotation.
-            var renderer = GetComponent<Renderer>();
-            var body = renderer != null ? renderer.bounds : new Bounds(transform.position, Vector3.one);
+            var body = GetBodyBounds();
             _caption.rectTransform.sizeDelta = new Vector2(body.size.x + 4, 1.4f);
             _caption.transform.SetPositionAndRotation(new Vector3(body.center.x, body.max.y + 0.9f, -0.05f), Quaternion.identity);
+        }
+
+        /// <summary>World-space bounds of the drawn body, valid right after a transform change (for the caption).</summary>
+        protected virtual Bounds GetBodyBounds()
+        {
+            var renderer = GetComponent<Renderer>();
+            return renderer != null ? renderer.bounds : new Bounds(transform.position, Vector3.one);
         }
 
         /// <summary>Label, value or other properties changed.</summary>

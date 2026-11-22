@@ -123,7 +123,7 @@ namespace LogicSim.Views
         /// Sets the text and fits its font size once. Auto-sizing stays off afterwards: clocks and pins change their
         /// label color with every value, and with auto-sizing on each change ran about a dozen layout passes.
         /// </summary>
-        private static void SetFittedText(TextMeshPro text, string value)
+        internal static void SetFittedText(TextMeshPro text, string value)
         {
             if (text.text == value && !text.enableAutoSizing)
                 return;

@@ -87,6 +87,30 @@ namespace LogicSim.Tests.App
             // The artboard's top-left corner is empty.
             Assert.That(At(0.1f, 0.1f).g, Is.LessThan(30));
             Assert.That(At(0.1f, 0.1f).r, Is.LessThan(30));
+
+            // Pin stubs run to the outline: the AND's flat back and front, the NAND's bubble.
+            Assert.That(and.Left[2], Is.EqualTo(0.99f).Within(0.02f));
+            Assert.That(and.Right[2], Is.EqualTo(4.32f).Within(0.02f));
+            Assert.That(result.Cells.Single(c => c.Id == "gate.nand").Right[2], Is.EqualTo(4.68f).Within(0.02f));
+            // Rows that miss the outline have no edge.
+            Assert.That(result.Cells.Single(c => c.Id == "io.clock").Left[0], Is.EqualTo(-1f));
+        }
+
+        [Test]
+        public void SymbolSet_InResources_IsComplete()
+        {
+            // The app loads this asset; it has to be rebuilt and committed after every change to the PSD.
+            var set = Resources.Load<LogicSim.Views.SymbolSet>(LogicSim.Views.SymbolRenderer.ResourceName);
+            Assert.That(set, Is.Not.Null);
+            Assert.That(set.Atlas, Is.Not.Null);
+            Assert.That(set.Shader, Is.Not.Null);
+            Assert.That(set.Shader.isSupported, Is.True);
+            Assert.That(set.Symbols.Select(s => s.Id), Is.EquivalentTo(ExpectedIds));
+            foreach (var symbol in set.Symbols)
+            {
+                Assert.That(symbol.Left, Has.Length.EqualTo((int)symbol.Size.y + 1), symbol.Id);
+                Assert.That(symbol.Right, Has.Length.EqualTo((int)symbol.Size.y + 1), symbol.Id);
+            }
         }
     }
 }

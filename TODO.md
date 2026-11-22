@@ -12,8 +12,7 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   properties (parse, serialize, describe); the view part needs the Unity editor to verify.
 
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)
-- [ ] Step 1: fix compile errors against the real packages (code was only compiled against 2021.3 reference DLLs + stubs); check the Burst version.
-- [ ] Step 2: EditMode tests in the Unity Test Runner; Jobs parity tests with the real job system and Burst.
+- [ ] Fix the 16 CS0618 warnings (`FindObjectsByType` with `FindObjectsSortMode` in `UI/AppUi.cs`, `FindFirstObjectByType` in `Views/VisualStyle.cs`).
 - [ ] Step 3: Play mode check of every feature (palette, editing, ICs, neurons, inspector, GPU LUT, MCP).
 - [ ] Step 4: Jobs + Burst benchmark numbers in the README; Profiler capture of a large circuit.
 - [ ] Step 5: asmdefs for the app code, no string lookups (generated input class, serialized UI references), PlayMode tests, wire mesh batching if views are the bottleneck.

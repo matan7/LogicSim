@@ -12,12 +12,15 @@ decision.
   to this branch. Do not open a pull request unless the user asks.
 - Unity: 6000.4.1f1 (`ProjectSettings/ProjectVersion.txt`).
 - What exists: see `README.md`. The pure C# parts (`Assets/Scripts/Simulation`, `Assets/Scripts/Mcp`) are covered by
-  89 NUnit tests that pass with `dotnet test Headless/LogicSim.Headless.sln`. The Jobs backend has 9 parity tests
-  against a stand-in of the Unity job API (`Headless/LogicSim.JobsTests`).
-- **Never run in Unity yet.** Everything under `Assets/Scripts/{Core,App,UI,Views,Actions,Behaviours,Editor}` and
-  `Simulation.Jobs` was only compiled outside Unity, against UnityEngine 2021.3 reference assemblies plus hand-written
-  signature stubs for Input System, uGUI, TextMeshPro, Burst and `Awaitable`. Expect some compile errors where the
-  real API differs from the stubs.
+  89 NUnit tests that pass with `dotnet test Headless/LogicSim.Headless.sln` and in the Unity Test Runner. The Jobs
+  backend has 9 parity tests (`Assets/Tests/EditMode/Jobs`) that run in Unity with the real job system and Burst, and
+  headless against a stand-in of the job API (`Headless/LogicSim.JobsTests`).
+- **Steps 1 and 2 are done** (2026-11-22). The project compiled in 6000.4.1f1 without changes (Burst 1.8.18 works,
+  16 CS0618 warnings left). The neuron parity tests failed by one ulp until the kernel rounded every float step
+  explicitly: Unity's Mono keeps float locals in double precision. Play mode (step 3) has not been tried yet.
+- Driving the editor: the `unity` CLI (`unity command <group> <name>`, e.g. `test run`, `console get`,
+  `script eval`, `script recompile`) needs the `com.unity.pipeline` package, which is in the manifest. `unity test`
+  only works when the editor is closed; with the editor open use `unity command test run`.
 
 Language: answer the user in Croatian; code, comments, commits and docs in English.
 

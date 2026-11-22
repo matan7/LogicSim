@@ -2,10 +2,22 @@ using LogicSim.Simulation;
 using LogicSim.Simulation.Jobs;
 using NUnit.Framework;
 
-namespace LogicSim.JobsTests
+namespace LogicSim.Tests.Jobs
 {
+    /// <summary>
+    /// Compares the Jobs backend with the managed backend tick by tick. Unity runs these with the real job system
+    /// (and Burst when installed); Headless/LogicSim.JobsTests runs the same file against a stand-in of the job API.
+    /// </summary>
     public class JobsEngineTests
     {
+        private static void AssertNativeArraysDisposed()
+        {
+#if !UNITY_5_3_OR_NEWER
+            // Only the headless stand-in counts native allocations.
+            Assert.That(Unity.Collections.Tracker.Allocated, Is.EqualTo(0), "all native arrays disposed");
+#endif
+        }
+
         [TestCase(SimulationMode.EventDriven, 1)]
         [TestCase(SimulationMode.FullSweep, 2)]
         [TestCase(SimulationMode.Auto, 3)]
@@ -39,7 +51,7 @@ namespace LogicSim.JobsTests
                         Assert.That(jobs.GetNet(net), Is.EqualTo(reference.GetNet(net)), $"net {net} at step {step} ({jobs.ActiveMode})");
                 }
             }
-            Assert.That(Unity.Collections.Tracker.Allocated, Is.EqualTo(0), "all native arrays disposed");
+            AssertNativeArraysDisposed();
         }
 
         [TestCase(SimulationMode.EventDriven, 11)]
@@ -72,11 +84,12 @@ namespace LogicSim.JobsTests
                     jobs.Complete();
                     for (int net = 0; net < compiled.NetCount; net++)
                         Assert.That(jobs.GetNet(net), Is.EqualTo(reference.GetNet(net)), $"net {net} at step {step} ({jobs.ActiveMode})");
+                    // Bit-exact: Burst runs with FloatMode.Strict.
                     for (int n = 0; n < compiled.NeuronCount; n++)
                         Assert.That(jobs.GetNeuronPotential(n), Is.EqualTo(reference.GetNeuronPotential(n)), $"neuron {n} at step {step}");
                 }
             }
-            Assert.That(Unity.Collections.Tracker.Allocated, Is.EqualTo(0), "all native arrays disposed");
+            AssertNativeArraysDisposed();
         }
 
         [Test]

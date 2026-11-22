@@ -9,7 +9,8 @@
   <ItemGroup>
     <Compile Include="$(AssetsDir)Scripts/Simulation.Jobs/**/*.cs" />
     <Compile Include="Stubs/**/*.cs" />
-    <Compile Include="*.cs" />
+    <!-- The same tests Unity's Test Runner runs with the real job system and Burst. -->
+    <Compile Include="$(AssetsDir)Tests/EditMode/Jobs/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

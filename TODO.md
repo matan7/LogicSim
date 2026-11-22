@@ -13,12 +13,11 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)
 - [ ] Fix the 16 CS0618 warnings (`FindObjectsByType` with `FindObjectsSortMode` in `UI/AppUi.cs`, `FindFirstObjectByType` in `Views/VisualStyle.cs`).
-- [ ] Step 3 leftovers (the rest of step 3 is done):
-  - Mouse and keyboard by hand: drag from the palette, wire pin to pin, rewire/disconnect by dragging an input, box and
-    Shift selection, double-click into an IC, Esc back, and the shortcuts (Ctrl+Z/Y/C/V/X, Del, R, F, F5, P, `.`).
-    Simulated input could not be checked: see "Simulated input" in docs/UNITY_SESSION.md.
-  - Editor test comparing `ComputeLutBuilder` with `BuildLutOnCpu`. It needs the app code in an asmdef (step 5);
-    an eval run on 10 random networks found 0 differing bits.
+- [ ] Editor test comparing `ComputeLutBuilder` with `BuildLutOnCpu` (left over from step 3). It needs the app code in
+  an asmdef (step 5); an eval run on 10 random networks found 0 differing bits.
+- [ ] Letter shortcuts other than Undo/Redo bind physical keys (`<Keyboard>/c`, `a`, `s`, ...). Fine on QWERTY/QWERTZ;
+  on AZERTY Ctrl+A is on the Q key. Character bindings (`#(A)`) would follow the layout but do not resolve on
+  non-Latin layouts, so decide per shortcut.
 - [ ] ReLU blocks often fail to learn small tables (XOR, 2-6-1: 5 of 10 seeds; sigmoid 2-4-1: 10 of 10). Try He
   initialisation and a small positive bias for ReLU, or retry training from a few seeds and keep the best.
 - [ ] Make unique on the only instance of an IC still asks for a name and makes a copy; say it is already unique.

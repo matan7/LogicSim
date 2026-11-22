@@ -18,15 +18,17 @@ decision.
 - **Steps 1 and 2 are done** (2026-11-22). The project compiled in 6000.4.1f1 without changes (Burst 1.8.18 works,
   16 CS0618 warnings left). The neuron parity tests failed by one ulp until the kernel rounded every float step
   explicitly: Unity's Mono keeps float locals in double precision.
-- **Step 3 is done except mouse/keyboard input** (2026-11-22, see `TODO.md`). Everything else was driven through the
-  app's own commands, UI buttons (`onClick`), inspector fields and the in-app MCP server, with screenshots. Fixed on
-  the way: framing right after opening a document or IC, captions on prefab components, framing next to the tool
-  panel, and the IC breadcrumb layout.
-- **Simulated input** (`runtime simulate_pointer` / `simulate_key`) does not reach the app's input actions reliably.
-  With "Pointers and keyboards respect Game View focus" the Game view must have OS focus. Even then, each simulated
-  event copies the device state from the editor buffer, which drops held buttons and modifiers, so drags and Ctrl
-  shortcuts break. Queuing complete `MouseState`/`KeyboardState` events from `script eval` works only while the
-  editor has focus.
+- **Step 3 is done** (2026-11-22). Features were driven through simulated mouse and keyboard input, the app's own
+  commands, UI buttons (`onClick`), inspector fields and the in-app MCP server, with screenshots. Fixed on the way:
+  framing right after opening a document or IC, captions on prefab components, framing next to the tool panel, the
+  IC breadcrumb layout, Ctrl+Z/Ctrl+Y on QWERTZ keyboards, and quick clicks on switches in the simulation.
+- **Simulated input**: the Game view needs OS focus ("Pointers and keyboards respect Game View focus"); ask the user
+  to keep the editor in front. Do not use `runtime simulate_pointer` / `simulate_key` for drags or shortcuts: each
+  event copies the device state from the editor buffer, which drops held buttons and modifiers. Queue complete
+  `MouseState`/`KeyboardState` events from `script eval` instead, one call per frame-separated step. Clicks must be
+  shorter than the Tap time (0.2 s): queue press and release with timestamps in one call. Double-clicks need two
+  presses in different frames: run them from a coroutine (`AppUi.Instance.StartCoroutine`). Read the result after a
+  short pause, since queued events are processed in the next frame.
 - Driving the editor: the `unity` CLI (`unity command <group> <name>`, e.g. `test run`, `console get`,
   `script eval`, `script recompile`) needs the `com.unity.pipeline` package, which is in the manifest. `unity test`
   only works when the editor is closed; with the editor open use `unity command test run`.

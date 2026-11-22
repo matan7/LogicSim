@@ -12,6 +12,7 @@ namespace Actions
         private readonly Camera _camera;
         private bool _pressed;
         private bool _pending;
+        private bool _releasePending;
         private Vector2 _pendingPosition;
         private int _heldButton;
 
@@ -38,6 +39,11 @@ namespace Actions
 
         private void Update()
         {
+            if (_releasePending && !_pending)
+            {
+                _releasePending = false;
+                ReleaseButton();
+            }
             if (!_pending)
                 return;
             _pending = false;
@@ -75,7 +81,18 @@ namespace Actions
         private void OnRelease(InputAction.CallbackContext context)
         {
             _pressed = false;
-            _pending = false;
+            if (_pending)
+            {
+                // Pressed and released within one frame (a quick click or touchpad tap): Update still handles the
+                // press, and a push button is let go one frame later.
+                _releasePending = true;
+                return;
+            }
+            ReleaseButton();
+        }
+
+        private void ReleaseButton()
+        {
             if (_heldButton == 0)
                 return;
             var circuit = SystemCore.CircuitService.Circuit;

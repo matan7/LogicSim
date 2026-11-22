@@ -87,6 +87,7 @@ namespace LogicSim.Views
                 {
                     var text = CreateText("Pin " + name, new Vector2(output ? x - 1.3f : x + 1.3f, go.transform.localPosition.y), new Vector2(2.2f, 1.1f), 10f);
                     text.alignment = output ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
+                    SetFittedText(text, name);
                 }
             }
         }
@@ -118,6 +119,24 @@ namespace LogicSim.Views
             return text;
         }
 
+        /// <summary>
+        /// Sets the text and fits its font size once. Auto-sizing stays off afterwards: clocks and pins change their
+        /// label color with every value, and with auto-sizing on each change ran about a dozen layout passes.
+        /// </summary>
+        private static void SetFittedText(TextMeshPro text, string value)
+        {
+            if (text.text == value && !text.enableAutoSizing)
+                return;
+            text.enableAutoSizing = true;
+            text.text = value;
+            if (!text.isActiveAndEnabled)
+                return; // fitted once it is shown
+            text.ForceMeshUpdate();
+            float size = text.fontSize;
+            text.enableAutoSizing = false;
+            text.fontSize = size;
+        }
+
         protected override void CollectPins(List<PinView> inputs, List<PinView> outputs)
         {
             inputs.AddRange(_inputPins);
@@ -136,9 +155,9 @@ namespace LogicSim.Views
 
         public override void OnPropertiesChanged()
         {
-            _label.text = BodyText(null);
-            _caption.text = Component.Label ?? string.Empty;
+            SetFittedText(_label, BodyText(null));
             _caption.gameObject.SetActive(!string.IsNullOrEmpty(Component.Label) && Component.Kind != ComponentKind.PinIn && Component.Kind != ComponentKind.PinOut);
+            SetFittedText(_caption, Component.Label ?? string.Empty);
         }
 
         private string BodyText(ISignalReader session)
@@ -200,7 +219,7 @@ namespace LogicSim.Views
             {
                 var text = BodyText(session);
                 if (_label.text != text)
-                    _label.text = text;
+                    SetFittedText(_label, text);
             }
 
             bool? value = null;

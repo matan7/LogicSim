@@ -89,21 +89,42 @@ namespace Behaviours
             UpdateBackground();
         }
 
-        /// <summary>Centers the view on <paramref name="bounds"/> and zooms out if needed.</summary>
+        /// <summary>Screen-space panel docked on the left (the tool panel). Framing keeps circuits clear of it.</summary>
+        public RectTransform LeftPanel { get; set; }
+
+        /// <summary>Fraction of the screen width that is not covered by <see cref="LeftPanel"/>.</summary>
+        private float VisibleWidthFraction()
+        {
+            if (LeftPanel == null || !LeftPanel.gameObject.activeInHierarchy || _mainCamera.pixelWidth <= 0)
+                return 1f;
+            var corners = new Vector3[4];
+            LeftPanel.GetWorldCorners(corners);
+            var canvas = LeftPanel.GetComponentInParent<Canvas>();
+            var uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+            float right = RectTransformUtility.WorldToScreenPoint(uiCamera, corners[2]).x;
+            return 1f - Mathf.Clamp(right, 0f, _mainCamera.pixelWidth * 0.5f) / _mainCamera.pixelWidth;
+        }
+
+        /// <summary>Centers <paramref name="bounds"/> in the area right of the tool panel and zooms out if needed.</summary>
         public void FrameBounds(Bounds bounds, bool onlyIfOutside)
         {
+            float visible = VisibleWidthFraction();
             float halfHeight = _mainCamera.orthographicSize;
             float halfWidth = halfHeight * _mainCamera.aspect;
             var center = transform.position;
-            bool inside = bounds.min.x >= center.x - halfWidth && bounds.max.x <= center.x + halfWidth
+            float left = center.x - halfWidth + 2 * halfWidth * (1 - visible);
+            bool inside = bounds.min.x >= left && bounds.max.x <= center.x + halfWidth
                 && bounds.min.y >= center.y - halfHeight && bounds.max.y <= center.y + halfHeight;
             if (onlyIfOutside && inside)
                 return;
 
             const float margin = 4f;
-            float needed = Mathf.Max(bounds.extents.y + margin, (bounds.extents.x + margin) / Mathf.Max(0.1f, _mainCamera.aspect));
-            _mainCamera.orthographicSize = Mathf.Clamp(Mathf.Max(needed, onlyIfOutside ? halfHeight : _cameraMinMaxZoom.x), _cameraMinMaxZoom.x, _cameraMinMaxZoom.y);
-            transform.position = new Vector3(bounds.center.x, bounds.center.y, transform.position.z);
+            float needed = Mathf.Max(bounds.extents.y + margin, (bounds.extents.x + margin) / Mathf.Max(0.1f, _mainCamera.aspect * visible));
+            float size = Mathf.Clamp(Mathf.Max(needed, onlyIfOutside ? halfHeight : _cameraMinMaxZoom.x), _cameraMinMaxZoom.x, _cameraMinMaxZoom.y);
+            _mainCamera.orthographicSize = size;
+            // The visible area's center lies right of the screen center by half the covered width.
+            float shift = size * _mainCamera.aspect * (1 - visible);
+            transform.position = new Vector3(bounds.center.x - shift, bounds.center.y, transform.position.z);
             UpdateBackground();
         }
 

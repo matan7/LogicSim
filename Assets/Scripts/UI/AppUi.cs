@@ -58,6 +58,8 @@ namespace LogicSim.UI
             BuildToolbar();
             BuildPalette();
             MakeToolPanelScrollable();
+            if (Behaviours.CameraControl.Instance != null)
+                Behaviours.CameraControl.Instance.LeftPanel = FindDeep("ToolsPanel") as RectTransform;
             BindSimulationToggle();
             BuildStatusBar();
             HierarchyBar.Create(_canvas);

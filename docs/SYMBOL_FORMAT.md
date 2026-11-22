@@ -4,10 +4,9 @@ Format of the component graphics for GPU-instanced rendering: one draw call for 
 on/off state read from a buffer of net values on the GPU instead of updated per GameObject on the CPU. See "View
 performance" in `TODO.md` for why.
 
-Status: agreed on 2026-11-22. The source art, the atlas builder and the instanced renderer for the gates and the
-inputs/outputs with a fixed footprint exist (see "Renderer" at the end). Boxes, gates with more inputs, the net-bit
-buffer and chunk culling do not yet. Wires (one mesh, colors from the same net buffer) are separate work and need no
-art.
+Status: agreed on 2026-11-22. The source art, the atlas builder, the instanced renderer for the gates and the
+inputs/outputs with a fixed footprint, and the instanced wire renderer with the net value buffer exist (see "Renderer"
+and "Wires" at the end). Boxes, gates with more inputs, net indices for the symbols and chunk culling do not yet.
 
 ## Geometry
 
@@ -183,3 +182,20 @@ What exists (`Views/SymbolRenderer.cs`, `Views/SymbolComponentView.cs`, `Shaders
   above the wires (-1) and below labels and pin dots.
 - No chunks yet: the draw call's bounds cover all instances, and the vertex shader cost is negligible at 10k
   instances. Chunks pay off from hundreds of thousands.
+
+## Wires
+
+`Views/WireRenderer.cs` and `Resources/Shaders/Wires.shader` draw all wires in one `Graphics.RenderPrimitives` call:
+
+- One quad per straight segment, five segment slots per wire (a route has at most six points). The vertex shader
+  widens the segment to the wire width (at least a pixel), with square caps so that the corners close.
+- Each wire knows the net its source pin drives (`ISignalReader.GetOutputNet`), looked up once per netlist and circuit
+  level. Every frame of the simulation the engine's net values are copied as they are, one byte per net
+  (`ISimulationEngine.CopyNetValues`), and uploaded as one buffer, a few tens of KB for 10k gates. The shader reads the
+  value of the wire's net, so the CPU does nothing per wire.
+- Wires sort after the background and before the bodies through their bounds (centered one unit behind the
+  components; the transparent queue of the orthographic camera sorts by depth).
+- A `WireView` per wire remains, with its `EdgeCollider2D`, for picking and selection; selected wires are drawn wider in
+  the selection color. Without GPU support the views draw themselves with line renderers as before.
+- A wire whose input lies behind its output turns back on a row that misses the bodies of both its components, so a
+  gate wired to its own input is routed around itself instead of through it.

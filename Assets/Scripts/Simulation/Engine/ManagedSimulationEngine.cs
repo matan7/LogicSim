@@ -143,6 +143,12 @@ namespace LogicSim.Simulation
             return _values[net] != 0;
         }
 
+        public void CopyNetValues(byte[] destination)
+        {
+            if (_values != null)
+                Buffer.BlockCopy(_values, 0, destination, 0, Math.Min(destination.Length, _values.Length));
+        }
+
         public float GetNeuronPotential(int neuron)
         {
             if (_neuronV == null || neuron < 0 || neuron >= _circuit.NeuronCount)

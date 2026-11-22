@@ -97,8 +97,7 @@ namespace LogicSim.Tests.PlayMode
 
         private static void AssertWireEndsAtPin(int componentId, string when)
         {
-            var line = Object.FindAnyObjectByType<WireView>().GetComponent<LineRenderer>();
-            var end = line.GetPosition(line.positionCount - 1);
+            var end = Object.FindAnyObjectByType<WireView>().End;
             var pin = ViewOf(componentId).Inputs[0].transform.position;
             Assert.That(Vector2.Distance(end, pin), Is.LessThan(0.01f), $"wire end at the pin {when}");
         }

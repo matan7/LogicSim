@@ -23,7 +23,7 @@ namespace LogicSim.Tests.PlayMode
             for (int i = 0; i < 5; i++)
                 yield return null;
 
-            var buttons = Object.FindObjectsByType<CommandButton>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var buttons = Object.FindObjectsByType<CommandButton>(FindObjectsInactive.Include);
             var commands = buttons.Select(b => b.Command).ToList();
             foreach (UiCommand command in Enum.GetValues(typeof(UiCommand)))
                 if (command != UiCommand.None)

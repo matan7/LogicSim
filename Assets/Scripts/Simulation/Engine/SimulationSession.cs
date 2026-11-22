@@ -85,6 +85,8 @@ namespace LogicSim.Simulation
 
         public bool GetWireValue(Wire wire) => GetOutputValue(wire.From.ComponentId, wire.From.Pin);
 
+        public int GetOutputNet(int componentId, int pin) => Compiled == null ? -1 : Compiled.GetOutputNet(componentId, pin);
+
         public bool TryGetNeuronPotential(CircuitComponent component, out float potential)
         {
             potential = 0;

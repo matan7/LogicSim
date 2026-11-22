@@ -174,6 +174,16 @@ namespace LogicSim.Simulation.Jobs
             return _values[net] != 0;
         }
 
+        public void CopyNetValues(byte[] destination)
+        {
+            Complete();
+            if (!_values.IsCreated)
+                return;
+            int count = Math.Min(destination.Length, _values.Length);
+            fixed (byte* target = destination)
+                Buffer.MemoryCopy(_values.GetUnsafePtr(), target, destination.Length, count);
+        }
+
         public float GetNeuronPotential(int neuron)
         {
             Complete();

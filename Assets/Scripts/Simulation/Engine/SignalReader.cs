@@ -11,6 +11,12 @@ namespace LogicSim.Simulation
         bool GetInputPinValue(int componentId, int pin);
         bool GetWireValue(Wire wire);
 
+        /// <summary>
+        /// Index of the net an output pin drives, in the values of <see cref="ISimulationEngine.CopyNetValues"/>, or -1
+        /// when the netlist does not have it. Valid until the circuit is recompiled.
+        /// </summary>
+        int GetOutputNet(int componentId, int pin);
+
         /// <summary>Value shown by a component: input pin 0 for sinks, otherwise output pin 0.</summary>
         bool GetDisplayValue(CircuitComponent component);
 
@@ -30,6 +36,7 @@ namespace LogicSim.Simulation
 
         public abstract bool GetOutputValue(int componentId, int pin);
         public abstract bool GetInputPinValue(int componentId, int pin);
+        public abstract int GetOutputNet(int componentId, int pin);
 
         /// <summary>Potential of the spiking neuron with this component id, if the netlist has it.</summary>
         protected abstract bool TryGetSpikingPotential(int componentId, out float potential);
@@ -122,6 +129,12 @@ namespace LogicSim.Simulation
         {
             var scope = Scope;
             return scope != null && _session.Engine.GetNet(_session.Compiled.GetInputNet(scope, componentId, pin));
+        }
+
+        public override int GetOutputNet(int componentId, int pin)
+        {
+            var scope = Scope;
+            return scope == null ? -1 : _session.Compiled.GetOutputNet(scope, componentId, pin);
         }
 
         protected override bool TryGetSpikingPotential(int componentId, out float potential)

@@ -51,6 +51,12 @@ namespace LogicSim.Views
         private Transform _wireRoot;
         private bool _valuesDirty;
         private SymbolRenderer _symbols;
+        private WireRenderer _wireRenderer;
+        // Nets of the wires are resolved for one netlist and one level reader.
+        private CompiledCircuit _wireNetsCompiled;
+        private ISignalReader _wireNetsReader;
+        private bool _wireNetsDirty = true;
+        private readonly List<Rect> _obstacles = new List<Rect>(2);
 
         private void Awake()
         {
@@ -62,6 +68,9 @@ namespace LogicSim.Views
             _symbols = SymbolRenderer.TryCreate();
             if (_symbols == null)
                 Debug.LogWarning("[LogicSim] Symbol rendering is not available (no SymbolSet in Resources or no GPU support); drawing component sprites.");
+            _wireRenderer = WireRenderer.TryCreate();
+            if (_wireRenderer == null)
+                Debug.LogWarning("[LogicSim] Wire rendering is not available (no wire shader or no GPU support); drawing line renderers.");
 
             SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
@@ -76,6 +85,8 @@ namespace LogicSim.Views
             UnbindCircuit();
             _symbols?.Dispose();
             _symbols = null;
+            _wireRenderer?.Dispose();
+            _wireRenderer = null;
             if (SystemCore.SimulationService != null)
                 SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
             if (SystemCore.AppStateService != null)
@@ -181,7 +192,7 @@ namespace LogicSim.Views
             foreach (var view in _components.Values)
                 DestroyView(view);
             foreach (var view in _wires.Values)
-                Destroy(view.gameObject);
+                DestroyView(view);
             _components.Clear();
             _wires.Clear();
             _dirtyWires.Clear();
@@ -261,7 +272,7 @@ namespace LogicSim.Views
                 return;
             DeselectView(view);
             _wires.Remove(wire.Id);
-            Destroy(view.gameObject);
+            DestroyView(view);
         }
 
         private void OnLibraryChanged()
@@ -339,7 +350,7 @@ namespace LogicSim.Views
         /// Destroys a view at the end of the frame, and disables it now: lookups and physics queries find only its
         /// replacement, and the symbol renderer stops drawing it in this frame.
         /// </summary>
-        private static void DestroyView(ComponentView view)
+        private static void DestroyView(Component view)
         {
             view.gameObject.SetActive(false);
             Destroy(view.gameObject);
@@ -347,14 +358,21 @@ namespace LogicSim.Views
 
         private void CreateWireView(Wire wire)
         {
-            var view = WireView.Create(_wireRoot, wire.Id);
+            var view = WireView.Create(_wireRoot, wire.Id, _wireRenderer);
             _wires[wire.Id] = view;
+            _wireNetsDirty = true;
             RouteWire(wire, view);
         }
 
         private void RouteWire(Wire wire, WireView view)
         {
-            view.SetEndpoints(GetPinPosition(wire.From, true), GetPinPosition(wire.To, false));
+            // A wire that has to turn back crosses outside the bodies of its two components.
+            _obstacles.Clear();
+            if (_components.TryGetValue(wire.From.ComponentId, out var source))
+                _obstacles.Add(source.GetFootprint());
+            if (wire.To.ComponentId != wire.From.ComponentId && _components.TryGetValue(wire.To.ComponentId, out var target))
+                _obstacles.Add(target.GetFootprint());
+            view.SetEndpoints(GetPinPosition(wire.From, true), GetPinPosition(wire.To, false), _obstacles);
         }
 
         #endregion
@@ -378,6 +396,7 @@ namespace LogicSim.Views
                         RouteWire(wire, view);
                 _dirtyWires.Clear();
             }
+            _wireRenderer?.Render();
             _symbols?.Render();
         }
 
@@ -399,6 +418,11 @@ namespace LogicSim.Views
 
             foreach (var view in _components.Values)
                 view.ShowValues(session);
+            if (_wireRenderer != null)
+            {
+                ShowWireValues(session);
+                return;
+            }
             foreach (var pair in _wires)
             {
                 if (session == null || !_circuit.TryGetWire(pair.Key, out var wire))
@@ -406,6 +430,29 @@ namespace LogicSim.Views
                 else
                     pair.Value.SetValue(session.GetWireValue(wire));
             }
+        }
+
+        /// <summary>
+        /// The wire renderer colors wires from the engine's net values on the GPU: the nets of the wires are looked up
+        /// once per netlist and level, after that each frame only copies the net values.
+        /// </summary>
+        private void ShowWireValues(ISignalReader session)
+        {
+            var simulation = SystemCore.SimulationService.Session;
+            var compiled = simulation.Compiled;
+            if (session == null || compiled == null)
+            {
+                _wireRenderer.HideValues();
+                return;
+            }
+            if (_wireNetsDirty || !ReferenceEquals(compiled, _wireNetsCompiled) || !ReferenceEquals(session, _wireNetsReader))
+            {
+                _wireRenderer.ResolveNets(session, _circuit);
+                _wireNetsCompiled = compiled;
+                _wireNetsReader = session;
+                _wireNetsDirty = false;
+            }
+            _wireRenderer.ShowValues(simulation.Engine, compiled.NetCount);
         }
 
         #endregion

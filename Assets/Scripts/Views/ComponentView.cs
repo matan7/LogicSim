@@ -135,6 +135,22 @@ namespace LogicSim.Views
                 _outputs[i].SetValue(session == null ? (bool?)null : session.GetOutputValue(ComponentId, i));
         }
 
+        /// <summary>
+        /// World rectangle of the body's box collider, valid right after a move (collider bounds follow only after a
+        /// physics sync). Wires route around it.
+        /// </summary>
+        public Rect GetFootprint()
+        {
+            if (!(GetComponent<Collider2D>() is BoxCollider2D box))
+            {
+                var b = GetBounds();
+                return Rect.MinMaxRect(b.min.x, b.min.y, b.max.x, b.max.y);
+            }
+            Vector2 half = box.size / 2;
+            Vector3 a = transform.TransformPoint(box.offset - half), c = transform.TransformPoint(box.offset + half);
+            return Rect.MinMaxRect(Mathf.Min(a.x, c.x), Mathf.Min(a.y, c.y), Mathf.Max(a.x, c.x), Mathf.Max(a.y, c.y));
+        }
+
         /// <summary>World-space bounds of the body (for framing and selection).</summary>
         public Bounds GetBounds()
         {

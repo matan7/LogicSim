@@ -48,6 +48,12 @@ namespace LogicSim.Simulation
 
         bool GetNet(int net);
 
+        /// <summary>
+        /// Copies the value of every net (0 or 1) to <paramref name="destination"/>, up to its length (views upload
+        /// them to the GPU in one piece). Waits for work started by <see cref="Schedule"/>.
+        /// </summary>
+        void CopyNetValues(byte[] destination);
+
         /// <summary>Membrane potential of a spiking neuron (index from the compiled circuit).</summary>
         float GetNeuronPotential(int neuron);
 

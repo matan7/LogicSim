@@ -124,7 +124,7 @@ namespace LogicSim.Simulation
                     float sum = 0;
                     for (int i = start; i < end; i++)
                         if (current[d.InNets[i]] != 0)
-                            sum += d.Weights[i];
+                            sum = (float)(sum + d.Weights[i]); // rounded to float32, see EvaluateSpiking
                     out0 = sum >= d.NeuronParams[d.Param[gate] * 4] ? (byte)1 : (byte)0;
                     return;
                 }
@@ -201,11 +201,14 @@ namespace LogicSim.Simulation
             }
             else
             {
+                // The explicit (float) casts round every step to float32. Unity's Mono keeps float
+                // locals in double precision, while Burst (FloatMode.Strict) and .NET round each operation, so
+                // without the casts the managed backend in the editor drifts from Burst by one ulp.
                 float input = 0;
                 for (int i = start; i < end; i++)
                     if (current[d.InNets[i]] != 0)
-                        input += d.Weights[i];
-                v = v * p[1] + input;
+                        input = (float)(input + d.Weights[i]);
+                v = (float)((float)(v * p[1]) + input);
                 if (v >= p[0])
                 {
                     spike = 1;

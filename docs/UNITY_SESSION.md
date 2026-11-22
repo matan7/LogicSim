@@ -17,7 +17,16 @@ decision.
   headless against a stand-in of the job API (`Headless/LogicSim.JobsTests`).
 - **Steps 1 and 2 are done** (2026-11-22). The project compiled in 6000.4.1f1 without changes (Burst 1.8.18 works,
   16 CS0618 warnings left). The neuron parity tests failed by one ulp until the kernel rounded every float step
-  explicitly: Unity's Mono keeps float locals in double precision. Play mode (step 3) has not been tried yet.
+  explicitly: Unity's Mono keeps float locals in double precision.
+- **Step 3 is done except mouse/keyboard input** (2026-11-22, see `TODO.md`). Everything else was driven through the
+  app's own commands, UI buttons (`onClick`), inspector fields and the in-app MCP server, with screenshots. Fixed on
+  the way: framing right after opening a document or IC, captions on prefab components, framing next to the tool
+  panel, and the IC breadcrumb layout.
+- **Simulated input** (`runtime simulate_pointer` / `simulate_key`) does not reach the app's input actions reliably.
+  With "Pointers and keyboards respect Game View focus" the Game view must have OS focus. Even then, each simulated
+  event copies the device state from the editor buffer, which drops held buttons and modifiers, so drags and Ctrl
+  shortcuts break. Queuing complete `MouseState`/`KeyboardState` events from `script eval` works only while the
+  editor has focus.
 - Driving the editor: the `unity` CLI (`unity command <group> <name>`, e.g. `test run`, `console get`,
   `script eval`, `script recompile`) needs the `com.unity.pipeline` package, which is in the manifest. `unity test`
   only works when the editor is closed; with the editor open use `unity command test run`.

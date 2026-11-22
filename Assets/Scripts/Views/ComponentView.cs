@@ -73,6 +73,46 @@ namespace LogicSim.Views
         {
             transform.position = new Vector3(Component.X, Component.Y, 0);
             transform.rotation = Quaternion.Euler(0, 0, -90 * Component.Rotation);
+            RefreshCaption();
+        }
+
+        /// <summary>Generated views draw their own caption; prefab views get one above the body.</summary>
+        protected virtual bool DrawsOwnCaption => false;
+
+        private TMPro.TextMeshPro _caption;
+
+        // Called from ApplyTransform, which also runs after every property change (label edits).
+        private void RefreshCaption()
+        {
+            if (DrawsOwnCaption || Component == null)
+                return;
+            if (string.IsNullOrEmpty(Component.Label))
+            {
+                if (_caption != null)
+                    _caption.gameObject.SetActive(false);
+                return;
+            }
+            if (_caption == null)
+            {
+                var go = new GameObject("Caption");
+                go.transform.SetParent(transform, false);
+                _caption = go.AddComponent<TMPro.TextMeshPro>();
+                _caption.alignment = TMPro.TextAlignmentOptions.Center;
+                _caption.enableAutoSizing = true;
+                _caption.fontSizeMin = 1f;
+                _caption.fontSizeMax = 14f;
+                _caption.color = new Color(VisualStyle.LabelColor.r, VisualStyle.LabelColor.g, VisualStyle.LabelColor.b, 0.7f);
+                _caption.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                _caption.sortingOrder = VisualStyle.LabelSortingOrder;
+                _caption.raycastTarget = false;
+            }
+            _caption.gameObject.SetActive(true);
+            _caption.text = Component.Label;
+            // Upright above the body whatever the rotation.
+            var renderer = GetComponent<Renderer>();
+            var body = renderer != null ? renderer.bounds : new Bounds(transform.position, Vector3.one);
+            _caption.rectTransform.sizeDelta = new Vector2(body.size.x + 4, 1.4f);
+            _caption.transform.SetPositionAndRotation(new Vector3(body.center.x, body.max.y + 0.9f, -0.05f), Quaternion.identity);
         }
 
         /// <summary>Label, value or other properties changed.</summary>

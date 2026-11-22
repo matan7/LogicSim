@@ -124,6 +124,8 @@ namespace LogicSim.Views
             outputs.AddRange(_outputPins);
         }
 
+        protected override bool DrawsOwnCaption => true;
+
         public override void ApplyTransform()
         {
             base.ApplyTransform();

@@ -29,10 +29,10 @@ namespace Actions
             _selectingManager = drawingSelectionManager;  
             _camera = Camera.main;
 
-            _inputService.CurrentInputActions.FindAction("SelectionDraw").performed += OnSelectionDraw;
-            _inputService.CurrentInputActions.FindAction("SelectionDraw").started += OnSelectionDrawStarted;
-            _inputService.CurrentInputActions.FindAction("SelectionDraw").canceled += OnSelectionDrawEnd;
-            _inputService.CurrentInputActions.FindAction("SelectionDrawMore").canceled += OnSelectingMoreEnd;
+            _inputService.Actions.GeneralGestures.SelectionDraw.performed += OnSelectionDraw;
+            _inputService.Actions.GeneralGestures.SelectionDraw.started += OnSelectionDrawStarted;
+            _inputService.Actions.GeneralGestures.SelectionDraw.canceled += OnSelectionDrawEnd;
+            _inputService.Actions.GeneralGestures.SelectionDrawMore.canceled += OnSelectingMoreEnd;
 
             actionsManager.UpdateEvent += Update;
         }

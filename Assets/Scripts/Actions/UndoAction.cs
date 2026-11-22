@@ -12,7 +12,7 @@ namespace Actions
         {
             _commandService = commandService;
             _inputService = inputService;
-            var action = _inputService.Find("Commands/UndoCommand");
+            var action = _inputService.Actions.Commands.UndoCommand;
             if (action != null)
                 action.performed += OnUndoShortcutPerformed;
         }

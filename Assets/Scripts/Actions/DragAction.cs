@@ -34,7 +34,7 @@ namespace Actions
             _selectingService = selectingService;
             _camera = Camera.main;
 
-            var drag = _inputService.Find("Drag");
+            var drag = _inputService.Actions.GeneralGestures.Drag;
             if (drag != null)
             {
                 drag.performed += OnDrag;

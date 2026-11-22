@@ -19,7 +19,7 @@ namespace Actions
         public SimInteractionAction(InputService inputService, ActionsManager actionsManager)
         {
             _camera = Camera.main;
-            var drag = inputService.Find("Drag");
+            var drag = inputService.Actions.GeneralGestures.Drag;
             if (drag != null)
             {
                 drag.performed += OnPointer;

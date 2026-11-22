@@ -33,7 +33,7 @@ namespace Behaviours
             _waiting = new WaitForSeconds(SettingsService.Settings.ClickGestureTimeMax);
             _camera = Camera.main;
             SettingsService.SettingsChanged += OnSettingsChanged;
-            var inputAction = SystemCore.InputService.CurrentInputActions.FindAction("PivotPositionChange");
+            var inputAction = SystemCore.InputService.Actions.GeneralGestures.PivotPositionChange;
             inputAction.performed += OnMouseRightClickStart;
             inputAction.canceled += OnMouseRightClickEnd;
          

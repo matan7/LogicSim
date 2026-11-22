@@ -33,13 +33,13 @@ namespace Behaviours
             OnSettingsChange();
             UpdateBackground();
 
-            var panAction = SystemCore.InputService.Find("CameraPan");
+            var panAction = SystemCore.InputService.Actions.GeneralGestures.CameraPan;
             if (panAction != null)
             {
                 panAction.started += OnMoveStart;
                 panAction.performed += OnMove;
             }
-            var zoomAction = SystemCore.InputService.Find("CameraZoom");
+            var zoomAction = SystemCore.InputService.Actions.GeneralGestures.CameraZoom;
             if (zoomAction != null)
                 zoomAction.performed += OnZoom;
         }

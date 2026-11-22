@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using Core.AppState;
 using Core.Clipboard;
 using Core.Command;
@@ -26,9 +25,6 @@ namespace Core
         public static CircuitService CircuitService { get; private set; }
         public static SimulationService SimulationService { get; private set; }
 
-        [Header("Dependencies")]
-        [SerializeField] private InputActionAsset _defaultInputActions;
-
         private void Awake()
         {
             if (Instance != null)
@@ -39,7 +35,7 @@ namespace Core
             Instance = this;
 
             SettingsService = new SettingsService();
-            InputService = new InputService(_defaultInputActions, SettingsService);
+            InputService = new InputService(SettingsService);
             CommandService = new CommandService();
             SelectingService = new SelectingService();
             ClipboardService = new ClipboardService();

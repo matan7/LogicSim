@@ -23,9 +23,9 @@ namespace Actions
             _camera = Camera.main;
 
             // Mouse left click
-            _inputService.CurrentInputActions.FindAction("SelectOne").performed += OnSelect;
+            _inputService.Actions.GeneralGestures.SelectOne.performed += OnSelect;
             // Shift + mouse left click
-            _inputService.CurrentInputActions.FindAction("SelectMany").performed += OnSelectMore;
+            _inputService.Actions.GeneralGestures.SelectMany.performed += OnSelectMore;
 
             actionsManager.UpdateEvent += Update;
         }

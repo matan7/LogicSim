@@ -6,23 +6,22 @@ using Core.Settings;
 namespace Core.Input
 {
     /// <summary>
-    /// Owns the input action asset. User rebinds are stored as binding overrides, so actions added in
+    /// Owns the input actions. <see cref="Actions"/> is generated from Assets/Data/GeneralInputActions.inputactions, so
+    /// actions are typed members instead of names. User rebinds are stored as binding overrides, so actions added in
     /// later versions of the app keep working with old settings files.
     /// </summary>
     public class InputService
     {
-        public InputActionAsset CurrentInputActions { get; }
+        public GeneralInputActions Actions { get; }
 
-        private readonly SettingsService _settingsService;
+        /// <summary>The asset behind <see cref="Actions"/> (for binding overrides).</summary>
+        public InputActionAsset CurrentInputActions => Actions.asset;
 
-        public InputService(InputActionAsset defaultInputActions, SettingsService settingsService)
+        public InputService(SettingsService settingsService)
         {
-            if (defaultInputActions == null)
-                throw new ArgumentNullException(nameof(defaultInputActions));
-            _settingsService = settingsService;
-            CurrentInputActions = defaultInputActions;
+            Actions = new GeneralInputActions();
 
-            var overrides = _settingsService.LoadInputOverrides();
+            var overrides = settingsService.LoadInputOverrides();
             if (!string.IsNullOrEmpty(overrides))
             {
                 try
@@ -35,16 +34,7 @@ namespace Core.Input
                 }
             }
 
-            CurrentInputActions.Enable();
-        }
-
-        /// <summary>Finds an action, logging a warning instead of throwing when it does not exist.</summary>
-        public InputAction Find(string nameOrPath)
-        {
-            var action = CurrentInputActions.FindAction(nameOrPath);
-            if (action == null)
-                Debug.LogWarning($"{nameof(InputService)}: input action '{nameOrPath}' not found");
-            return action;
+            Actions.Enable();
         }
     }
 }

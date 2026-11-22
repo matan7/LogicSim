@@ -7,7 +7,7 @@ namespace Actions
     {
         public PasteAction(InputService inputService)
         {
-            var action = inputService.Find("Commands/PasteCommand");
+            var action = inputService.Actions.Commands.PasteCommand;
             if (action != null)
                 action.performed += Paste;
         }

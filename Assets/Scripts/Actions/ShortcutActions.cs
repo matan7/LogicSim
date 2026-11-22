@@ -14,26 +14,26 @@ namespace Actions
         public ShortcutActions(InputService inputService, WireAction wireAction)
         {
             _wireAction = wireAction;
-            Bind(inputService, "Commands/CutCommand", () => EditCommands.Cut());
-            Bind(inputService, "Commands/SelectAllCommand", EditCommands.SelectAll);
-            Bind(inputService, "Commands/RotateCommand", () =>
+            Bind(inputService.Actions.Commands.CutCommand, () => EditCommands.Cut());
+            Bind(inputService.Actions.Commands.SelectAllCommand, EditCommands.SelectAll);
+            Bind(inputService.Actions.Commands.RotateCommand, () =>
             {
                 // R is also part of Ctrl+R (redo).
                 if (Keyboard.current != null && Keyboard.current.ctrlKey.isPressed)
                     return;
                 EditCommands.Rotate();
             });
-            Bind(inputService, "Commands/SaveCommand", () => AppCommands.Save(saveAs: false));
-            Bind(inputService, "Commands/OpenCommand", AppCommands.ShowOpen);
-            Bind(inputService, "Commands/NewCommand", AppCommands.New);
-            Bind(inputService, "Commands/ToggleSimulation", AppCommands.ToggleSimulation);
-            Bind(inputService, "Commands/PauseSimulation", AppCommands.TogglePause);
-            Bind(inputService, "Commands/StepSimulation", AppCommands.Step);
-            Bind(inputService, "Commands/SpeedUp", () => AppCommands.ChangeSpeed(2));
-            Bind(inputService, "Commands/SpeedDown", () => AppCommands.ChangeSpeed(0.5));
-            Bind(inputService, "Commands/CancelCommand", Cancel);
-            Bind(inputService, "Commands/HelpCommand", AppCommands.ShowHelp);
-            Bind(inputService, "Commands/FrameAll", AppCommands.FrameAll);
+            Bind(inputService.Actions.Commands.SaveCommand, () => AppCommands.Save(saveAs: false));
+            Bind(inputService.Actions.Commands.OpenCommand, AppCommands.ShowOpen);
+            Bind(inputService.Actions.Commands.NewCommand, AppCommands.New);
+            Bind(inputService.Actions.Commands.ToggleSimulation, AppCommands.ToggleSimulation);
+            Bind(inputService.Actions.Commands.PauseSimulation, AppCommands.TogglePause);
+            Bind(inputService.Actions.Commands.StepSimulation, AppCommands.Step);
+            Bind(inputService.Actions.Commands.SpeedUp, () => AppCommands.ChangeSpeed(2));
+            Bind(inputService.Actions.Commands.SpeedDown, () => AppCommands.ChangeSpeed(0.5));
+            Bind(inputService.Actions.Commands.CancelCommand, Cancel);
+            Bind(inputService.Actions.Commands.HelpCommand, AppCommands.ShowHelp);
+            Bind(inputService.Actions.Commands.FrameAll, AppCommands.FrameAll);
         }
 
         private void Cancel()
@@ -54,11 +54,8 @@ namespace Actions
             SystemCore.SelectingService.DeselectAll();
         }
 
-        private static void Bind(InputService inputService, string action, Action handler)
+        private static void Bind(InputAction inputAction, Action handler)
         {
-            var inputAction = inputService.Find(action);
-            if (inputAction == null)
-                return;
             inputAction.performed += _ =>
             {
                 // Typing into a text field must not trigger editor shortcuts.

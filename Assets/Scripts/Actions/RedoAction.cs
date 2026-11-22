@@ -12,7 +12,7 @@ namespace Actions
         {
             _commandService = commandService;
             _inputService = inputService;
-            var action = _inputService.Find("Commands/RedoCommand");
+            var action = _inputService.Actions.Commands.RedoCommand;
             if (action != null)
                 action.performed += OnRedoShortcutPerformed;
         }

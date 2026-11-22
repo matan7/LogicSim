@@ -23,7 +23,7 @@ namespace Actions
         {
             _camera = Camera.main;
             // "Drag" reports the pointer position while the button is held: the first report is the press.
-            var drag = inputService.Find("Drag");
+            var drag = inputService.Actions.GeneralGestures.Drag;
             if (drag != null)
             {
                 drag.performed += OnPointer;

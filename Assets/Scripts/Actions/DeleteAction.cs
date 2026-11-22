@@ -7,7 +7,7 @@ namespace Actions
     {
         public DeleteAction(InputService inputService)
         {
-            var action = inputService.Find("Commands/DeleteCommand");
+            var action = inputService.Actions.Commands.DeleteCommand;
             if (action != null)
                 action.performed += OnDeletePerformed;
         }

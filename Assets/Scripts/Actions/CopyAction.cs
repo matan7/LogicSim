@@ -9,7 +9,7 @@ namespace Actions
     {
         public CopyAction(InputService inputService)
         {
-            var action = inputService.Find("Commands/CopyCommand");
+            var action = inputService.Actions.Commands.CopyCommand;
             if (action != null)
                 action.performed += Copy;
         }

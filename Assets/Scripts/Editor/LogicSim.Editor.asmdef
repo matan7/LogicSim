@@ -1,9 +1,8 @@
 {
-    "name": "Editor",
+    "name": "LogicSim.Editor",
     "rootNamespace": "",
     "references": [
         "Core",
-        "UnityEditor.UI",
         "Unity.InputSystem",
         "LogicSim.Simulation",
         "LogicSim.Simulation.Jobs"

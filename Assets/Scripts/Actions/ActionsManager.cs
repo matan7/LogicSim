@@ -1,5 +1,6 @@
 using Core;
 using System;
+using LogicSim.Views;
 using UnityEngine;
 
 namespace Actions

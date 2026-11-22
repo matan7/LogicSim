@@ -1,6 +1,7 @@
 ﻿using Core.Input;
 using Core.Selecting;
 using UnityEngine;
+using LogicSim.Views;
 using UnityEngine.InputSystem;
 
 namespace Actions

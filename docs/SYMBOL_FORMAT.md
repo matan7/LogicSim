@@ -4,8 +4,8 @@ Format of the component graphics for GPU-instanced rendering: one draw call for 
 on/off state read from a buffer of net values on the GPU instead of updated per GameObject on the CPU. See "View
 performance" in `TODO.md` for why.
 
-Status: agreed on 2026-11-22. Not implemented yet. Wires (one mesh, colors from the same net buffer) are separate
-work and need no art.
+Status: agreed on 2026-11-22. The source art and the atlas builder exist; the instanced renderer does not yet. Wires
+(one mesh, colors from the same net buffer) are separate work and need no art.
 
 ## Geometry
 
@@ -31,7 +31,7 @@ for inputs and x = width for outputs. Gates with 3 to 8 inputs use this layout t
 
 ## Texture channels
 
-One RGBA8 atlas, linear (not sRGB), bilinear filtering with mipmaps. Every channel is a **signed distance field**
+One RGBA8 atlas, linear (not sRGB), trilinear filtering (mipmaps). Every channel is a **signed distance field**
 (SDF): 0.5 is the edge of the shape, larger values are inside. The distance range (spread) is 8 texels on each side of
 the edge, which is 0.25 units at 32 texels per unit.
 
@@ -91,7 +91,7 @@ font atlas. They are shown only above a zoom threshold.
 - Layers in each artboard: `outline`, `fill` and optionally `glow`. Shapes on transparency in any color: only alpha is
   used. In the template the outlines are white and the fills gray, so that both stay visible. Prefer vector shapes.
 - Do not draw pin stubs or text.
-- Export every layer as PNG to `Art/Symbols/export/<symbol id>_<layer>.png`.
+- Save the PSD. Nothing is exported: the atlas builder reads the PSD itself.
 
 The template exists: `Art/Symbols/Symbols.psd` (3100 × 1600) has one artboard per symbol with unit guides. The gate,
 switch and bulb bodies were taken over from `Assets/Textures/GraphicAssets.psd` as vector shapes, scaled 4 times
@@ -110,11 +110,26 @@ switch and bulb bodies were taken over from `Assets/Textures/GraphicAssets.psd` 
 
 ## Atlas builder (Unity editor)
 
-**Tools > LogicSim > Build Symbol Atlas** reads `Art/Symbols/export`, computes the SDF of each layer at 32 texels per unit
-with an 8-texel spread, packs the symbols into a power-of-two RGBA8 atlas with padding, and writes:
+**Tools > LogicSim > Build Symbol Atlas** (`Assets/Scripts/Editor/Symbols`) reads `Art/Symbols/Symbols.psd` directly:
 
-- `Assets/Art/Symbols/SymbolAtlas.png`
-- `Assets/Art/Symbols/SymbolSet.asset`: per symbol id the UV rect, the size in units and the origin.
+- Every visible top-level artboard is a symbol named after the artboard. Its size must be whole units (multiples of
+  100 px), otherwise it is skipped with a warning.
+- In each artboard the visible layers named `outline`, `fill` and `glow` (case-insensitive; several layers with the
+  same name are merged) become the R, G and B channels. A pixel is inside where the layer's alpha is at least 128.
+  Shape layers work as they are, because the PSD stores their rasterized alpha.
+- Only 8-bit PSD files (not PSB) are read.
+
+Each layer becomes an exact Euclidean signed distance field (positive inside), sampled at 32 texels per unit with an
+8-texel spread (0.25 units) and 9 texels of padding around each symbol. The symbols are shelf-packed into the smallest
+power-of-two square, and the builder writes:
+
+- `Assets/Art/Symbols/SymbolAtlas.png`: linear (not sRGB), mipmaps, trilinear, clamp, uncompressed RGBA32. With the
+  18 symbols it is 1024 × 1024 and takes about 3 seconds to build.
+- `Assets/Art/Symbols/SymbolSet.asset` (`LogicSim.Views.SymbolSet`): per symbol id the UV rect (padding included) and
+  the size in units; also the texels per unit, the spread and the padding in units.
+
+Run it again after every change to the PSD and commit both outputs. `SymbolAtlasTests` checks the reader, the distance
+field and the packed atlas.
 
 ## Rendering contract
 

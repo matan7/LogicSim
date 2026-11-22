@@ -1,0 +1,163 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54ced20ec800c604a9db07f03009c945, type: 3}
+  m_Name: SymbolSet
+  m_EditorClassIdentifier: LogicSim.App::LogicSim.Views.SymbolSet
+  Atlas: {fileID: 2800000, guid: 7f7c537f6a1ccdd4aa0d4fadd6bedca5, type: 3}
+  TexelsPerUnit: 32
+  Spread: 0.25
+  Padding: 0.28125
+  Symbols:
+  - Id: gate.and
+    Uv:
+      serializedVersion: 2
+      x: 0.7050781
+      y: 0.14648438
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.buf
+    Uv:
+      serializedVersion: 2
+      x: 0.001953125
+      y: 0.14648438
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.nand
+    Uv:
+      serializedVersion: 2
+      x: 0.7050781
+      y: 0.001953125
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.nor
+    Uv:
+      serializedVersion: 2
+      x: 0.5292969
+      y: 0.001953125
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.not
+    Uv:
+      serializedVersion: 2
+      x: 0.17773438
+      y: 0.14648438
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.or
+    Uv:
+      serializedVersion: 2
+      x: 0.5292969
+      y: 0.14648438
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.xnor
+    Uv:
+      serializedVersion: 2
+      x: 0.35351562
+      y: 0.001953125
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: gate.xor
+    Uv:
+      serializedVersion: 2
+      x: 0.35351562
+      y: 0.14648438
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: icon.lif
+    Uv:
+      serializedVersion: 2
+      x: 0.5175781
+      y: 0.29101562
+      width: 0.080078125
+      height: 0.080078125
+    Size: {x: 2, y: 2}
+  - Id: icon.network
+    Uv:
+      serializedVersion: 2
+      x: 0.43554688
+      y: 0.29101562
+      width: 0.080078125
+      height: 0.080078125
+    Size: {x: 2, y: 2}
+  - Id: icon.neuron
+    Uv:
+      serializedVersion: 2
+      x: 0.5996094
+      y: 0.29101562
+      width: 0.080078125
+      height: 0.080078125
+    Size: {x: 2, y: 2}
+  - Id: io.bulb
+    Uv:
+      serializedVersion: 2
+      x: 0.001953125
+      y: 0.001953125
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: io.button
+    Uv:
+      serializedVersion: 2
+      x: 0.29101562
+      y: 0.29101562
+      width: 0.14257812
+      height: 0.14257812
+    Size: {x: 4, y: 4}
+  - Id: io.clock
+    Uv:
+      serializedVersion: 2
+      x: 0.14648438
+      y: 0.29101562
+      width: 0.14257812
+      height: 0.14257812
+    Size: {x: 4, y: 4}
+  - Id: io.constant
+    Uv:
+      serializedVersion: 2
+      x: 0.001953125
+      y: 0.29101562
+      width: 0.14257812
+      height: 0.14257812
+    Size: {x: 4, y: 4}
+  - Id: io.switch
+    Uv:
+      serializedVersion: 2
+      x: 0.17773438
+      y: 0.001953125
+      width: 0.17382812
+      height: 0.14257812
+    Size: {x: 5, y: 4}
+  - Id: mark.bubble
+    Uv:
+      serializedVersion: 2
+      x: 0.7324219
+      y: 0.29101562
+      width: 0.048828125
+      height: 0.048828125
+    Size: {x: 1, y: 1}
+  - Id: mark.clock
+    Uv:
+      serializedVersion: 2
+      x: 0.6816406
+      y: 0.29101562
+      width: 0.048828125
+      height: 0.048828125
+    Size: {x: 1, y: 1}

@@ -5,7 +5,8 @@
         "Core",
         "Unity.InputSystem",
         "LogicSim.Simulation",
-        "LogicSim.Simulation.Jobs"
+        "LogicSim.Simulation.Jobs",
+        "LogicSim.App"
     ],
     "includePlatforms": [
         "Editor"

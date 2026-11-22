@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "LogicSim.Simulation",
-        "LogicSim.App"
+        "LogicSim.App",
+        "LogicSim.Editor"
     ],
     "includePlatforms": [
         "Editor"

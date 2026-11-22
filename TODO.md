@@ -31,5 +31,6 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   - Wires: one GameObject with a LineRenderer and an `EdgeCollider2D` each. Draw them as one mesh (colors from the net
     values) and use a spatial index for pointer hit tests; this also needs wire selection without per-wire objects.
   - Component bodies: GPU-instanced symbols with their state read from a net value buffer. The art format is agreed in
-    `docs/SYMBOL_FORMAT.md`; next are the PhotoCraft source file and the atlas builder.
+    `docs/SYMBOL_FORMAT.md`; the source art (`Art/Symbols/Symbols.psd`) and the atlas builder exist. Next is the
+    instanced renderer.
   - Loading such a circuit creates 25k GameObjects and takes about 10 s.

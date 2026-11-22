@@ -17,6 +17,3 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 - [ ] Step 3: Play mode check of every feature (palette, editing, ICs, neurons, inspector, GPU LUT, MCP).
 - [ ] Step 4: Jobs + Burst benchmark numbers in the README; Profiler capture of a large circuit.
 - [ ] Step 5: asmdefs for the app code, no string lookups (generated input class, serialized UI references), PlayMode tests, wire mesh batching if views are the bottleneck.
-
-## Outside this branch
-- [ ] `Assets/logicsim-complete.bundle` on `refactoring`: delete only if the user agrees.

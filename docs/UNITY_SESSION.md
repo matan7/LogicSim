@@ -149,8 +149,3 @@ Do these only after steps 1–4 pass, in this order, each as its own commit with
 ## Can also be done without Unity
 
 The open items that do not need the editor are listed in `TODO.md`.
-
-## Leftover outside this branch
-
-`Assets/logicsim-complete.bundle` was committed by the user to the `refactoring` branch to hand over the work. Delete
-it there only if the user agrees.

@@ -97,6 +97,24 @@ namespace LogicSim.Tests.App
         }
 
         [Test]
+        public void UiIconBuilder_DrawsEveryIcon()
+        {
+            string root = Directory.GetParent(Application.dataPath).FullName;
+            var icons = UiIconBuilder.Build(PsdReader.Read(Path.Combine(root, UiIconBuilder.IconSourcePath)), ReadSource());
+            Assert.That(icons.Keys, Is.SupersetOf(new[] { "ui.new", "ui.undo", "ui.ic", "comp.dff", "comp.pinout" }));
+            Assert.That(icons.Keys.Where(k => k.StartsWith(UiIconBuilder.SymbolIconPrefix + "gate.")).Count(), Is.EqualTo(8));
+            // Square icons from Icons.psd; the 5 x 4 gates as wide as the icons and as high as their aspect.
+            Assert.That((icons["ui.new"].Width, icons["ui.new"].Height), Is.EqualTo((128, 128)));
+            Assert.That((icons["comp.gate.and"].Width, icons["comp.gate.and"].Height), Is.EqualTo((128, 104)));
+            foreach (var pair in icons)
+            {
+                var pixels = pair.Value.Pixels;
+                Assert.That(pixels.Count(p => p.a > 200), Is.GreaterThan(100), pair.Key + " has a drawing");
+                Assert.That(pixels[0].a, Is.Zero, pair.Key + " has a transparent corner");
+            }
+        }
+
+        [Test]
         public void SymbolSet_InResources_IsComplete()
         {
             // The app loads this asset; it has to be rebuilt and committed after every change to the PSD.

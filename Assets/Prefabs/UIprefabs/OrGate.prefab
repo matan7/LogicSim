@@ -67,9 +67,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300006, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f0c66978aebc08442a16306f9d422aaa, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -91,6 +91,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ObjectCreationFromUI
   _objectToInstantiate: {fileID: 3737317089831340954, guid: a6b2c033b910e754e9e81a349ed2db1e,
     type: 3}
+  _kind: 
+  _subcircuitId: 
 --- !u!114 &6067291452681660718
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,6 +209,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

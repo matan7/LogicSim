@@ -27,7 +27,8 @@ decision.
   `ScheduleBatchedJobs`), and a circuit slower than the requested speed got 0.25 s worth of requested ticks per frame.
   Both are fixed; the frame is now about 120 ms and limited by the views (see `TODO.md`).
 - **Step 5 is done except the larger view refactors** (2026-11-22). The app code is in `LogicSim.App`; input actions
-  come from the generated `Core.Input.GeneralInputActions`; scene UI objects are serialized on `AppUiReferences`;
+  come from the generated `Core.Input.GeneralInputActions`; scene UI objects are serialized on `AppUiReferences`
+  (since 2026-11-23 the whole UI is in the scene: buttons are `ToolButton` prefab instances with a `CommandButton`);
   PlayMode tests (`Assets/Tests/PlayMode`) cover palette, wiring, dragging, simulation and IC flows; an editor test
   compares the GPU and CPU lookup tables. Run PlayMode tests with
   `unity command test run --mode playmode --async-tests true`, then poll `test status`.

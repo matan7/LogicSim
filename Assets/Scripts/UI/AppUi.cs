@@ -13,8 +13,9 @@ using UnityEngine.UI;
 namespace LogicSim.UI
 {
     /// <summary>
-    /// Extends the scene's tool panel at runtime: toolbar buttons, palette entries for every component kind,
-    /// custom circuits, a status bar and dialogs. Built from templates already in the scene so it matches their style.
+    /// Runtime part of the scene's UI: binds the simulation toggle, keeps the status line current, adds the ICs of the
+    /// library to the palette, and opens dialogs. The buttons, palette entries, inspector and IC bar are in the scene
+    /// (prefabs under Assets/Prefabs/UI).
     /// </summary>
     public class AppUi : MonoBehaviour
     {
@@ -33,8 +34,6 @@ namespace LogicSim.UI
         private Toggle _simulationToggle;
         private bool _syncingToggle;
 
-        private GameObject _buttonTemplate;
-        private GameObject _paletteTemplate;
         private RectTransform _customContainer;
         private int _customFixedEntries;
         private readonly List<GameObject> _subcircuitEntries = new List<GameObject>();
@@ -62,16 +61,14 @@ namespace LogicSim.UI
             }
 
             RegisterPalettePrefabs();
-            BuildToolbar();
-            BuildPalette();
-            MakeToolPanelScrollable();
             if (Behaviours.CameraControl.Instance != null)
                 Behaviours.CameraControl.Instance.LeftPanel = _refs.ToolsPanel;
             BindSimulationToggle();
-            BuildStatusBar();
-            HierarchyBar.Create(_canvas);
-            InspectorPanel.Create(_canvas);
+            _status = _refs.StatusText;
+            RefreshStatus();
 
+            _customContainer = _refs.CustomCircuitIcons;
+            _customFixedEntries = _customContainer != null ? _customContainer.childCount : 0;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
             SystemCore.CircuitService.Root.Library.Changed += RebuildSubcircuitEntries;
             SystemCore.CircuitService.LevelChanged += RebuildSubcircuitEntries;
@@ -104,7 +101,7 @@ namespace LogicSim.UI
 
         #endregion
 
-        #region Palette and toolbar
+        #region Palette
 
         /// <summary>Palette entries reference the gate prefabs; reuse their artwork for loaded circuits.</summary>
         private void RegisterPalettePrefabs()
@@ -113,252 +110,60 @@ namespace LogicSim.UI
                 Views.ComponentPrefabRegistry.Register(spawner.Prefab);
         }
 
-        private void BuildToolbar()
-        {
-            var undo = _refs.UndoButton;
-            if (undo == null)
-            {
-                Debug.LogWarning("[LogicSim] AppUiReferences.UndoButton is not set; toolbar buttons are not created.");
-                return;
-            }
-            // Pristine, inactive copy: the scene's undo/redo buttons get restyled below.
-            _buttonTemplate = Instantiate(undo, transform);
-            _buttonTemplate.SetActive(false);
-            foreach (var behaviour in _buttonTemplate.GetComponentsInChildren<MonoBehaviour>(true))
-                if (behaviour is UndoButton || behaviour is RedoButton)
-                    DestroyImmediate(behaviour);
-            var icons = UiIconSet.Instance;
-
-            var edit = _refs.EditIcons;
-            if (edit != null)
-            {
-                StyleTextButton(undo, "UNDO");
-                if (_refs.RedoButton != null)
-                    StyleTextButton(_refs.RedoButton, "REDO");
-                AddToolbarButton(edit, "Cut", icons != null ? icons.Cut : null, null, () => Actions.EditCommands.Cut());
-                AddToolbarButton(edit, "Copy", icons != null ? icons.Copy : null, null, () => Actions.EditCommands.Copy());
-                AddToolbarButton(edit, "Paste", icons != null ? icons.Paste : null, null, () => Actions.EditCommands.Paste());
-                AddToolbarButton(edit, "Delete", icons != null ? icons.Delete : null, null, () => Actions.EditCommands.Delete());
-                AddToolbarButton(edit, "Rotate", null, "R", () => Actions.EditCommands.Rotate());
-                AddToolbarButton(edit, "Select all", null, "ALL", Actions.EditCommands.SelectAll);
-                FitSection(edit, 3, 80, 70, 10, 25);
-            }
-
-            var menu = _refs.MenuIcons;
-            if (menu != null)
-            {
-                AddToolbarButton(menu, "New", icons != null ? icons.New : null, null, AppCommands.New);
-                AddToolbarButton(menu, "Open", icons != null ? icons.Open : null, null, AppCommands.ShowOpen);
-                AddToolbarButton(menu, "Save", icons != null ? icons.Save : null, null, () => AppCommands.Save(saveAs: false));
-                AddToolbarButton(menu, "Save as", null, "AS", () => AppCommands.Save(saveAs: true));
-                AddToolbarButton(menu, "Truth table", null, "TT", AppCommands.ShowTruthTable);
-                AddToolbarButton(menu, "Help", null, "?", AppCommands.ShowHelp);
-                FitSection(menu, 3, 80, 70, 10, 25);
-            }
-        }
-
-        private void AddToolbarButton(RectTransform container, string label, Sprite icon, string iconText, Action onClick)
-        {
-            var go = Instantiate(_buttonTemplate, container);
-            go.name = label + "Button";
-            go.SetActive(true);
-
-            var button = go.GetComponentInChildren<Button>(true);
-            if (button != null)
-            {
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(() => onClick());
-                button.interactable = true;
-            }
-            var name = go.transform.Find("NameTxt");
-            if (name != null && name.TryGetComponent(out TextMeshProUGUI nameText))
-                nameText.text = label;
-
-            if (icon != null && button != null && button.targetGraphic is Image image)
-            {
-                image.sprite = icon;
-                image.preserveAspect = true;
-                image.color = Color.white;
-            }
-            else
-            {
-                StyleTextButton(go, iconText ?? label);
-            }
-        }
-
-        /// <summary>Icon-less buttons: dark tile with a short caption instead of a blank white box.</summary>
-        private static void StyleTextButton(GameObject buttonRoot, string caption)
-        {
-            var button = buttonRoot.GetComponentInChildren<Button>(true);
-            if (button == null || !(button.targetGraphic is Image image) || image.sprite != null)
-                return;
-            image.color = UiFactory.ButtonColor;
-            var colors = button.colors;
-            colors.highlightedColor = new Color(1.4f, 1.4f, 1.4f, 1f);
-            button.colors = colors;
-            if (image.transform.Find("Caption") != null)
-                return;
-            var text = UiFactory.CreateText(image.transform, caption, 18, UiFactory.TextColor, TextAlignmentOptions.Center);
-            text.name = "Caption";
-            text.fontStyle = FontStyles.Bold;
-            UiFactory.Stretch(text.rectTransform);
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-        }
-
-        private void BuildPalette()
-        {
-            _paletteTemplate = FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Include)
-                .Select(s => FindPaletteRoot(s.transform))
-                .FirstOrDefault(t => t != null)?.gameObject;
-            if (_paletteTemplate == null)
-                return;
-
-            var gates = _refs.LogicGatesIcons;
-            if (gates != null)
-            {
-                AddPaletteEntry(gates, ComponentKind.DFlipFlop, "D flip-flop", "D");
-                AddPaletteEntry(gates, ComponentKind.TFlipFlop, "T flip-flop", "T");
-                AddPaletteEntry(gates, ComponentKind.JKFlipFlop, "JK flip-flop", "JK");
-                AddPaletteEntry(gates, ComponentKind.Neuron, "Neuron", "N");
-                AddPaletteEntry(gates, ComponentKind.SpikingNeuron, "Spiking neuron", "LIF");
-                AddPaletteEntry(gates, ComponentKind.NeuralBlock, "Neural block", "NN");
-                FitSection(gates, 2, 100, 75, 50, 35);
-            }
-
-            var io = _refs.InputOutputIcons;
-            if (io != null)
-            {
-                AddPaletteEntry(io, ComponentKind.Button, "Push button", "BTN");
-                AddPaletteEntry(io, ComponentKind.Clock, "Clock", "CLK");
-                AddPaletteEntry(io, ComponentKind.Constant, "Constant", "0/1");
-                AddPaletteEntry(io, ComponentKind.HexDisplay, "Hex display", "HEX");
-                FitSection(io, 2, 100, 75, 50, 35);
-            }
-
-            _customContainer = _refs.CustomCircuitIcons;
-            if (_customContainer != null)
-            {
-                var icons = UiIconSet.Instance;
-                if (_buttonTemplate != null)
-                {
-                    AddToolbarButton(_customContainer, "Create IC", icons != null ? icons.Subcircuit : null, "IC", AppCommands.CreateSubcircuit);
-                    AddToolbarButton(_customContainer, "Collapse", null, ">IC", AppCommands.CollapseSelection);
-                    AddToolbarButton(_customContainer, "Open IC", null, "OPEN", AppCommands.OpenSelectedSubcircuit);
-                    AddToolbarButton(_customContainer, "Explode", null, "IC>", AppCommands.ExplodeSelection);
-                    AddToolbarButton(_customContainer, "Make unique", null, "UNIQ", AppCommands.MakeSelectedUnique);
-                }
-                AddPaletteEntry(_customContainer, ComponentKind.PinIn, "Input pin", "IN");
-                AddPaletteEntry(_customContainer, ComponentKind.PinOut, "Output pin", "OUT");
-                _customFixedEntries = _customContainer.childCount;
-                FitSection(_customContainer, 2, 100, 75, 50, 35);
-            }
-        }
-
-        private static Transform FindPaletteRoot(Transform spawner)
-        {
-            // Palette prefab: Root -> Image (ObjectSpawner, UiDraggable) + NameTxt.
-            var root = spawner.parent;
-            return root != null && root.Find("NameTxt") != null ? root : null;
-        }
-
-        private GameObject AddPaletteEntry(RectTransform container, ComponentKind kind, string label, string caption, string subcircuitId = null, Sprite icon = null)
-        {
-            var go = Instantiate(_paletteTemplate, container);
-            go.name = label;
-            var spawner = go.GetComponentInChildren<ObjectSpawner>(true);
-            spawner.Configure(kind, subcircuitId);
-            var name = go.transform.Find("NameTxt");
-            if (name != null && name.TryGetComponent(out TextMeshProUGUI nameText))
-                nameText.text = label;
-
-            var image = spawner.GetComponent<Image>();
-            if (image != null)
-            {
-                image.sprite = icon;
-                image.preserveAspect = true;
-                image.color = icon != null ? Color.white : UiFactory.ButtonColor;
-                if (icon == null)
-                {
-                    var text = UiFactory.CreateText(image.transform, caption, 20, UiFactory.TextColor, TextAlignmentOptions.Center);
-                    text.fontStyle = FontStyles.Bold;
-                    UiFactory.Stretch(text.rectTransform);
-                    text.textWrappingMode = TextWrappingModes.NoWrap;
-                }
-            }
-            return go;
-        }
-
+        /// <summary>One palette entry per IC of the library, after the fixed entries of the custom circuits section.</summary>
         private void RebuildSubcircuitEntries()
         {
-            if (_customContainer == null || _paletteTemplate == null)
+            if (_customContainer == null || _refs.PaletteEntryPrefab == null)
                 return;
             foreach (var entry in _subcircuitEntries)
                 if (entry != null)
                     Destroy(entry);
             _subcircuitEntries.Clear();
 
-            var icons = UiIconSet.Instance;
+            var icon = UiIconSet.Instance != null ? UiIconSet.Instance.Subcircuit : null;
             var hierarchy = SystemCore.CircuitService.Hierarchy;
             foreach (var definition in hierarchy.Library.Definitions)
             {
-                var entry = AddPaletteEntry(_customContainer, ComponentKind.Subcircuit, definition.Name, "IC", definition.Id, icons != null ? icons.Subcircuit : null);
-                // ICs that would end up inside themselves are shown dimmed (dropping them is refused).
-                if (!hierarchy.CanPlace(definition.Id))
+                var entry = Instantiate(_refs.PaletteEntryPrefab, _customContainer);
+                entry.name = definition.Name;
+                var spawner = entry.GetComponentInChildren<ObjectSpawner>(true);
+                spawner.Configure(ComponentKind.Subcircuit, definition.Id);
+                var label = entry.transform.Find("NameTxt");
+                if (label != null && label.TryGetComponent(out TextMeshProUGUI labelText))
+                    labelText.text = definition.Name;
+                var image = spawner.GetComponent<Image>();
+                if (image != null)
                 {
-                    var image = entry.GetComponentInChildren<ObjectSpawner>(true)?.GetComponent<Image>();
-                    if (image != null)
-                        image.color = new Color(1, 1, 1, 0.3f);
+                    image.sprite = icon;
+                    image.preserveAspect = true;
+                    // ICs that would end up inside themselves are shown dimmed (dropping them is refused).
+                    image.color = new Color(1, 1, 1, hierarchy.CanPlace(definition.Id) ? 1f : 0.3f);
                 }
                 _subcircuitEntries.Add(entry);
             }
             // Destroyed entries only leave the hierarchy at the end of the frame, so count explicitly.
-            FitSection(_customContainer, 2, 100, 75, 50, 35, _customFixedEntries + _subcircuitEntries.Count);
+            FitSection(_customContainer, _customFixedEntries + _subcircuitEntries.Count);
         }
 
-        /// <summary>Resizes a tool panel section so its grid of items fits (sections have fixed heights in the scene).</summary>
-        private static void FitSection(RectTransform container, int columns, float cellWidth, float cellHeight, float spacingX, float spacingY, int? itemCount = null)
+        /// <summary>
+        /// Resizes a palette section (fixed heights in the scene) so that its grid of entries fits. The grid's own
+        /// settings come from the scene.
+        /// </summary>
+        private static void FitSection(RectTransform container, int itemCount)
         {
             var grid = container.GetComponent<GridLayoutGroup>();
             if (grid == null)
-                grid = container.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(cellWidth, cellHeight);
-            grid.spacing = new Vector2(spacingX, spacingY);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = columns;
-            grid.childAlignment = TextAnchor.UpperCenter;
-            grid.padding = new RectOffset(0, 0, 10, 0);
-
-            int items = itemCount ?? container.childCount;
-            int rows = Mathf.Max(1, Mathf.CeilToInt(items / (float)columns));
-            float gridHeight = 10 + rows * cellHeight + (rows - 1) * spacingY;
-
-            container.anchorMin = container.anchorMax = new Vector2(0, 1);
-            container.pivot = new Vector2(0.5f, 1);
-            container.anchoredPosition = new Vector2(140, -SectionTitleHeight);
-            container.sizeDelta = new Vector2(280, gridHeight);
-
+                return;
+            int columns = Mathf.Max(1, grid.constraintCount);
+            int rows = Mathf.Max(1, Mathf.CeilToInt(itemCount / (float)columns));
+            float gridHeight = grid.padding.top + rows * grid.cellSize.y + (rows - 1) * grid.spacing.y;
+            container.sizeDelta = new Vector2(container.sizeDelta.x, gridHeight);
             if (container.parent is RectTransform section)
             {
                 section.sizeDelta = new Vector2(section.sizeDelta.x, SectionTitleHeight + gridHeight + SectionPadding);
                 if (section.parent is RectTransform list)
                     LayoutRebuilder.MarkLayoutForRebuild(list);
             }
-        }
-
-        /// <summary>The tool panel content is taller than the screen: scroll it with the mouse wheel.</summary>
-        private void MakeToolPanelScrollable()
-        {
-            var main = _refs.ScrollViewport;
-            var content = _refs.ScrollContent;
-            if (main == null || content == null)
-                return;
-            if (main.GetComponent<RectMask2D>() == null)
-                main.gameObject.AddComponent<RectMask2D>();
-            if (main.GetComponent<Image>() == null)
-                UiFactory.AddImage(main, new Color(0, 0, 0, 0));
-            var scroller = main.gameObject.AddComponent<WheelScroller>();
-            scroller.Content = content;
-            scroller.Viewport = main;
         }
 
         #endregion
@@ -387,24 +192,6 @@ namespace LogicSim.UI
                 _simulationToggle.isOn = state == ApplicationState.Simulator;
                 _syncingToggle = false;
             }
-            RefreshStatus();
-        }
-
-        private void BuildStatusBar()
-        {
-            var rect = UiFactory.CreateRect("Status Bar", _canvas.transform);
-            rect.anchorMin = new Vector2(0, 0);
-            rect.anchorMax = new Vector2(1, 0);
-            rect.pivot = new Vector2(0.5f, 0);
-            rect.offsetMin = new Vector2(310, 6);
-            rect.offsetMax = new Vector2(-12, 34);
-            _status = rect.gameObject.AddComponent<TextMeshProUGUI>();
-            _status.fontSize = 16;
-            _status.alignment = TextAlignmentOptions.BottomRight;
-            _status.color = UiFactory.MutedText;
-            _status.raycastTarget = false;
-            _status.richText = true;
-            _status.textWrappingMode = TextWrappingModes.NoWrap;
             RefreshStatus();
         }
 

@@ -228,8 +228,10 @@ Assets/Scripts/
   App/               bootstrap, simulation driver, MCP host for the running app
   Views/             component, pin and wire views
   Actions/           mouse and keyboard interaction
-  UI/                toolbar, palette, inspector, IC breadcrumb, dialogs, status bar
-Assets/Resources/    examples, icons, NeuralLut.compute
+  UI/                binds the scene's tool panel, inspector, IC breadcrumb and status bar; dialogs
+Assets/Prefabs/UI/   ToolButton, PaletteEntry, HierarchyBar, InspectorPanel (all in SampleScene)
+Assets/Art/          symbol atlas and UI icons, built from Art/ (PSD sources) by Tools > LogicSim
+Assets/Resources/    examples, symbol set, UI icon set, NeuralLut.compute
 Assets/Tests/EditMode/   NUnit tests (Unity Test Runner and dotnet)
 Headless/            .NET solution: core library, MCP server, tests, benchmark
 docs/UNITY_SESSION.md  checklist for verifying and continuing the work inside the Unity editor

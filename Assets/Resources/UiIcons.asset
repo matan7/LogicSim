@@ -12,11 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 374f88d21e034891bb4a704ba8fe06fe, type: 3}
   m_Name: UiIcons
   m_EditorClassIdentifier: Assembly-CSharp::LogicSim.UI.UiIconSet
-  New: {fileID: -818169423965538391, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Open: {fileID: 4077145829424181497, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Save: {fileID: 1507196999817282918, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Cut: {fileID: 8394158078495450125, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Copy: {fileID: -5944188053718757599, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Paste: {fileID: -6567643371809809131, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Delete: {fileID: -9180129457090887526, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
-  Subcircuit: {fileID: 21300066, guid: 1ec0b74c645ea314fb978fccf0219fe4, type: 3}
+  Subcircuit: {fileID: 21300000, guid: 1a892ebdb500af64d9a088a1a886353e, type: 3}

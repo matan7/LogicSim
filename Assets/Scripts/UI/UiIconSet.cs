@@ -2,17 +2,11 @@ using UnityEngine;
 
 namespace LogicSim.UI
 {
-    /// <summary>Icons for the generated toolbar buttons (Resources/UiIcons).</summary>
+    /// <summary>Icons the runtime UI assigns itself (Resources/UiIcons); the scene's buttons reference theirs directly.</summary>
     [CreateAssetMenu(menuName = "LogicSim/UI Icon Set", fileName = "UiIcons")]
     public class UiIconSet : ScriptableObject
     {
-        public Sprite New;
-        public Sprite Open;
-        public Sprite Save;
-        public Sprite Cut;
-        public Sprite Copy;
-        public Sprite Paste;
-        public Sprite Delete;
+        [Tooltip("Palette entries of the ICs in the library.")]
         public Sprite Subcircuit;
 
         private static UiIconSet _instance;

@@ -135,6 +135,20 @@ power-of-two square, and the builder writes:
 Run it again after every change to the PSD and commit both outputs. `SymbolAtlasTests` checks the reader, the distance
 field and the packed atlas.
 
+## UI icons
+
+The tool panel's icons are built the same way: **Tools > LogicSim > Build UI Icons** (`UiIconBuilder`) writes
+`Assets/Art/UI/Icons/<id>.png` (white on transparent, imported as sprites):
+
+- every artboard of `Art/UI/Icons.psd` (256 px, white strokes of 14 px with round caps, all visible layers merged)
+  becomes a 128 px icon: `ui.*` for commands, `comp.*` for components without a symbol (flip-flops, hex display, IC
+  pins);
+- the components with a symbol get `comp.<symbol id>`: the outline of `Symbols.psd` widened to the icons' stroke over
+  the fill at 22 % opacity, 128 px wide and as high as the symbol's aspect needs.
+
+The buttons and palette entries are in the scene (prefabs in `Assets/Prefabs/UI`) and reference these sprites. Run the
+builder again after editing either PSD; the sprites keep their GUIDs, so the scene picks up the change.
+
 ## Rendering contract
 
 - Per instance, updated only when the circuit changes: position, rotation (0 to 3 quarter turns), symbol index,

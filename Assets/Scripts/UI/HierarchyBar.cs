@@ -9,55 +9,25 @@ namespace LogicSim.UI
 {
     /// <summary>
     /// Breadcrumb at the top of the canvas while an IC is open: "Main > Full adder > Half adder", where it gets its
-    /// values from, and Done / Discard buttons. Clicking a crumb goes back to that level (keeping the changes).
+    /// values from, and Done / Discard buttons. Clicking a crumb goes back to that level (keeping the changes). The bar is
+    /// in the scene (Assets/Prefabs/UI/HierarchyBar.prefab); only the crumbs are created at run time.
     /// </summary>
     public class HierarchyBar : MonoBehaviour
     {
         private const float CrumbSpacing = 4;
 
-        private RectTransform _root;
-        private RectTransform _crumbs;
-        private TextMeshProUGUI _state;
-        private Button _discard;
+        [Tooltip("The bar itself, shown only while an IC is open.")]
+        [SerializeField] private RectTransform _root;
+        [Tooltip("Row the crumb buttons are added to.")]
+        [SerializeField] private RectTransform _crumbs;
+        [SerializeField] private TextMeshProUGUI _state;
+        [SerializeField] private Button _discard;
         private readonly List<GameObject> _crumbObjects = new List<GameObject>();
         private float _nextRefresh;
 
-        public static HierarchyBar Create(Canvas canvas)
+        // The behaviour is on an always-active host, the bar below it is hidden at the root level.
+        private void Start()
         {
-            var rect = UiFactory.CreateRect("Hierarchy Bar", canvas.transform);
-            rect.anchorMin = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(0.5f, 1);
-            // Right of the tool panel, below the simulation button and left of the inspector.
-            rect.offsetMin = new Vector2(330, -122);
-            rect.offsetMax = new Vector2(-(30 + InspectorPanel.Width), -74);
-            var bar = rect.gameObject.AddComponent<HierarchyBar>();
-            bar.Build(rect);
-            return bar;
-        }
-
-        private void Build(RectTransform rect)
-        {
-            _root = rect;
-            UiFactory.AddImage(rect, UiFactory.PanelColor);
-            var row = UiFactory.CreateHorizontalGroup(rect, 8);
-            UiFactory.Stretch(row, 10, 10, 6, 6);
-            var group = row.GetComponent<HorizontalLayoutGroup>();
-            group.childAlignment = TextAnchor.MiddleLeft;
-
-            // Sized in Rebuild: a ContentSizeFitter inside the row's layout group grows around its pivot and overlaps
-            // the neighbours.
-            _crumbs = UiFactory.CreateHorizontalGroup(row, CrumbSpacing);
-            _crumbs.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleLeft;
-            _crumbs.sizeDelta = new Vector2(10, 36);
-
-            _state = UiFactory.CreateText(row, string.Empty, 16, UiFactory.MutedText, TextAlignmentOptions.MidlineLeft);
-            _state.textWrappingMode = TextWrappingModes.NoWrap;
-            _state.rectTransform.sizeDelta = new Vector2(420, 36);
-
-            UiFactory.CreateButton(row, "Done", () => AppCommands.CloseSubcircuit(apply: true), 100, 36);
-            _discard = UiFactory.CreateButton(row, "Discard", () => AppCommands.CloseSubcircuit(apply: false), 110, 36);
-
             SystemCore.CircuitService.LevelChanged += Rebuild;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
             Rebuild();

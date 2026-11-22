@@ -12,15 +12,18 @@ namespace LogicSim.UI
 {
     /// <summary>
     /// Properties of the selected component (edit mode): label, inputs, clock period, constant value, neuron weights,
-    /// network layers and training, IC actions. Every change is one undoable edit.
+    /// network layers and training, IC actions. Every change is one undoable edit. The panel is in the scene
+    /// (Assets/Prefabs/UI/InspectorPanel.prefab); its rows are created for the selected component.
     /// </summary>
     public class InspectorPanel : MonoBehaviour
     {
         public const float Width = 340;
         private const float LabelWidth = 110;
 
-        private RectTransform _root;
-        private RectTransform _content;
+        [Tooltip("The panel, hidden while nothing single is selected. The behaviour is on an always-active host.")]
+        [SerializeField] private RectTransform _root;
+        [Tooltip("Where the property rows are created (the panel itself, with a vertical layout).")]
+        [SerializeField] private RectTransform _content;
         private int _shownId;
         private Circuit _shownCircuit;
         private bool _dirty = true;
@@ -28,36 +31,7 @@ namespace LogicSim.UI
         private static CultureInfo Invariant => CultureInfo.InvariantCulture;
         private static Circuit Circuit => SystemCore.CircuitService.Circuit;
 
-        public static InspectorPanel Create(Canvas canvas)
-        {
-            // The behaviour lives on an always-active host so it keeps polling while the panel is hidden.
-            var host = UiFactory.CreateRect("Inspector Host", canvas.transform);
-            UiFactory.Stretch(host);
-            var rect = UiFactory.CreateRect("Inspector", host);
-            rect.anchorMin = new Vector2(1, 1);
-            rect.anchorMax = new Vector2(1, 1);
-            rect.pivot = new Vector2(1, 1);
-            rect.anchoredPosition = new Vector2(-20, -70);
-            rect.sizeDelta = new Vector2(Width, 100);
-            UiFactory.AddImage(rect, UiFactory.PanelColor);
-            var layout = rect.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(14, 14, 12, 14);
-            layout.spacing = 6;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            var fitter = rect.gameObject.AddComponent<ContentSizeFitter>();
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            var panel = host.gameObject.AddComponent<InspectorPanel>();
-            panel._root = rect;
-            panel._content = rect;
-            rect.gameObject.SetActive(false);
-            return panel;
-        }
-
-        private void Awake()
+        private void Start()
         {
             SystemCore.CircuitService.LevelChanged += MarkDirty;
             SystemCore.SelectingService.Changed += MarkDirty;

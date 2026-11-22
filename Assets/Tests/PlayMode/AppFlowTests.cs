@@ -66,6 +66,44 @@ namespace LogicSim.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator WiresFollowADraggedComponent()
+        {
+            yield return LoadApp();
+            var (input, output) = AddSwitchAndBulb();
+            SystemCore.CircuitService.Editor.Apply(new ConnectEdit(Circuit, new PinRef(input.Id, 0), new PinRef(output.Id, 0)));
+            yield return null;
+            var from = BodyOnScreen(output.Id);
+            var to = from + new Vector2(0, -Screen.height * 0.2f);
+
+            // Check the wire end while the bulb is still being dragged, then after the drop.
+            Move(_mouse.position, from);
+            yield return null;
+            Press(_mouse.leftButton);
+            yield return null;
+            for (int i = 1; i <= 6; i++)
+            {
+                Move(_mouse.position, Vector2.Lerp(from, to, i / 6f));
+                yield return null;
+            }
+            yield return null;
+            AssertWireEndsAtPin(output.Id, "while dragging");
+            Release(_mouse.leftButton);
+            yield return null;
+            yield return null;
+
+            Assert.That(Circuit.GetComponent(output.Id).Y, Is.LessThan(0), "the bulb moved down");
+            AssertWireEndsAtPin(output.Id, "after the drop");
+        }
+
+        private static void AssertWireEndsAtPin(int componentId, string when)
+        {
+            var line = Object.FindAnyObjectByType<WireView>().GetComponent<LineRenderer>();
+            var end = line.GetPosition(line.positionCount - 1);
+            var pin = ViewOf(componentId).Inputs[0].transform.position;
+            Assert.That(Vector2.Distance(end, pin), Is.LessThan(0.01f), $"wire end at the pin {when}");
+        }
+
+        [UnityTest]
         public IEnumerator ToggleASwitchInTheSimulation()
         {
             yield return LoadApp();

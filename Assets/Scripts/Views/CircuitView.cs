@@ -201,8 +201,20 @@ namespace LogicSim.Views
 
         private void OnComponentMoved(CircuitComponent component)
         {
-            if (_components.TryGetValue(component.Id, out var view))
-                view.ApplyTransform();
+            if (!_components.TryGetValue(component.Id, out var view))
+                return;
+            view.ApplyTransform();
+            NotifyViewMoved(component.Id);
+        }
+
+        /// <summary>
+        /// Re-routes the wires of a component whose view moved: by a model change or while it is dragged. Views move only
+        /// through these paths, so no per-frame scan of all transforms is needed.
+        /// </summary>
+        public void NotifyViewMoved(int componentId)
+        {
+            foreach (var wire in _circuit.GetWiresOf(componentId))
+                _dirtyWires.Add(wire.Id);
         }
 
         private void OnComponentPropertiesChanged(CircuitComponent component)
@@ -216,6 +228,7 @@ namespace LogicSim.Views
             }
             view.OnPropertiesChanged();
             view.ApplyTransform();
+            NotifyViewMoved(component.Id); // rotation moves the pins
             _valuesDirty = true;
         }
 
@@ -267,7 +280,7 @@ namespace LogicSim.Views
                 view = go.AddComponent<GenericComponentView>();
             }
             view.Bind(component, _circuit);
-            view.transform.hasChanged = true;
+            NotifyViewMoved(component.Id);
             _components[component.Id] = view;
         }
 
@@ -321,16 +334,6 @@ namespace LogicSim.Views
 
         private void LateUpdate()
         {
-            foreach (var pair in _components)
-            {
-                var t = pair.Value.transform;
-                if (!t.hasChanged)
-                    continue;
-                t.hasChanged = false;
-                foreach (var wire in _circuit.GetWiresOf(pair.Key))
-                    _dirtyWires.Add(wire.Id);
-            }
-
             if (_dirtyWires.Count > 0)
             {
                 foreach (var id in _dirtyWires)

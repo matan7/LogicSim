@@ -157,7 +157,7 @@ namespace Actions
                 // A click, not a drag: put everything back exactly.
                 for (int i = 0; i < _draggables.Count; i++)
                     if (_draggables[i] != null)
-                        _draggables[i].transform.position = _startPositions[i];
+                        _draggables[i].ResetPosition(_startPositions[i]);
             }
 
             _draggables.Clear();

@@ -143,6 +143,9 @@ namespace LogicSim.Views
 
         public bool TryGetBounds(IEnumerable<int> componentIds, out Bounds bounds)
         {
+            // Collider bounds follow their transforms only after a physics sync. Views created or moved in this frame
+            // (opening a document or an IC, then framing it) would otherwise report stale bounds.
+            Physics2D.SyncTransforms();
             bounds = default;
             bool any = false;
             foreach (var id in componentIds)

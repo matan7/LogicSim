@@ -89,7 +89,7 @@ namespace LogicSim.UI
 
         private static Canvas FindRootCanvas()
         {
-            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include))
                 if (canvas.isRootCanvas && canvas.renderMode != RenderMode.WorldSpace)
                     return canvas;
             return null;
@@ -117,7 +117,7 @@ namespace LogicSim.UI
         /// <summary>Palette entries reference the gate prefabs; reuse their artwork for loaded circuits.</summary>
         private void RegisterPalettePrefabs()
         {
-            foreach (var spawner in FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var spawner in FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Include))
                 Views.ComponentPrefabRegistry.Register(spawner.Prefab);
         }
 
@@ -216,7 +216,7 @@ namespace LogicSim.UI
 
         private void BuildPalette()
         {
-            _paletteTemplate = FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            _paletteTemplate = FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Include)
                 .Select(s => FindPaletteRoot(s.transform))
                 .FirstOrDefault(t => t != null)?.gameObject;
             if (_paletteTemplate == null)

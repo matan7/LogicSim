@@ -19,7 +19,7 @@ namespace LogicSim.App
                 Debug.LogWarning("[LogicSim] No SystemCore in the scene; the simulator is not started.");
                 return;
             }
-            if (Object.FindFirstObjectByType<CircuitView>() != null)
+            if (Object.FindAnyObjectByType<CircuitView>() != null)
                 return;
 
             ComputeLutBuilder.Register();

@@ -99,7 +99,7 @@ namespace LogicSim.Views
                 else
                 {
                     // The sprite shader is always in builds through the sprites' default material.
-                    var sprite = Object.FindFirstObjectByType<SpriteRenderer>();
+                    var sprite = Object.FindAnyObjectByType<SpriteRenderer>();
                     _lineMaterial = sprite != null ? new Material(sprite.sharedMaterial) : null;
                 }
                 return _lineMaterial;

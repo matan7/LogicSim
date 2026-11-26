@@ -33,6 +33,9 @@ namespace LogicSim.Simulation
             public int Epochs;
             public float Loss;
 
+            /// <summary>Training runs from different random starts (network training retries while it is not perfect).</summary>
+            public int Attempts = 1;
+
             public float Accuracy => Total == 0 ? 1 : (float)Correct / Total;
             public bool Perfect => Correct == Total;
         }
@@ -114,6 +117,9 @@ namespace LogicSim.Simulation
         /// Trains a Neuron (perceptron rule) or NeuralBlock (backpropagation; the block is resized when the samples have
         /// another number of inputs or outputs) and returns the properties to apply with a <see cref="SetPropertiesEdit"/>.
         /// </summary>
+        /// <summary>Training runs of a neural block at most (the first plus retries from fresh random weights).</summary>
+        public const int MaxAttempts = 8;
+
         public static Result TrainComponent(CircuitComponent component, IReadOnlyList<Sample> samples, Options options, out ComponentProperties properties)
         {
             options = options ?? new Options();
@@ -137,14 +143,27 @@ namespace LogicSim.Simulation
                     var current = component.Network;
                     var activation = options.Activation ?? current.Activation;
                     var start = current;
+                    var hidden = options.Hidden ?? (current.InputCount == inputs
+                        ? (IReadOnlyList<int>)current.LayerSizes.Skip(1).Take(current.LayerSizes.Count - 2).ToList()
+                        : new[] { Math.Min(NeuralNetwork.MaxLayerSize, Math.Max(4, inputs * 2)) });
                     if (options.Hidden != null || current.InputCount != inputs || current.OutputCount != outputs || activation != current.Activation)
-                    {
-                        var hidden = options.Hidden ?? (current.InputCount == inputs
-                            ? (IReadOnlyList<int>)current.LayerSizes.Skip(1).Take(current.LayerSizes.Count - 2).ToList()
-                            : new[] { Math.Min(NeuralNetwork.MaxLayerSize, Math.Max(4, inputs * 2)) });
                         start = NeuralNetwork.Create(inputs, hidden, outputs, activation, options.Seed);
+                    int epochs = options.Epochs ?? 3000;
+                    float learningRate = options.LearningRate ?? 0.5f;
+                    result = TrainNetwork(start, samples, epochs, learningRate, options.Seed);
+
+                    // Gradient descent can get stuck (dead ReLU units, flat sigmoid regions): start again from other
+                    // random weights and keep the best result. Large tables get fewer retries to stay quick.
+                    int attempts = samples.Count <= 256 ? MaxAttempts : 2;
+                    int attempt = 1;
+                    for (; attempt < attempts && !result.Perfect; attempt++)
+                    {
+                        var fresh = NeuralNetwork.Create(inputs, hidden, outputs, activation, options.Seed + attempt * 7919);
+                        var retry = TrainNetwork(fresh, samples, epochs, learningRate, options.Seed + attempt);
+                        if (retry.Correct > result.Correct || (retry.Correct == result.Correct && retry.Loss < result.Loss))
+                            result = retry;
                     }
-                    result = TrainNetwork(start, samples, options.Epochs ?? 3000, options.LearningRate ?? 0.5f, options.Seed);
+                    result.Attempts = attempt;
                     properties.Network = result.Network;
                     return result;
                 }

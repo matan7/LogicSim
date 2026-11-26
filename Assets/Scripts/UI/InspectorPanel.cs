@@ -332,6 +332,7 @@ namespace LogicSim.UI
             SystemCore.CircuitService.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
             var message = result.Perfect
                 ? $"Learned {what}: {result.Total}/{result.Total} rows after {result.Epochs} epochs"
+                    + (result.Attempts > 1 ? $" (attempt {result.Attempts}: restarted from new random weights)" : string.Empty)
                 : $"Learned {result.Correct}/{result.Total} rows of {what}" + (component.Kind == ComponentKind.Neuron
                     ? " - one neuron cannot learn it (not linearly separable); try a neural block"
                     : " - try more hidden neurons");

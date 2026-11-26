@@ -15,8 +15,6 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 - [ ] Letter shortcuts other than Undo/Redo bind physical keys (`<Keyboard>/c`, `a`, `s`, ...). Fine on QWERTY/QWERTZ;
   on AZERTY Ctrl+A is on the Q key. Character bindings (`#(A)`) would follow the layout but do not resolve on
   non-Latin layouts, so decide per shortcut.
-- [ ] ReLU blocks often fail to learn small tables (XOR, 2-6-1: 5 of 10 seeds; sigmoid 2-4-1: 10 of 10). Try He
-  initialisation and a small positive bias for ReLU, or retry training from a few seeds and keep the best.
 - [ ] View performance for large circuits (the rest of step 5). Play mode with `BenchmarkCircuits.Random(1, 10000, 16)`
   (10,016 components, 15,197 wires) at 48k ticks/s, editor in Debug code mode, i7-5820K: median frame 66 ms, of which
   the player loop is 21 ms (126 and 77 ms with the sprite and line renderer views, measured in the same session).

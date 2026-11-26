@@ -92,7 +92,13 @@ namespace LogicSim.Simulation
                     throw new CircuitException($"Hidden layers have 1..{MaxLayerSize} neurons");
         }
 
-        /// <summary>Random (Xavier) initialization, reproducible through <paramref name="seed"/>.</summary>
+        /// <summary>Bias of new ReLU units: slightly active, so that they get a gradient from the first sample.</summary>
+        public const float InitialReluBias = 0.1f;
+
+        /// <summary>
+        /// Random initialization, reproducible through <paramref name="seed"/>: Xavier, and for layers into ReLU units He
+        /// (variance 2 / fan-in) with a small positive bias, so that few units start dead (always 0, no gradient).
+        /// </summary>
         public static NeuralNetwork Create(int inputs, IEnumerable<int> hidden, int outputs, NeuralActivation activation = NeuralActivation.Sigmoid, int seed = 1)
         {
             var layers = new List<int> { inputs };
@@ -105,12 +111,17 @@ namespace LogicSim.Simulation
             for (int l = 0; l < layers.Count - 1; l++)
             {
                 int from = layers[l], to = layers[l + 1];
-                float limit = (float)Math.Sqrt(6.0 / (from + to));
+                bool intoRelu = activation == NeuralActivation.Relu && l < layers.Count - 2;
+                float limit = (float)Math.Sqrt(6.0 / (intoRelu ? from : from + to));
                 var w = new float[from * to];
                 for (int i = 0; i < w.Length; i++)
                     w[i] = (float)(random.NextDouble() * 2 - 1) * limit;
                 weights.Add(w);
-                biases.Add(new float[to]);
+                var bias = new float[to];
+                if (intoRelu)
+                    for (int i = 0; i < to; i++)
+                        bias[i] = InitialReluBias;
+                biases.Add(bias);
             }
             return new NeuralNetwork(layers, activation, weights, biases);
         }

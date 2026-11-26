@@ -157,6 +157,38 @@ namespace LogicSim.Tests
         }
 
         [Test]
+        public void TrainingFromAFreshNetwork_LearnsXorWithEveryActivationAndSeed()
+        {
+            var samples = NeuralTraining.SamplesFromText("0110");
+            var failures = new List<string>();
+            foreach (var (activation, hidden) in new[] { (NeuralActivation.Relu, 6), (NeuralActivation.Relu, 4), (NeuralActivation.Sigmoid, 4), (NeuralActivation.Tanh, 4) })
+            {
+                for (int seed = 1; seed <= 10; seed++)
+                {
+                    var t = Wrap(ComponentKind.NeuralBlock, 2, out var block, out _);
+                    var options = new NeuralTraining.Options { Seed = seed, Hidden = new[] { hidden }, Activation = activation };
+                    var result = NeuralTraining.TrainComponent(block, samples, options, out _);
+                    if (!result.Perfect)
+                        failures.Add($"{activation} 2-{hidden}-1 seed {seed}: {result.Correct}/{result.Total}");
+                }
+            }
+            Assert.That(failures, Is.Empty);
+        }
+
+        [Test]
+        public void ReluNetworks_StartWithHeWeightsAndPositiveBiases()
+        {
+            var relu = NeuralNetwork.Create(2, new[] { 6 }, 1, NeuralActivation.Relu, seed: 1);
+            Assert.That(relu.GetBiases(0), Has.All.EqualTo(0.1f), "hidden ReLU units start active");
+            Assert.That(relu.GetBiases(1), Has.All.EqualTo(0f), "the sigmoid output starts unbiased");
+            float heLimit = (float)System.Math.Sqrt(6.0 / 2);
+            Assert.That(relu.GetWeights(0), Has.All.InRange(-heLimit, heLimit));
+            Assert.That(relu.GetWeights(0).Max(w => System.Math.Abs(w)), Is.GreaterThan((float)System.Math.Sqrt(6.0 / 8)), "wider than Xavier");
+            var sigmoid = NeuralNetwork.Create(2, new[] { 6 }, 1, NeuralActivation.Sigmoid, seed: 1);
+            Assert.That(sigmoid.GetBiases(0), Has.All.EqualTo(0f));
+        }
+
+        [Test]
         public void NeuralBlock_LearnsAFullAdderIc_AndBehavesLikeIt()
         {
             var library = new SubcircuitLibrary();

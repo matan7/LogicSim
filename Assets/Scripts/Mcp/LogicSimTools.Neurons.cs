@@ -131,6 +131,7 @@ namespace LogicSim.Mcp
             if (component.Kind == ComponentKind.NeuralBlock)
             {
                 output["loss"] = Math.Round(result.Loss, 5);
+                output["attempts"] = result.Attempts;
                 output["network"] = component.Network.Describe();
             }
             else

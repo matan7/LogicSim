@@ -175,6 +175,32 @@ namespace LogicSim.Tests.PlayMode
             Assert.That(SystemCore.SelectingService.SelectionList.Count, Is.Zero);
         }
 
+        [UnityTest]
+        public IEnumerator AnInspectorFieldTakesAClickAndChangesTheComponent()
+        {
+            yield return LoadApp();
+            var block = ComponentFactory.Create(ComponentKind.NeuralBlock, 0, 0);
+            SystemCore.CircuitService.Editor.Apply(new AddElementsEdit(Circuit, new[] { block }));
+            AppCommands.FrameAll();
+            yield return null;
+            yield return Click(BodyOnScreen(block.Id));
+            yield return null;
+            var inspector = Object.FindAnyObjectByType<InspectorPanel>();
+            var label = inspector.Panel.GetComponentsInChildren<TMPro.TMP_InputField>()[0];
+            var rect = (RectTransform)label.transform;
+
+            yield return Click(RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)));
+            yield return null;
+            Assert.That(label.isFocused, Is.True, "a click focuses the field");
+            Assert.That(label.textViewport.GetComponentInChildren<TMPro.TMP_SelectionCaret>(true), Is.Not.Null, "the field shows a caret");
+
+            // Typed text arrives as IMGUI events, which the virtual keyboard does not produce: enter it directly.
+            label.text = "adder";
+            label.onEndEdit.Invoke(label.text);
+            yield return null;
+            Assert.That(Circuit.GetComponent(block.Id).Label, Is.EqualTo("adder"));
+        }
+
         #region Helpers
 
         private IEnumerator Drag(Vector2 from, Vector2 to, int steps = 6)

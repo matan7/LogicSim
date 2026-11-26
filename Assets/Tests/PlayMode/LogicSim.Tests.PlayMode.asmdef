@@ -8,7 +8,9 @@
         "Unity.InputSystem.TestFramework",
         "Core",
         "LogicSim.App",
-        "LogicSim.Simulation"
+        "LogicSim.Simulation",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

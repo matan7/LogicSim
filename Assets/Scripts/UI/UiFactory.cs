@@ -85,6 +85,9 @@ namespace LogicSim.UI
         public static TMP_InputField CreateInputField(Transform parent, string initialText, float width, float height)
         {
             var root = CreateRect("Input", parent);
+            // Built inactive: TMP_InputField sets itself up in OnEnable (the caret and the selection highlight come
+            // from its text component and viewport), which AddComponent would run before they are assigned.
+            root.gameObject.SetActive(false);
             root.sizeDelta = new Vector2(width, height);
             var background = AddImage(root, new Color(0.03f, 0.05f, 0.08f, 1f));
             var layout = root.gameObject.AddComponent<LayoutElement>();
@@ -115,6 +118,7 @@ namespace LogicSim.UI
             input.caretColor = TextColor;
             input.selectionColor = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.4f);
             input.text = initialText ?? string.Empty;
+            root.gameObject.SetActive(true);
             return input;
         }
 

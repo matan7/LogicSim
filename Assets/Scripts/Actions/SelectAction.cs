@@ -43,7 +43,9 @@ namespace Actions
 
         private void Update()
         {
-            if (!Core.SystemCore.AppStateService.IsEditing)
+            // Clicks on the UI (inspector, tool panel, dialogs) belong to it, not to the canvas behind it: they must
+            // not deselect, or the inspector closes under the pointer.
+            if (!Core.SystemCore.AppStateService.IsEditing || PointerQuery.IsOverUi())
             {
                 _isSelectMorePending = false;
                 _isSelectPending = false;
@@ -77,11 +79,6 @@ namespace Actions
             _isSelectPending = false;
         }
 
-        private ISelectable RayCast()
-        {
-            if (PointerQuery.IsOverUi())
-                return null;
-            return PointerQuery.SelectableAt(_pendingPosition);
-        }
+        private ISelectable RayCast() => PointerQuery.SelectableAt(_pendingPosition);
     }
 }

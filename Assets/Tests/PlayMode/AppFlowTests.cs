@@ -148,6 +148,33 @@ namespace LogicSim.Tests.PlayMode
             Assert.That(SystemCore.CircuitService.Hierarchy.Depth, Is.EqualTo(0), "Esc goes back");
         }
 
+        [UnityTest]
+        public IEnumerator ClickingTheInspectorKeepsTheSelection()
+        {
+            yield return LoadApp();
+            var block = ComponentFactory.Create(ComponentKind.NeuralBlock, 0, 0);
+            SystemCore.CircuitService.Editor.Apply(new AddElementsEdit(Circuit, new[] { block }));
+            AppCommands.FrameAll();
+            yield return null;
+            yield return Click(BodyOnScreen(block.Id));
+            yield return null;
+            var inspector = Object.FindAnyObjectByType<InspectorPanel>();
+            Assert.That(inspector.Panel.gameObject.activeSelf, Is.True, "selecting the block opens the inspector");
+
+            // A click on the panel belongs to the UI, not to the canvas behind it.
+            var panel = inspector.Panel;
+            Vector2 center = RectTransformUtility.WorldToScreenPoint(null, panel.TransformPoint(panel.rect.center));
+            yield return Click(center);
+            yield return null;
+            Assert.That(SystemCore.SelectingService.SelectionList.Count, Is.EqualTo(1), "the block stays selected");
+            Assert.That(inspector.Panel.gameObject.activeSelf, Is.True, "the inspector stays open");
+
+            // A click on the empty canvas still deselects.
+            yield return Click(new Vector2(Screen.width * 0.5f, Screen.height * 0.15f));
+            yield return null;
+            Assert.That(SystemCore.SelectingService.SelectionList.Count, Is.Zero);
+        }
+
         #region Helpers
 
         private IEnumerator Drag(Vector2 from, Vector2 to, int steps = 6)

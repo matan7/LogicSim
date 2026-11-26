@@ -28,6 +28,9 @@ namespace LogicSim.UI
         private Circuit _shownCircuit;
         private bool _dirty = true;
 
+        /// <summary>The panel, shown while one component is selected in edit mode.</summary>
+        public RectTransform Panel => _root;
+
         private static CultureInfo Invariant => CultureInfo.InvariantCulture;
         private static Circuit Circuit => SystemCore.CircuitService.Circuit;
 

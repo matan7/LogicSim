@@ -110,6 +110,21 @@ namespace LogicSim.Simulation
 
         public bool CanPlace(string definitionId) => !Library.WouldCreateCycle(definitionId, OpenDefinitionIds);
 
+        /// <summary>
+        /// Instances of a definition in the document and in all definitions, each definition counted once. An open IC
+        /// counts with its working copy, which holds its unapplied edits.
+        /// </summary>
+        public int CountInstances(string definitionId)
+        {
+            int count = Root.InstancesOf(definitionId).Count();
+            foreach (var definition in Library.Definitions)
+            {
+                var open = _levels.LastOrDefault(l => l.DefinitionId == definition.Id);
+                count += (open != null ? open.Circuit : definition.Circuit).InstancesOf(definitionId).Count();
+            }
+            return count;
+        }
+
         #region Open
 
         public HierarchyLevel OpenInstance(int instanceId)

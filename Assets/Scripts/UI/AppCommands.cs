@@ -293,6 +293,11 @@ namespace LogicSim.UI
             }
             var instance = instances[0];
             var definition = Circuit.Library.Get(instance.SubcircuitId);
+            if (SystemCore.CircuitService.Hierarchy.CountInstances(definition.Id) <= 1)
+            {
+                Ui.ShowToast($"'{definition.Name}' is used only here: this instance already has its own copy");
+                return;
+            }
             Ui.PromptText("Make unique", $"Copy '{definition.Name}' for this instance only. Name of the copy:",
                 SubcircuitRefactoring.UniqueName(Circuit.Library, definition.Name), name =>
                 {

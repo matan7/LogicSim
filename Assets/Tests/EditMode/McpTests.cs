@@ -290,8 +290,11 @@ namespace LogicSim.Tests
             Call("close_subcircuit", new { apply = false });
             Assert.That((int)Call("get_subcircuit", new { subcircuit = id })["components"], Is.EqualTo(collapsed["components"].Value<int>()));
             Call("delete_subcircuit", new { subcircuit = id }, expectError: true);
-            Call("make_subcircuit_unique", new { component = (int)collapsed["instance"]["id"] });
-            Call("delete_subcircuit", new { subcircuit = id });
+            // The only instance already has the definition to itself: no copy is made, and the definition stays in use.
+            var unique = Call("make_subcircuit_unique", new { component = (int)collapsed["instance"]["id"] });
+            Assert.That((bool)unique["already_unique"], Is.True);
+            Assert.That((string)unique["id"], Is.EqualTo(id));
+            Call("delete_subcircuit", new { subcircuit = id }, expectError: true);
         }
 
         [Test]

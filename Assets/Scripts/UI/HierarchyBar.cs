@@ -95,7 +95,7 @@ namespace LogicSim.UI
             var level = hierarchy.Current;
             bool simulating = SystemCore.AppStateService.IsSimulating;
             bool modified = hierarchy.IsModified(level);
-            int instances = CountInstances(hierarchy, level.DefinitionId);
+            int instances = hierarchy.CountInstances(level.DefinitionId);
             string text;
             if (simulating)
             {
@@ -114,18 +114,6 @@ namespace LogicSim.UI
             _state.richText = true;
             _state.text = text;
             _discard.interactable = modified && !simulating;
-        }
-
-        /// <summary>Instances in the document and in all definitions (each definition counted once).</summary>
-        private static int CountInstances(LogicSim.Simulation.CircuitHierarchy hierarchy, string definitionId)
-        {
-            int count = 0;
-            foreach (var c in hierarchy.Root.InstancesOf(definitionId))
-                count++;
-            foreach (var definition in hierarchy.Library.Definitions)
-                foreach (var c in definition.Circuit.InstancesOf(definitionId))
-                    count++;
-            return count;
         }
     }
 }

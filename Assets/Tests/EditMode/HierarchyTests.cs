@@ -264,6 +264,22 @@ namespace LogicSim.Tests
         }
 
         [Test]
+        public void CountInstances_CountsTheDocumentAndEachDefinitionOnce()
+        {
+            var library = new SubcircuitLibrary();
+            var t = FullAdderInstance(library, out var instance);
+            var hierarchy = new CircuitHierarchy(t.Circuit, new DirectCircuitEditor(t.Circuit));
+            Assert.That(hierarchy.CountInstances("full-adder"), Is.EqualTo(1));
+            Assert.That(hierarchy.CountInstances("half-adder"), Is.EqualTo(2));
+
+            // An open IC counts with its working copy.
+            var level = hierarchy.OpenInstance(instance.Id);
+            var ha = level.Circuit.InstancesOf("half-adder").First();
+            hierarchy.Editor.Apply(new RemoveElementsEdit(level.Circuit, new[] { ha.Id }));
+            Assert.That(hierarchy.CountInstances("half-adder"), Is.EqualTo(1));
+        }
+
+        [Test]
         public void OpenIcs_CannotBePlacedInsideThemselves()
         {
             var library = new SubcircuitLibrary();

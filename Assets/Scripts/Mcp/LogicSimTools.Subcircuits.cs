@@ -117,6 +117,14 @@ namespace LogicSim.Mcp
         private McpToolResult MakeSubcircuitUnique(JObject args)
         {
             var instance = ResolveInstance(Required(args, "component"));
+            if (Hierarchy.CountInstances(instance.SubcircuitId) <= 1)
+            {
+                // The only instance: a copy would change nothing but the name.
+                var own = DescribeDefinition(Circuit.Library.Get(instance.SubcircuitId));
+                own["instance"] = instance.Id;
+                own["already_unique"] = true;
+                return McpToolResult.Ok(own);
+            }
             var edit = SubcircuitRefactoring.MakeUnique(Circuit, instance.Id, (string)args["name"], out var copy);
             _workspace.Editor.Apply(edit);
             var output = DescribeDefinition(copy);

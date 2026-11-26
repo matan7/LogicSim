@@ -83,4 +83,5 @@ one and press its value in the inspector.
 
 The simulation is unit-delay: every gate takes one tick. The longest path, through the ripple-carry adder, needs about
 14 ticks, so the computer works with a clock half period of 8 ticks or more; the example uses 20. At the default 600
-ticks/s that is a 15 Hz clock, about three instructions per second.
+ticks/s that is a 15 Hz clock, about three instructions per second. `ExampleComputerTests` loads the example, runs the program
+and checks the printed numbers.

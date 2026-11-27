@@ -53,32 +53,23 @@ namespace Actions
             }
             if (_isSelectMorePending)
             {
-                ISelectable selectable = RayCast();
-                if (selectable != null)
+                if (PointerQuery.TrySelectableAt(_pendingPosition, out var item))
                 {
-                    if (!_selectingService.Contains(selectable))
-                    {
-                        _selectingService.Select(selectable);
-                    }
+                    if (!_selectingService.Contains(item))
+                        _selectingService.Select(item);
                     else
-                    {
-                        _selectingService.Deselect(selectable);
-                    }
+                        _selectingService.Deselect(item);
                 }
             }
             else if (_isSelectPending)
             {
-                ISelectable selectable = RayCast();
+                bool hit = PointerQuery.TrySelectableAt(_pendingPosition, out var item);
                 _selectingService.DeselectAll();
-                if (selectable != null)
-                {
-                    _selectingService.Select(selectable);
-                }
+                if (hit)
+                    _selectingService.Select(item);
             }
             _isSelectMorePending = false;
             _isSelectPending = false;
         }
-
-        private ISelectable RayCast() => PointerQuery.SelectableAt(_pendingPosition);
     }
 }

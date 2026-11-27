@@ -27,20 +27,17 @@ namespace Actions
 
         public static List<int> SelectedComponentIds()
         {
-            return SystemCore.SelectingService.SelectionList
-                .Select(s => s.Transform != null ? s.Transform.GetComponent<ComponentView>() : null)
-                .Where(v => v != null && Circuit.TryGetComponent(v.ComponentId, out _))
-                .Select(v => v.ComponentId)
-                .Distinct()
+            return SystemCore.SelectingService.ComponentIds
+                .Where(id => Circuit.TryGetComponent(id, out _))
+                .OrderBy(id => id)
                 .ToList();
         }
 
         public static List<int> SelectedWireIds()
         {
-            return SystemCore.SelectingService.SelectionList
-                .OfType<WireView>()
-                .Where(w => w != null && Circuit.TryGetWire(w.WireId, out _))
-                .Select(w => w.WireId)
+            return SystemCore.SelectingService.WireIds
+                .Where(id => Circuit.TryGetWire(id, out _))
+                .OrderBy(id => id)
                 .ToList();
         }
 
@@ -130,13 +127,7 @@ namespace Actions
         {
             var selecting = SystemCore.SelectingService;
             selecting.DeselectAll();
-            if (CircuitView.Instance == null)
-                return;
-            foreach (var id in componentIds)
-            {
-                if (CircuitView.Instance.TryGetComponentView(id, out var view) && view.TryGetComponent(out ISelectable selectable))
-                    selecting.Select(selectable);
-            }
+            selecting.Select(componentIds.Where(id => Circuit.TryGetComponent(id, out _)).Select(SelectionItem.Component).ToList());
         }
     }
 }

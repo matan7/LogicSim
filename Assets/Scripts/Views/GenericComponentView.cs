@@ -57,10 +57,7 @@ namespace LogicSim.Views
             _body.size = new Vector2(width, height);
             _body.sortingOrder = VisualStyle.BodySortingOrder;
 
-            var collider = gameObject.AddComponent<BoxCollider2D>();
-            collider.isTrigger = true;
-            collider.size = new Vector2(width, height);
-            collider.offset = new Vector2(width / 2, -height / 2);
+            LocalBody = new Rect(0, -height, width, height);
 
             // Auto-sizing keeps every text inside its rect (world units), whatever the font scale.
             _label = CreateText("Label", new Vector2(width / 2, -height / 2), new Vector2(width - 1.2f, Mathf.Min(3f, height - 1f)), 30f);

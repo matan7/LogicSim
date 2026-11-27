@@ -3,9 +3,6 @@
 Open work on branch `claude/optimistic-noether-1l3qr9`. Items are removed from this list when they are committed.
 Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
-## Without the Unity editor
-- [ ] Selection still stores views (`ISelectable`). Storing component/wire ids would let undo and MCP restore a selection without views. Optional; the inspector no longer polls.
-
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)
 - [ ] View performance for large circuits (the rest of step 5). Play mode with `BenchmarkCircuits.Random(1, 10000, 16)`
   (10,016 components, 15,197 wires) at 48k ticks/s, editor in Debug code mode, i7-5820K: median frame 66 ms, of which
@@ -15,10 +12,13 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   change color, canvas/TMP update 33 -> 4 ms), wires drawn by the instanced wire renderer and colored from the net
   values on the GPU (`CircuitView.Update` 37 -> 15 ms, camera render 1.3 -> 0.5 ms), symbols lit from the same net
   values (`CircuitView.Update` 15 -> 4.4 ms; what is left is the views without a symbol, the flip-flops here).
+  Picking uses a spatial grid instead of colliders (`Views/SpatialGrid.cs`) and the selection holds ids, so the views
+  have no colliders any more and the Scene view's gizmos for them (about 33 ms in the editor) are gone; filing the
+  benchmark's 15,197 wires takes 67 ms, re-filing them 84 ms (measured outside Unity; the frame in Play mode is not
+  measured again yet).
   Left, in the order of their cost:
-  - Editor only: the Scene view's gizmos for 25k colliders take about 33 ms; close the Scene view when profiling.
-  - Picking: every wire and component still has a GameObject with a collider. A spatial index for pointer hit tests
-    and selection by id (see the selection item above) would remove them.
   - Symbols not drawn by the renderer yet: gates with 3 to 8 inputs (vertical input bar), boxes for flip-flops, ICs,
     pins, displays and neurons, with the icons and markers from the atlas (`docs/SYMBOL_FORMAT.md`).
-  - Loading such a circuit creates about 25k GameObjects and takes 10 to 15 s.
+  - Loading such a circuit creates a GameObject per component, wire and pin and takes 10 to 15 s. The views no
+    longer need GameObjects for picking; pins as plain objects and views pooled or drawn without GameObjects would
+    remove most of them.

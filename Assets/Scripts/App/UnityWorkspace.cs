@@ -55,11 +55,7 @@ namespace LogicSim.App
         {
             get
             {
-                return SystemCore.SelectingService.SelectionList
-                    .Select(s => s.Transform != null ? s.Transform.GetComponent<ComponentView>() : null)
-                    .Where(v => v != null)
-                    .Select(v => v.ComponentId)
-                    .ToList();
+                return SystemCore.SelectingService.ComponentIds.OrderBy(id => id).ToList();
             }
         }
 

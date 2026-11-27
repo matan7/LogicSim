@@ -46,7 +46,7 @@ namespace Actions
                 return;
             }
             // Esc first deselects, then leaves the open IC (keeping its changes).
-            if (SystemCore.SelectingService.SelectionList.Count == 0 && !SystemCore.CircuitService.Hierarchy.IsAtRoot)
+            if (SystemCore.SelectingService.Count == 0 && !SystemCore.CircuitService.Hierarchy.IsAtRoot)
             {
                 AppCommands.CloseSubcircuit(apply: true);
                 return;

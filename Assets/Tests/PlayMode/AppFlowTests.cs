@@ -95,6 +95,30 @@ namespace LogicSim.Tests.PlayMode
             AssertWireEndsAtPin(output.Id, "after the drop");
         }
 
+        [UnityTest]
+        public IEnumerator AnAreaSelectsAndTheSelectionDragsTogether()
+        {
+            yield return LoadApp();
+            var a = ComponentFactory.Create(ComponentKind.And, 10, 0);
+            var b = ComponentFactory.Create(ComponentKind.Or, 10, -8);
+            var far = ComponentFactory.Create(ComponentKind.Not, 40, 0);
+            SystemCore.CircuitService.Editor.Apply(new AddElementsEdit(Circuit, new[] { a, b, far }));
+            AppCommands.FrameAll();
+            yield return null;
+
+            // From the empty canvas below and right of b, up across both gates; the rectangle only has to overlap them.
+            var camera = Camera.main;
+            yield return Drag(camera.WorldToScreenPoint(new Vector3(16, -14)), camera.WorldToScreenPoint(new Vector3(12, 3)));
+            Assert.That(SystemCore.SelectingService.ComponentIds, Is.EquivalentTo(new[] { a.Id, b.Id }), "the area selects both gates");
+
+            yield return Drag(BodyOnScreen(a.Id), BodyOnScreen(a.Id) + new Vector2(0, -Screen.height * 0.15f));
+            float moved = Circuit.GetComponent(a.Id).Y;
+            Assert.That(moved, Is.LessThan(0), "the pressed gate moved down");
+            Assert.That(Circuit.GetComponent(b.Id).Y, Is.EqualTo(-8 + moved), "the other selected gate moved with it");
+            Assert.That(Circuit.GetComponent(far.Id).Y, Is.EqualTo(0), "the unselected gate stayed");
+            Assert.That(CircuitView.Instance.ComponentAt(new Vector2(12, moved - 2)), Is.SameAs(ViewOf(a.Id)), "picking follows the move");
+        }
+
         private static void AssertWireEndsAtPin(int componentId, string when)
         {
             var end = Object.FindAnyObjectByType<WireView>().End;
@@ -166,13 +190,13 @@ namespace LogicSim.Tests.PlayMode
             Vector2 center = RectTransformUtility.WorldToScreenPoint(null, panel.TransformPoint(panel.rect.center));
             yield return Click(center);
             yield return null;
-            Assert.That(SystemCore.SelectingService.SelectionList.Count, Is.EqualTo(1), "the block stays selected");
+            Assert.That(SystemCore.SelectingService.Count, Is.EqualTo(1), "the block stays selected");
             Assert.That(inspector.Panel.gameObject.activeSelf, Is.True, "the inspector stays open");
 
             // A click on the empty canvas still deselects.
             yield return Click(new Vector2(Screen.width * 0.5f, Screen.height * 0.15f));
             yield return null;
-            Assert.That(SystemCore.SelectingService.SelectionList.Count, Is.Zero);
+            Assert.That(SystemCore.SelectingService.Count, Is.Zero);
         }
 
         [UnityTest]
@@ -245,7 +269,6 @@ namespace LogicSim.Tests.PlayMode
 
         private static Vector2 BodyOnScreen(int id)
         {
-            Physics2D.SyncTransforms();
             return Camera.main.WorldToScreenPoint(ViewOf(id).GetBounds().center);
         }
 

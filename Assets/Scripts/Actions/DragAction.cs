@@ -72,13 +72,12 @@ namespace Actions
             _componentIds.Clear();
             _startPositions.Clear();
 
-            var selectionList = _selectingService.SelectionList;
-            bool dragSelection = view.TryGetComponent(out ISelectable selectable) && _selectingService.Contains(selectable) && selectionList.Count > 1;
+            bool dragSelection = _selectingService.Contains(SelectionItem.Component(view.ComponentId)) && _selectingService.Count > 1;
             if (dragSelection)
             {
-                foreach (var item in selectionList)
+                foreach (var id in _selectingService.ComponentIds)
                 {
-                    if (item.Transform == null || !item.Transform.TryGetComponent(out Draggable other) || !item.Transform.TryGetComponent(out ComponentView otherView))
+                    if (!CircuitView.Instance.TryGetComponentView(id, out var otherView) || !otherView.TryGetComponent(out Draggable other))
                         continue;
                     Add(other, otherView);
                 }

@@ -21,6 +21,21 @@ namespace LogicSim.Views
         public IReadOnlyList<PinView> Inputs => _inputs;
         public IReadOnlyList<PinView> Outputs => _outputs;
 
+        // The body in local coordinates (origin at the component's position, y up), for picking, framing and routing.
+        private Rect _localBody = new Rect(-0.5f, -0.5f, 1f, 1f);
+        private bool _hasLocalBody;
+
+        /// <summary>Generated views set their body; prefab views take it from their collider or sprite.</summary>
+        protected Rect LocalBody
+        {
+            get => _localBody;
+            set
+            {
+                _localBody = value;
+                _hasLocalBody = true;
+            }
+        }
+
         /// <summary>Kind shown by this view (prefab views are fixed to one kind).</summary>
         public abstract ComponentKind Kind { get; }
 
@@ -135,45 +150,40 @@ namespace LogicSim.Views
                 _outputs[i].SetValue(session == null ? (bool?)null : session.GetOutputValue(ComponentId, i));
         }
 
-        /// <summary>
-        /// World rectangle of the body's box collider, valid right after a move (collider bounds follow only after a
-        /// physics sync). Wires route around it.
-        /// </summary>
+        /// <summary>World rectangle of the body, valid right after a move. Picking, framing and wire routing use it.</summary>
         public Rect GetFootprint()
         {
-            if (!(GetComponent<Collider2D>() is BoxCollider2D box))
-            {
-                var b = GetBounds();
-                return Rect.MinMaxRect(b.min.x, b.min.y, b.max.x, b.max.y);
-            }
-            Vector2 half = box.size / 2;
-            Vector3 a = transform.TransformPoint(box.offset - half), c = transform.TransformPoint(box.offset + half);
+            Vector3 a = transform.TransformPoint(_localBody.min), c = transform.TransformPoint(_localBody.max);
             return Rect.MinMaxRect(Mathf.Min(a.x, c.x), Mathf.Min(a.y, c.y), Mathf.Max(a.x, c.x), Mathf.Max(a.y, c.y));
         }
 
-        /// <summary>World-space bounds of the body (for framing and selection).</summary>
+        /// <summary>World-space bounds of the body (for framing).</summary>
         public Bounds GetBounds()
         {
-            var collider = GetComponent<Collider2D>();
-            if (collider != null)
-                return collider.bounds;
-            var renderer = GetComponent<Renderer>();
-            return renderer != null ? renderer.bounds : new Bounds(transform.position, Vector3.one);
+            var r = GetFootprint();
+            return new Bounds(new Vector3(r.center.x, r.center.y, 0), new Vector3(r.width, r.height, 0));
         }
 
         private void EnsureInteraction()
         {
-            if (GetComponent<Collider2D>() == null)
+            // Picking uses CircuitView's spatial grid. Prefabs still carry colliders: their box is the body, then they go.
+            if (!_hasLocalBody)
             {
-                var box = gameObject.AddComponent<BoxCollider2D>();
-                box.isTrigger = true;
                 var spriteRenderer = GetComponent<SpriteRenderer>();
-                if (spriteRenderer != null)
+                if (GetComponent<Collider2D>() is BoxCollider2D box)
+                    LocalBody = new Rect(box.offset - box.size / 2, box.size);
+                else if (spriteRenderer != null)
                 {
                     var bounds = spriteRenderer.sprite != null ? spriteRenderer.sprite.bounds : spriteRenderer.bounds;
-                    box.size = bounds.size;
-                    box.offset = bounds.center;
+                    LocalBody = new Rect(bounds.min, bounds.size);
                 }
+            }
+            foreach (var collider in GetComponentsInChildren<Collider2D>(true))
+            {
+                if (Application.isPlaying)
+                    Destroy(collider);
+                else
+                    DestroyImmediate(collider);
             }
             if (GetComponent<Draggable>() == null)
                 gameObject.AddComponent<Draggable>();

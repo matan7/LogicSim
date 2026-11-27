@@ -42,7 +42,7 @@ namespace Actions
             if (_isDrawingSelectionPending)
             {
                 // Only on empty canvas, and only while editing.
-                if (Core.SystemCore.AppStateService.IsEditing && Physics2D.OverlapPoint(_pendingPosition) == null && !PointerQuery.IsOverUi())
+                if (Core.SystemCore.AppStateService.IsEditing && !PointerQuery.AnythingAt(_pendingPosition) && !PointerQuery.IsOverUi())
                 {
                     _mouseStartPosition = _pendingPosition;
                     _isDrawingSelection = true;
@@ -107,15 +107,7 @@ namespace Actions
 
         private void SelectArea(Vector2 startPosition, Vector2 endPosition)
         {
-            var hits = Physics2D.OverlapAreaAll(startPosition, endPosition);
-
-            for (int i = 0; i < hits.Length; i++)
-            {
-                if (hits[i].TryGetComponent<ISelectable>(out ISelectable selectable))
-                {
-                    _selectingService.Select(selectable);
-                }
-            }
+            _selectingService.Select(PointerQuery.ElementsIn(startPosition, endPosition));
         }
     }
 }

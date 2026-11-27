@@ -3,12 +3,10 @@ using Core.Settings;
 using UnityEngine;
 
 [RequireComponent(typeof(SpriteRenderer))]
-public class SelectableSprite : MonoBehaviour, ISelectable
+public class SelectableSprite : MonoBehaviour, ISelectionView
 {
     private SpriteRenderer _spriteRenderer;
     private Color _startColor;
-
-    public Transform Transform => transform;
 
     private void Awake()
     {
@@ -16,13 +14,8 @@ public class SelectableSprite : MonoBehaviour, ISelectable
         _startColor = _spriteRenderer.color;
     }
 
-    public void Select()
+    public void SetSelected(bool selected)
     {
-        _spriteRenderer.color = SettingsService.Settings.SelectionColor;
-    }
-
-    public void Deselect()
-    {
-        _spriteRenderer.color = _startColor;
+        _spriteRenderer.color = selected ? SettingsService.Settings.SelectionColor : _startColor;
     }
 }

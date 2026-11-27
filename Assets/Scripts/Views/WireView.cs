@@ -5,23 +5,24 @@ using UnityEngine;
 namespace LogicSim.Views
 {
     /// <summary>
-    /// Orthogonally routed wire. It keeps a collider for picking and selection; the <see cref="WireRenderer"/> draws it
-    /// with all other wires. Without that renderer (no GPU support) the wire draws itself with a LineRenderer.
+    /// Orthogonally routed wire. <see cref="CircuitView"/> files its segments in a spatial grid for picking; the
+    /// <see cref="WireRenderer"/> draws it with all other wires. Without that renderer (no GPU support) the wire draws
+    /// itself with a LineRenderer.
     /// </summary>
-    public class WireView : MonoBehaviour, ISelectable
+    public class WireView : MonoBehaviour, ISelectionView
     {
         public const float LineWidth = 0.18f;
+        /// <summary>How far from its center line a wire is picked.</summary>
+        public const float HitRadius = 0.25f;
 
         private WireRenderer _renderer;
         private LineRenderer _line;
-        private EdgeCollider2D _collider;
         private bool _selected;
         private bool? _value;
         private readonly Vector3[] _points = new Vector3[6];
         private int _pointCount;
 
         public int WireId { get; private set; }
-        public Transform Transform => transform;
 
         /// <summary>Last point of the route: the input pin it ends at.</summary>
         public Vector3 End => _pointCount > 0 ? _points[_pointCount - 1] : transform.position;
@@ -41,8 +42,6 @@ namespace LogicSim.Views
                 view._line = go.AddComponent<LineRenderer>();
                 ConfigureLine(view._line, VisualStyle.WireSortingOrder);
             }
-            view._collider = go.AddComponent<EdgeCollider2D>();
-            view._collider.edgeRadius = 0.25f;
             view.AddToRenderer();
             view.ApplyColor();
             return view;
@@ -97,11 +96,19 @@ namespace LogicSim.Views
             }
             if (Slot >= 0)
                 _renderer.SetRoute(Slot, _points, _pointCount);
+        }
 
-            var points = new Vector2[_pointCount];
-            for (int i = 0; i < _pointCount; i++)
-                points[i] = _points[i];
-            _collider.points = points;
+        /// <summary>Writes the segments' hit boxes (each widened by <see cref="HitRadius"/>); returns how many.</summary>
+        public int GetHitRects(Rect[] rects)
+        {
+            int count = 0;
+            for (int i = 0; i + 1 < _pointCount && count < rects.Length; i++)
+            {
+                Vector2 a = _points[i], b = _points[i + 1];
+                rects[count++] = Rect.MinMaxRect(Mathf.Min(a.x, b.x) - HitRadius, Mathf.Min(a.y, b.y) - HitRadius,
+                    Mathf.Max(a.x, b.x) + HitRadius, Mathf.Max(a.y, b.y) + HitRadius);
+            }
+            return count;
         }
 
         /// <summary>
@@ -181,15 +188,9 @@ namespace LogicSim.Views
             ApplyColor();
         }
 
-        public void Select()
+        public void SetSelected(bool selected)
         {
-            _selected = true;
-            ApplyColor();
-        }
-
-        public void Deselect()
-        {
-            _selected = false;
+            _selected = selected;
             ApplyColor();
         }
 

@@ -8,9 +8,9 @@ namespace LogicSim.Views
 {
     /// <summary>
     /// View of a component whose body the <see cref="SymbolRenderer"/> draws from the symbol atlas. It has no renderer
-    /// of its own: only a collider for picking and dragging, the pins, and text where the symbol needs it.
+    /// or collider of its own: only the pins, and text where the symbol needs it.
     /// </summary>
-    public sealed class SymbolComponentView : ComponentView, ISelectable
+    public sealed class SymbolComponentView : ComponentView, ISelectionView
     {
         private sealed class Layout
         {
@@ -61,8 +61,6 @@ namespace LogicSim.Views
 
         public override ComponentKind Kind => _kind;
 
-        public Transform Transform => transform;
-
         /// <summary>True when the renderer has a symbol for the component with its current pin counts.</summary>
         public static bool CanShow(CircuitComponent component, Circuit circuit, SymbolRenderer renderer)
         {
@@ -80,10 +78,7 @@ namespace LogicSim.Views
             _symbol = Renderer.IndexOf(_layout.Symbol);
             _size = Renderer.Set.Symbols[_symbol].Size;
 
-            var collider = gameObject.AddComponent<BoxCollider2D>();
-            collider.isTrigger = true;
-            collider.size = _size;
-            collider.offset = new Vector2(_size.x / 2, -_size.y / 2);
+            LocalBody = new Rect(0, -_size.y, _size.x, _size.y);
 
             uint inputRows = 0, outputRows = 0;
             CreatePins<InputPin>(_inputPins, _layout.InputRows, 0, ref inputRows);
@@ -233,11 +228,7 @@ namespace LogicSim.Views
             Renderer.SetLit(Slot, own && Component.Value);
         }
 
-        public void Select() => SetSelected(true);
-
-        public void Deselect() => SetSelected(false);
-
-        private void SetSelected(bool selected)
+        public void SetSelected(bool selected)
         {
             _selected = selected;
             if (Slot >= 0)

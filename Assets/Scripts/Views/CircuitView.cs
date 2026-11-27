@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Core;
 using Core.AppState;
+using Core.Selecting;
 using LogicSim.Simulation;
 using UnityEngine;
 
@@ -59,6 +60,15 @@ namespace LogicSim.Views
         private bool _netsDirty = true;
         private readonly List<Rect> _obstacles = new List<Rect>(2);
 
+        // Picking: hit boxes of the bodies, pins and wire segments (see SpatialGrid).
+        private readonly SpatialGrid<ComponentView> _componentGrid = new SpatialGrid<ComponentView>();
+        private readonly SpatialGrid<PinView> _pinGrid = new SpatialGrid<PinView>();
+        private readonly SpatialGrid<WireView> _wireGrid = new SpatialGrid<WireView>();
+        private readonly Rect[] _wireRects = new Rect[WireRenderer.SegmentsPerWire];
+        private readonly List<ComponentView> _componentHits = new List<ComponentView>();
+        private readonly List<PinView> _pinHits = new List<PinView>();
+        private readonly List<WireView> _wireHits = new List<WireView>();
+
         private void Awake()
         {
             Instance = this;
@@ -77,6 +87,7 @@ namespace LogicSim.Views
 
             SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
+            SystemCore.SelectingService.ItemChanged += OnSelectionItemChanged;
             SystemCore.CircuitService.LevelChanged += OnLevelChanged;
             BindCircuit(SystemCore.CircuitService.Circuit);
         }
@@ -96,6 +107,8 @@ namespace LogicSim.Views
                 SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
             if (SystemCore.AppStateService != null)
                 SystemCore.AppStateService.StateChanged -= OnStateChanged;
+            if (SystemCore.SelectingService != null)
+                SystemCore.SelectingService.ItemChanged -= OnSelectionItemChanged;
             if (SystemCore.CircuitService != null)
                 SystemCore.CircuitService.LevelChanged -= OnLevelChanged;
         }
@@ -168,9 +181,6 @@ namespace LogicSim.Views
 
         public bool TryGetBounds(IEnumerable<int> componentIds, out Bounds bounds)
         {
-            // Collider bounds follow their transforms only after a physics sync. Views created or moved in this frame
-            // (opening a document or an IC, then framing it) would otherwise report stale bounds.
-            Physics2D.SyncTransforms();
             bounds = default;
             bool any = false;
             foreach (var id in componentIds)
@@ -189,6 +199,112 @@ namespace LogicSim.Views
 
         #endregion
 
+        #region Picking
+
+        /// <summary>The pin whose hit box contains <paramref name="world"/>, the nearest one if several do.</summary>
+        public PinView PinAt(Vector2 world)
+        {
+            _pinHits.Clear();
+            _pinGrid.Query(world, _pinHits);
+            PinView best = null;
+            float bestDistance = float.MaxValue;
+            foreach (var pin in _pinHits)
+            {
+                if (pin == null || pin.Owner == null)
+                    continue;
+                float distance = (pin.Position - world).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    best = pin;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>The component whose body contains <paramref name="world"/>; of overlapping ones the newest.</summary>
+        public ComponentView ComponentAt(Vector2 world)
+        {
+            _componentHits.Clear();
+            _componentGrid.Query(world, _componentHits);
+            ComponentView best = null;
+            foreach (var view in _componentHits)
+                if (view != null && (best == null || view.ComponentId > best.ComponentId))
+                    best = view;
+            return best;
+        }
+
+        public WireView WireAt(Vector2 world)
+        {
+            _wireHits.Clear();
+            _wireGrid.Query(world, _wireHits);
+            WireView best = null;
+            foreach (var view in _wireHits)
+                if (view != null && (best == null || view.WireId > best.WireId))
+                    best = view;
+            return best;
+        }
+
+        /// <summary>The components and wires that overlap <paramref name="area"/>.</summary>
+        public void ElementsIn(Rect area, List<SelectionItem> results)
+        {
+            _componentHits.Clear();
+            _componentGrid.Query(area, _componentHits);
+            foreach (var view in _componentHits)
+                results.Add(SelectionItem.Component(view.ComponentId));
+            _wireHits.Clear();
+            _wireGrid.Query(area, _wireHits);
+            foreach (var view in _wireHits)
+                results.Add(SelectionItem.Wire(view.WireId));
+        }
+
+        private void IndexComponent(ComponentView view)
+        {
+            _componentGrid.Set(view, view.GetFootprint());
+            foreach (var pin in view.Inputs)
+                _pinGrid.Set(pin, pin.HitRect);
+            foreach (var pin in view.Outputs)
+                _pinGrid.Set(pin, pin.HitRect);
+        }
+
+        private void UnindexComponent(ComponentView view)
+        {
+            _componentGrid.Remove(view);
+            foreach (var pin in view.Inputs)
+                _pinGrid.Remove(pin);
+            foreach (var pin in view.Outputs)
+                _pinGrid.Remove(pin);
+        }
+
+        #endregion
+
+        #region Selection
+
+        private void OnSelectionItemChanged(SelectionItem item, bool selected)
+        {
+            Component view = null;
+            if (item.IsWire)
+            {
+                if (_wires.TryGetValue(item.Id, out var wire))
+                    view = wire;
+            }
+            else if (_components.TryGetValue(item.Id, out var component))
+            {
+                view = component;
+            }
+            if (view != null && view.TryGetComponent(out ISelectionView shown))
+                shown.SetSelected(selected);
+        }
+
+        // A view created for a selected element (a recreated component, an undone removal) shows it.
+        private static void ShowSelection(Component view, SelectionItem item)
+        {
+            if (SystemCore.SelectingService.Contains(item) && view.TryGetComponent(out ISelectionView shown))
+                shown.SetSelected(true);
+        }
+
+        #endregion
+
         #region Model events
 
         private void Rebuild()
@@ -201,6 +317,9 @@ namespace LogicSim.Views
             _components.Clear();
             _wires.Clear();
             _dirtyWires.Clear();
+            _componentGrid.Clear();
+            _pinGrid.Clear();
+            _wireGrid.Clear();
 
             foreach (var component in _circuit.Components)
                 CreateComponentView(component);
@@ -219,9 +338,10 @@ namespace LogicSim.Views
         {
             if (!_components.TryGetValue(component.Id, out var view))
                 return;
-            DeselectView(view);
             _components.Remove(component.Id);
+            UnindexComponent(view);
             DestroyView(view);
+            SystemCore.SelectingService.Deselect(SelectionItem.Component(component.Id));
         }
 
         private void OnComponentMoved(CircuitComponent component)
@@ -238,8 +358,11 @@ namespace LogicSim.Views
         /// </summary>
         public void NotifyViewMoved(int componentId)
         {
-            if (_components.TryGetValue(componentId, out var view) && view is SymbolComponentView symbol)
+            if (!_components.TryGetValue(componentId, out var view))
+                return;
+            if (view is SymbolComponentView symbol)
                 symbol.SyncTransform();
+            IndexComponent(view);
             foreach (var wire in _circuit.GetWiresOf(componentId))
                 _dirtyWires.Add(wire.Id);
         }
@@ -275,9 +398,10 @@ namespace LogicSim.Views
         {
             if (!_wires.TryGetValue(wire.Id, out var view))
                 return;
-            DeselectView(view);
             _wires.Remove(wire.Id);
+            _wireGrid.Remove(view);
             DestroyView(view);
+            SystemCore.SelectingService.Deselect(SelectionItem.Wire(wire.Id));
         }
 
         private void OnLibraryChanged()
@@ -326,35 +450,29 @@ namespace LogicSim.Views
                 view = go.AddComponent<GenericComponentView>();
             }
             view.Bind(component, _circuit);
-            NotifyViewMoved(component.Id);
             _components[component.Id] = view;
+            NotifyViewMoved(component.Id);
+            ShowSelection(view, SelectionItem.Component(component.Id));
         }
 
+        /// <summary>Replaces the view of a component; the selection keeps its id, so the new view shows it.</summary>
         private void RecreateComponentView(CircuitComponent component)
         {
-            bool wasSelected = false;
             if (_components.TryGetValue(component.Id, out var old))
             {
-                wasSelected = IsSelected(old);
-                DeselectView(old);
                 _components.Remove(component.Id);
+                UnindexComponent(old);
                 DestroyView(old);
             }
             CreateComponentView(component);
-            if (wasSelected && _components.TryGetValue(component.Id, out var view))
-            {
-                var selectable = view.GetComponent<Core.Selecting.ISelectable>();
-                if (selectable != null)
-                    SystemCore.SelectingService.Select(selectable);
-            }
             foreach (var wire in _circuit.GetWiresOf(component.Id))
                 _dirtyWires.Add(wire.Id);
             _valuesDirty = true;
         }
 
         /// <summary>
-        /// Destroys a view at the end of the frame, and disables it now: lookups and physics queries find only its
-        /// replacement, and the symbol renderer stops drawing it in this frame.
+        /// Destroys a view at the end of the frame, and disables it now: the symbol and wire renderers stop drawing it in
+        /// this frame. Callers take it out of the lookups and grids first.
         /// </summary>
         private static void DestroyView(Component view)
         {
@@ -368,6 +486,7 @@ namespace LogicSim.Views
             _wires[wire.Id] = view;
             _netsDirty = true;
             RouteWire(wire, view);
+            ShowSelection(view, SelectionItem.Wire(wire.Id));
         }
 
         private void RouteWire(Wire wire, WireView view)
@@ -379,6 +498,7 @@ namespace LogicSim.Views
             if (wire.To.ComponentId != wire.From.ComponentId && _components.TryGetValue(wire.To.ComponentId, out var target))
                 _obstacles.Add(target.GetFootprint());
             view.SetEndpoints(GetPinPosition(wire.From, true), GetPinPosition(wire.To, false), _obstacles);
+            _wireGrid.Set(view, _wireRects, view.GetHitRects(_wireRects));
         }
 
         #endregion
@@ -466,23 +586,6 @@ namespace LogicSim.Views
                 _netsDirty = false;
             }
             _netValues.Show(simulation.Engine, compiled.NetCount);
-        }
-
-        #endregion
-
-        #region Selection helpers
-
-        private static bool IsSelected(Component view)
-        {
-            var selectable = view.GetComponent<Core.Selecting.ISelectable>();
-            return selectable != null && SystemCore.SelectingService.Contains(selectable);
-        }
-
-        private static void DeselectView(Component view)
-        {
-            var selectable = view.GetComponent<Core.Selecting.ISelectable>();
-            if (selectable != null)
-                SystemCore.SelectingService.Deselect(selectable);
         }
 
         #endregion

@@ -7,7 +7,7 @@
       {
         "id": 1,
         "type": "Clock",
-        "x": 0.0,
+        "x": -38.0,
         "y": 0.0,
         "label": "CLK",
         "halfPeriod": 15
@@ -15,37 +15,45 @@
       {
         "id": 2,
         "type": "Constant",
-        "x": 0.0,
+        "x": -38.0,
         "y": -10.0,
         "label": "1",
         "value": true
       },
       {
         "id": 3,
-        "type": "Not",
-        "x": 44.0,
-        "y": -84.0,
-        "label": "wr"
-      },
-      {
-        "id": 4,
-        "type": "Button",
-        "x": 44.0,
-        "y": -92.0,
-        "label": "CLEAR"
-      },
-      {
-        "id": 5,
-        "type": "Nor",
-        "x": 44.0,
-        "y": -20.0,
-        "label": "nor",
+        "type": "And",
+        "x": -24.0,
+        "y": -46.0,
+        "label": "x=31",
         "inputs": 5
       },
       {
+        "id": 4,
+        "type": "Not",
+        "x": 36.0,
+        "y": -92.0,
+        "label": "WR"
+      },
+      {
+        "id": 5,
+        "type": "Button",
+        "x": 36.0,
+        "y": -100.0,
+        "label": "CLEAR"
+      },
+      {
         "id": 6,
+        "type": "Nor",
+        "x": 36.0,
+        "y": -20.0,
+        "label": "D",
+        "inputs": 5
+      },
+      {
+        "id": 7,
         "type": "Screen",
-        "x": 60.0,
+        "x": 50.0,
         "y": 0.0,
         "label": "Sierpinski",
         "width": 32,
@@ -53,113 +61,169 @@
         "pixelSize": 2
       },
       {
-        "id": 7,
+        "id": 8,
         "type": "TFlipFlop",
-        "x": 12.0,
+        "x": 0.0,
         "y": 0.0,
         "label": "Q0"
       },
       {
-        "id": 8,
-        "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -9.0,
-        "label": "Q1"
-      },
-      {
         "id": 9,
         "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -18.0,
-        "label": "Q2"
+        "x": 0.0,
+        "y": -10.0,
+        "label": "Q1"
       },
       {
         "id": 10,
         "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -27.0,
-        "label": "Q3"
+        "x": 0.0,
+        "y": -20.0,
+        "label": "Q2"
       },
       {
         "id": 11,
-        "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -36.0,
-        "label": "Q4"
+        "type": "And",
+        "x": -12.0,
+        "y": -18.0,
+        "label": "T2",
+        "inputs": 2
       },
       {
         "id": 12,
         "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -45.0,
-        "label": "Q5"
+        "x": 0.0,
+        "y": -30.0,
+        "label": "Q3"
       },
       {
         "id": 13,
-        "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -54.0,
-        "label": "Q6"
+        "type": "And",
+        "x": -12.0,
+        "y": -28.0,
+        "label": "T3",
+        "inputs": 3
       },
       {
         "id": 14,
         "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -63.0,
-        "label": "Q7"
+        "x": 0.0,
+        "y": -40.0,
+        "label": "Q4"
       },
       {
         "id": 15,
-        "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -72.0,
-        "label": "Q8"
+        "type": "And",
+        "x": -12.0,
+        "y": -38.0,
+        "label": "T4",
+        "inputs": 4
       },
       {
         "id": 16,
         "type": "TFlipFlop",
-        "x": 12.0,
-        "y": -81.0,
-        "label": "Q9"
+        "x": 0.0,
+        "y": -50.0,
+        "label": "Q5"
       },
       {
         "id": 17,
-        "type": "And",
-        "x": 30.0,
-        "y": -20.0,
-        "label": "and0",
-        "inputs": 2
+        "type": "TFlipFlop",
+        "x": 0.0,
+        "y": -60.0,
+        "label": "Q6"
       },
       {
         "id": 18,
         "type": "And",
-        "x": 30.0,
-        "y": -30.0,
-        "label": "and1",
+        "x": -12.0,
+        "y": -58.0,
+        "label": "T6",
         "inputs": 2
       },
       {
         "id": 19,
-        "type": "And",
-        "x": 30.0,
-        "y": -40.0,
-        "label": "and2",
-        "inputs": 2
+        "type": "TFlipFlop",
+        "x": 0.0,
+        "y": -70.0,
+        "label": "Q7"
       },
       {
         "id": 20,
         "type": "And",
-        "x": 30.0,
-        "y": -50.0,
-        "label": "and3",
-        "inputs": 2
+        "x": -12.0,
+        "y": -68.0,
+        "label": "T7",
+        "inputs": 3
       },
       {
         "id": 21,
+        "type": "TFlipFlop",
+        "x": 0.0,
+        "y": -80.0,
+        "label": "Q8"
+      },
+      {
+        "id": 22,
         "type": "And",
-        "x": 30.0,
+        "x": -12.0,
+        "y": -78.0,
+        "label": "T8",
+        "inputs": 4
+      },
+      {
+        "id": 23,
+        "type": "TFlipFlop",
+        "x": 0.0,
+        "y": -90.0,
+        "label": "Q9"
+      },
+      {
+        "id": 24,
+        "type": "And",
+        "x": -12.0,
+        "y": -90.0,
+        "label": "T9",
+        "inputs": 5
+      },
+      {
+        "id": 25,
+        "type": "And",
+        "x": 22.0,
+        "y": -20.0,
+        "label": "x0&y0",
+        "inputs": 2
+      },
+      {
+        "id": 26,
+        "type": "And",
+        "x": 22.0,
+        "y": -30.0,
+        "label": "x1&y1",
+        "inputs": 2
+      },
+      {
+        "id": 27,
+        "type": "And",
+        "x": 22.0,
+        "y": -40.0,
+        "label": "x2&y2",
+        "inputs": 2
+      },
+      {
+        "id": 28,
+        "type": "And",
+        "x": 22.0,
+        "y": -50.0,
+        "label": "x3&y3",
+        "inputs": 2
+      },
+      {
+        "id": 29,
+        "type": "And",
+        "x": 22.0,
         "y": -60.0,
-        "label": "and4",
+        "label": "x4&y4",
         "inputs": 2
       }
     ],
@@ -171,454 +235,454 @@
           "pin": 0
         },
         "to": {
-          "component": 7,
-          "pin": 1
+          "component": 4,
+          "pin": 0
         }
       },
       {
         "id": 2,
         "from": {
-          "component": 1,
+          "component": 4,
           "pin": 0
         },
         "to": {
-          "component": 3,
-          "pin": 0
+          "component": 7,
+          "pin": 11
         }
       },
       {
         "id": 3,
         "from": {
-          "component": 3,
+          "component": 5,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 11
+          "component": 7,
+          "pin": 12
         }
       },
       {
         "id": 4,
         "from": {
-          "component": 4,
+          "component": 6,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 12
+          "component": 7,
+          "pin": 10
         }
       },
       {
         "id": 5,
         "from": {
-          "component": 5,
+          "component": 2,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 10
+          "component": 8,
+          "pin": 0
         }
       },
       {
         "id": 6,
         "from": {
-          "component": 2,
+          "component": 8,
           "pin": 0
         },
         "to": {
-          "component": 7,
+          "component": 9,
           "pin": 0
         }
       },
       {
         "id": 7,
         "from": {
-          "component": 7,
+          "component": 3,
           "pin": 0
         },
         "to": {
-          "component": 6,
+          "component": 16,
           "pin": 0
         }
       },
       {
         "id": 8,
         "from": {
-          "component": 2,
+          "component": 8,
           "pin": 0
         },
         "to": {
-          "component": 8,
+          "component": 3,
           "pin": 0
         }
       },
       {
         "id": 9,
         "from": {
-          "component": 7,
-          "pin": 1
+          "component": 9,
+          "pin": 0
         },
         "to": {
-          "component": 8,
+          "component": 3,
           "pin": 1
         }
       },
       {
         "id": 10,
         "from": {
-          "component": 8,
+          "component": 10,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 1
+          "component": 3,
+          "pin": 2
         }
       },
       {
         "id": 11,
         "from": {
-          "component": 2,
+          "component": 12,
           "pin": 0
         },
         "to": {
-          "component": 9,
-          "pin": 0
+          "component": 3,
+          "pin": 3
         }
       },
       {
         "id": 12,
         "from": {
-          "component": 8,
-          "pin": 1
+          "component": 14,
+          "pin": 0
         },
         "to": {
-          "component": 9,
-          "pin": 1
+          "component": 3,
+          "pin": 4
         }
       },
       {
         "id": 13,
         "from": {
-          "component": 9,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 2
+          "component": 8,
+          "pin": 1
         }
       },
       {
         "id": 14,
         "from": {
-          "component": 2,
+          "component": 8,
           "pin": 0
         },
         "to": {
-          "component": 10,
+          "component": 7,
           "pin": 0
         }
       },
       {
         "id": 15,
         "from": {
-          "component": 9,
-          "pin": 1
+          "component": 1,
+          "pin": 0
         },
         "to": {
-          "component": 10,
+          "component": 9,
           "pin": 1
         }
       },
       {
         "id": 16,
         "from": {
-          "component": 10,
+          "component": 9,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 3
+          "component": 7,
+          "pin": 1
         }
       },
       {
         "id": 17,
         "from": {
-          "component": 2,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 11,
-          "pin": 0
+          "component": 10,
+          "pin": 1
         }
       },
       {
         "id": 18,
         "from": {
           "component": 10,
-          "pin": 1
+          "pin": 0
         },
         "to": {
-          "component": 11,
-          "pin": 1
+          "component": 7,
+          "pin": 2
         }
       },
       {
         "id": 19,
         "from": {
-          "component": 11,
+          "component": 8,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 4
+          "component": 11,
+          "pin": 0
         }
       },
       {
         "id": 20,
         "from": {
-          "component": 2,
+          "component": 9,
           "pin": 0
         },
         "to": {
-          "component": 12,
-          "pin": 0
+          "component": 11,
+          "pin": 1
         }
       },
       {
         "id": 21,
         "from": {
           "component": 11,
-          "pin": 1
+          "pin": 0
         },
         "to": {
-          "component": 12,
-          "pin": 1
+          "component": 10,
+          "pin": 0
         }
       },
       {
         "id": 22,
         "from": {
-          "component": 12,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 5
+          "component": 12,
+          "pin": 1
         }
       },
       {
         "id": 23,
         "from": {
-          "component": 2,
+          "component": 12,
           "pin": 0
         },
         "to": {
-          "component": 13,
-          "pin": 0
+          "component": 7,
+          "pin": 3
         }
       },
       {
         "id": 24,
         "from": {
-          "component": 12,
-          "pin": 1
+          "component": 8,
+          "pin": 0
         },
         "to": {
           "component": 13,
-          "pin": 1
+          "pin": 0
         }
       },
       {
         "id": 25,
         "from": {
-          "component": 13,
+          "component": 9,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 6
+          "component": 13,
+          "pin": 1
         }
       },
       {
         "id": 26,
         "from": {
-          "component": 2,
+          "component": 10,
           "pin": 0
         },
         "to": {
-          "component": 14,
-          "pin": 0
+          "component": 13,
+          "pin": 2
         }
       },
       {
         "id": 27,
         "from": {
           "component": 13,
-          "pin": 1
+          "pin": 0
         },
         "to": {
-          "component": 14,
-          "pin": 1
+          "component": 12,
+          "pin": 0
         }
       },
       {
         "id": 28,
         "from": {
-          "component": 14,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 7
+          "component": 14,
+          "pin": 1
         }
       },
       {
         "id": 29,
         "from": {
-          "component": 2,
+          "component": 14,
           "pin": 0
         },
         "to": {
-          "component": 15,
-          "pin": 0
+          "component": 7,
+          "pin": 4
         }
       },
       {
         "id": 30,
         "from": {
-          "component": 14,
-          "pin": 1
+          "component": 8,
+          "pin": 0
         },
         "to": {
           "component": 15,
-          "pin": 1
+          "pin": 0
         }
       },
       {
         "id": 31,
         "from": {
-          "component": 15,
+          "component": 9,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 8
+          "component": 15,
+          "pin": 1
         }
       },
       {
         "id": 32,
         "from": {
-          "component": 2,
+          "component": 10,
           "pin": 0
         },
         "to": {
-          "component": 16,
-          "pin": 0
+          "component": 15,
+          "pin": 2
         }
       },
       {
         "id": 33,
         "from": {
-          "component": 15,
-          "pin": 1
+          "component": 12,
+          "pin": 0
         },
         "to": {
-          "component": 16,
-          "pin": 1
+          "component": 15,
+          "pin": 3
         }
       },
       {
         "id": 34,
         "from": {
-          "component": 16,
+          "component": 15,
           "pin": 0
         },
         "to": {
-          "component": 6,
-          "pin": 9
+          "component": 14,
+          "pin": 0
         }
       },
       {
         "id": 35,
         "from": {
-          "component": 7,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 17,
-          "pin": 0
+          "component": 16,
+          "pin": 1
         }
       },
       {
         "id": 36,
         "from": {
-          "component": 12,
+          "component": 16,
           "pin": 0
         },
         "to": {
-          "component": 17,
-          "pin": 1
+          "component": 7,
+          "pin": 5
         }
       },
       {
         "id": 37,
         "from": {
-          "component": 17,
+          "component": 1,
           "pin": 0
         },
         "to": {
-          "component": 5,
-          "pin": 0
+          "component": 17,
+          "pin": 1
         }
       },
       {
         "id": 38,
         "from": {
-          "component": 8,
+          "component": 17,
           "pin": 0
         },
         "to": {
-          "component": 18,
-          "pin": 0
+          "component": 7,
+          "pin": 6
         }
       },
       {
         "id": 39,
         "from": {
-          "component": 13,
+          "component": 3,
           "pin": 0
         },
         "to": {
           "component": 18,
-          "pin": 1
+          "pin": 0
         }
       },
       {
         "id": 40,
         "from": {
-          "component": 18,
+          "component": 16,
           "pin": 0
         },
         "to": {
-          "component": 5,
+          "component": 18,
           "pin": 1
         }
       },
       {
         "id": 41,
         "from": {
-          "component": 9,
+          "component": 18,
           "pin": 0
         },
         "to": {
-          "component": 19,
+          "component": 17,
           "pin": 0
         }
       },
       {
         "id": 42,
         "from": {
-          "component": 14,
+          "component": 1,
           "pin": 0
         },
         "to": {
@@ -633,14 +697,14 @@
           "pin": 0
         },
         "to": {
-          "component": 5,
-          "pin": 2
+          "component": 7,
+          "pin": 7
         }
       },
       {
         "id": 44,
         "from": {
-          "component": 10,
+          "component": 3,
           "pin": 0
         },
         "to": {
@@ -651,7 +715,7 @@
       {
         "id": 45,
         "from": {
-          "component": 15,
+          "component": 16,
           "pin": 0
         },
         "to": {
@@ -662,29 +726,29 @@
       {
         "id": 46,
         "from": {
-          "component": 20,
+          "component": 17,
           "pin": 0
         },
         "to": {
-          "component": 5,
-          "pin": 3
+          "component": 20,
+          "pin": 2
         }
       },
       {
         "id": 47,
         "from": {
-          "component": 11,
+          "component": 20,
           "pin": 0
         },
         "to": {
-          "component": 21,
+          "component": 19,
           "pin": 0
         }
       },
       {
         "id": 48,
         "from": {
-          "component": 16,
+          "component": 1,
           "pin": 0
         },
         "to": {
@@ -699,7 +763,315 @@
           "pin": 0
         },
         "to": {
-          "component": 5,
+          "component": 7,
+          "pin": 8
+        }
+      },
+      {
+        "id": 50,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 22,
+          "pin": 0
+        }
+      },
+      {
+        "id": 51,
+        "from": {
+          "component": 16,
+          "pin": 0
+        },
+        "to": {
+          "component": 22,
+          "pin": 1
+        }
+      },
+      {
+        "id": 52,
+        "from": {
+          "component": 17,
+          "pin": 0
+        },
+        "to": {
+          "component": 22,
+          "pin": 2
+        }
+      },
+      {
+        "id": 53,
+        "from": {
+          "component": 19,
+          "pin": 0
+        },
+        "to": {
+          "component": 22,
+          "pin": 3
+        }
+      },
+      {
+        "id": 54,
+        "from": {
+          "component": 22,
+          "pin": 0
+        },
+        "to": {
+          "component": 21,
+          "pin": 0
+        }
+      },
+      {
+        "id": 55,
+        "from": {
+          "component": 1,
+          "pin": 0
+        },
+        "to": {
+          "component": 23,
+          "pin": 1
+        }
+      },
+      {
+        "id": 56,
+        "from": {
+          "component": 23,
+          "pin": 0
+        },
+        "to": {
+          "component": 7,
+          "pin": 9
+        }
+      },
+      {
+        "id": 57,
+        "from": {
+          "component": 3,
+          "pin": 0
+        },
+        "to": {
+          "component": 24,
+          "pin": 0
+        }
+      },
+      {
+        "id": 58,
+        "from": {
+          "component": 16,
+          "pin": 0
+        },
+        "to": {
+          "component": 24,
+          "pin": 1
+        }
+      },
+      {
+        "id": 59,
+        "from": {
+          "component": 17,
+          "pin": 0
+        },
+        "to": {
+          "component": 24,
+          "pin": 2
+        }
+      },
+      {
+        "id": 60,
+        "from": {
+          "component": 19,
+          "pin": 0
+        },
+        "to": {
+          "component": 24,
+          "pin": 3
+        }
+      },
+      {
+        "id": 61,
+        "from": {
+          "component": 21,
+          "pin": 0
+        },
+        "to": {
+          "component": 24,
+          "pin": 4
+        }
+      },
+      {
+        "id": 62,
+        "from": {
+          "component": 24,
+          "pin": 0
+        },
+        "to": {
+          "component": 23,
+          "pin": 0
+        }
+      },
+      {
+        "id": 63,
+        "from": {
+          "component": 8,
+          "pin": 0
+        },
+        "to": {
+          "component": 25,
+          "pin": 0
+        }
+      },
+      {
+        "id": 64,
+        "from": {
+          "component": 16,
+          "pin": 0
+        },
+        "to": {
+          "component": 25,
+          "pin": 1
+        }
+      },
+      {
+        "id": 65,
+        "from": {
+          "component": 25,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 0
+        }
+      },
+      {
+        "id": 66,
+        "from": {
+          "component": 9,
+          "pin": 0
+        },
+        "to": {
+          "component": 26,
+          "pin": 0
+        }
+      },
+      {
+        "id": 67,
+        "from": {
+          "component": 17,
+          "pin": 0
+        },
+        "to": {
+          "component": 26,
+          "pin": 1
+        }
+      },
+      {
+        "id": 68,
+        "from": {
+          "component": 26,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 1
+        }
+      },
+      {
+        "id": 69,
+        "from": {
+          "component": 10,
+          "pin": 0
+        },
+        "to": {
+          "component": 27,
+          "pin": 0
+        }
+      },
+      {
+        "id": 70,
+        "from": {
+          "component": 19,
+          "pin": 0
+        },
+        "to": {
+          "component": 27,
+          "pin": 1
+        }
+      },
+      {
+        "id": 71,
+        "from": {
+          "component": 27,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 2
+        }
+      },
+      {
+        "id": 72,
+        "from": {
+          "component": 12,
+          "pin": 0
+        },
+        "to": {
+          "component": 28,
+          "pin": 0
+        }
+      },
+      {
+        "id": 73,
+        "from": {
+          "component": 21,
+          "pin": 0
+        },
+        "to": {
+          "component": 28,
+          "pin": 1
+        }
+      },
+      {
+        "id": 74,
+        "from": {
+          "component": 28,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
+          "pin": 3
+        }
+      },
+      {
+        "id": 75,
+        "from": {
+          "component": 14,
+          "pin": 0
+        },
+        "to": {
+          "component": 29,
+          "pin": 0
+        }
+      },
+      {
+        "id": 76,
+        "from": {
+          "component": 23,
+          "pin": 0
+        },
+        "to": {
+          "component": 29,
+          "pin": 1
+        }
+      },
+      {
+        "id": 77,
+        "from": {
+          "component": 29,
+          "pin": 0
+        },
+        "to": {
+          "component": 6,
           "pin": 4
         }
       }

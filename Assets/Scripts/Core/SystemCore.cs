@@ -49,6 +49,7 @@ namespace Core
             if (Instance != this)
                 return;
             SimulationService?.Dispose();
+            InputService?.Dispose();
             Instance = null;
         }
     }

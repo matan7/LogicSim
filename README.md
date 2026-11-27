@@ -158,6 +158,9 @@ speed, the status bar shows the speed that is actually simulated.
 | Pause / step one tick / speed | P / . / [ and ] |
 | Help | F1 |
 
+Letter shortcuts follow the keyboard layout (Ctrl+Z is where the Z is on QWERTZ and AZERTY); on layouts without Latin
+letters they use the key positions of a US keyboard. `.`, `[` and `]` are key positions.
+
 In simulation mode, click switches and input pins to toggle them, and hold push buttons.
 
 | ICs | Input |

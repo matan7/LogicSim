@@ -779,7 +779,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""20a13d43-a805-45c5-9210-ae2f29599f2d"",
-                    ""path"": ""<Keyboard>/c"",
+                    ""path"": ""<Keyboard>/#(C)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -812,7 +812,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""2338278d-3303-4d50-9237-4dc44c64c2c2"",
-                    ""path"": ""<Keyboard>/v"",
+                    ""path"": ""<Keyboard>/#(V)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -845,7 +845,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""e404f3c6-b071-47d1-b2b7-6cb4ed76ef7a"",
-                    ""path"": ""<Keyboard>/x"",
+                    ""path"": ""<Keyboard>/#(X)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -878,7 +878,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""97bf279b-f7a0-4061-a99d-7eb4e05ef06d"",
-                    ""path"": ""<Keyboard>/a"",
+                    ""path"": ""<Keyboard>/#(A)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -911,7 +911,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""7f66f6f5-b597-4a4e-b169-e599f538055a"",
-                    ""path"": ""<Keyboard>/s"",
+                    ""path"": ""<Keyboard>/#(S)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -944,7 +944,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""55e542ac-267d-4c03-97d7-e716dbb19e82"",
-                    ""path"": ""<Keyboard>/o"",
+                    ""path"": ""<Keyboard>/#(O)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -977,7 +977,7 @@ namespace Core.Input
                 {
                     ""name"": ""binding"",
                     ""id"": ""c4e41ca5-1d2f-4881-8638-1871919a7bc3"",
-                    ""path"": ""<Keyboard>/n"",
+                    ""path"": ""<Keyboard>/#(N)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -988,7 +988,7 @@ namespace Core.Input
                 {
                     ""name"": """",
                     ""id"": ""4694ebab-0cf3-49ec-ac35-e165dfd0dc19"",
-                    ""path"": ""<Keyboard>/r"",
+                    ""path"": ""<Keyboard>/#(R)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -1010,7 +1010,7 @@ namespace Core.Input
                 {
                     ""name"": """",
                     ""id"": ""94a80be1-a424-45c4-8419-10a9d7ab6466"",
-                    ""path"": ""<Keyboard>/p"",
+                    ""path"": ""<Keyboard>/#(P)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -1076,7 +1076,7 @@ namespace Core.Input
                 {
                     ""name"": """",
                     ""id"": ""c88c738e-4aa4-425c-8805-88c2518479e4"",
-                    ""path"": ""<Keyboard>/f"",
+                    ""path"": ""<Keyboard>/#(F)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",

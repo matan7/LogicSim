@@ -27,6 +27,19 @@ namespace LogicSim.Simulation
             return component;
         }
 
+        /// <summary>Applies properties to a detached component after checking the ranges of its settings.</summary>
+        public static void Configure(CircuitComponent component, ComponentProperties properties)
+        {
+            foreach (var setting in component.Spec.Settings)
+            {
+                int value = setting.Get(properties);
+                if (value < setting.Min || value > setting.Max)
+                    throw new CircuitException(setting.IsFlag ? $"{setting.Name} is 0 or 1" : $"{component.Spec.DisplayName}: {setting.Name} must be {setting.Min}..{setting.Max}");
+            }
+            component.ApplyProperties(properties);
+            component.NormalizeNeuralState();
+        }
+
         /// <summary>Sets the neuron settings of a detached Neuron/SpikingNeuron (the input count follows the weights).</summary>
         public static void SetNeuron(CircuitComponent component, NeuronParameters neuron)
         {

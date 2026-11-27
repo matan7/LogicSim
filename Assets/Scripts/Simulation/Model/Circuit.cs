@@ -67,38 +67,13 @@ namespace LogicSim.Simulation
 
         public bool TryGetWire(int id, out Wire wire) => _wires.TryGetValue(id, out wire);
 
-        public int GetInputCount(CircuitComponent component)
-        {
-            if (component.Kind == ComponentKind.Subcircuit)
-                return Library.TryGet(component.SubcircuitId, out var def) ? def.InputComponentIds.Count : 0;
-            if (component.Kind == ComponentKind.NeuralBlock)
-                return component.Network?.InputCount ?? 0;
-            var spec = component.Spec;
-            return spec.HasVariableInputs ? component.InputCount : spec.DefaultInputs;
-        }
+        public int GetInputCount(CircuitComponent component) => component.Spec.GetInputCount(component, this);
 
-        public int GetOutputCount(CircuitComponent component)
-        {
-            if (component.Kind == ComponentKind.Subcircuit)
-                return Library.TryGet(component.SubcircuitId, out var def) ? def.OutputComponentIds.Count : 0;
-            if (component.Kind == ComponentKind.NeuralBlock)
-                return component.Network?.OutputCount ?? 0;
-            return component.Spec.OutputCount;
-        }
+        public int GetOutputCount(CircuitComponent component) => component.Spec.GetOutputCount(component, this);
 
-        public string GetInputName(CircuitComponent component, int pin)
-        {
-            if (component.Kind == ComponentKind.Subcircuit && Library.TryGet(component.SubcircuitId, out var def) && pin < def.InputNames.Count)
-                return def.InputNames[pin];
-            return component.Spec.GetInputName(pin);
-        }
+        public string GetInputName(CircuitComponent component, int pin) => component.Spec.GetInputName(component, this, pin);
 
-        public string GetOutputName(CircuitComponent component, int pin)
-        {
-            if (component.Kind == ComponentKind.Subcircuit && Library.TryGet(component.SubcircuitId, out var def) && pin < def.OutputNames.Count)
-                return def.OutputNames[pin];
-            return component.Spec.GetOutputName(pin);
-        }
+        public string GetOutputName(CircuitComponent component, int pin) => component.Spec.GetOutputName(component, this, pin);
 
         /// <summary>Resolves a pin by name ("in0", "Q", "CLK") or by index ("1"). Returns -1 if not found.</summary>
         public int FindPin(CircuitComponent component, string name, bool output)
@@ -214,24 +189,22 @@ namespace LogicSim.Simulation
                 properties.InputCount = component.InputCount;
             else if (properties.InputCount < spec.MinInputs || properties.InputCount > spec.MaxInputs)
                 throw new CircuitException($"{spec.DisplayName} supports {spec.MinInputs}..{spec.MaxInputs} inputs");
+            foreach (var setting in spec.Settings)
+            {
+                int value = setting.Get(properties);
+                if (value < setting.Min || value > setting.Max)
+                    throw new CircuitException(setting.IsFlag ? $"{setting.Name} is 0 or 1" : $"{spec.DisplayName}: {setting.Name} must be {setting.Min}..{setting.Max}");
+            }
 
-            if (spec.HasVariableInputs)
-            {
-                for (int pin = properties.InputCount; pin < component.InputCount; pin++)
-                {
-                    if (GetWireInto(id, pin) != null)
-                        throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
-                }
-            }
-            if (component.Kind == ComponentKind.NeuralBlock && properties.Network != null)
-            {
-                for (int pin = properties.Network.InputCount; pin < GetInputCount(component); pin++)
-                    if (GetWireInto(id, pin) != null)
-                        throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
-                for (int pin = properties.Network.OutputCount; pin < GetOutputCount(component); pin++)
-                    if (GetWiresFrom(id, pin).Any())
-                        throw new CircuitException($"Disconnect output {pin} of {component} before removing it");
-            }
+            // Pins the new properties remove must be free: inputs, a network's layers, a screen's size, ...
+            var probe = component.Clone();
+            probe.ApplyProperties(properties);
+            for (int pin = GetInputCount(probe); pin < GetInputCount(component); pin++)
+                if (GetWireInto(id, pin) != null)
+                    throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
+            for (int pin = GetOutputCount(probe); pin < GetOutputCount(component); pin++)
+                if (GetWiresFrom(id, pin).Any())
+                    throw new CircuitException($"Disconnect output {pin} of {component} before removing it");
 
             var before = component.GetProperties();
             component.ApplyProperties(properties);
@@ -244,7 +217,8 @@ namespace LogicSim.Simulation
                 || before.ClockHalfPeriod != after.ClockHalfPeriod
                 || (component.Kind == ComponentKind.Constant && before.Value != after.Value)
                 || !Equals(before.Neuron, after.Neuron)
-                || !Equals(before.Network, after.Network);
+                || !Equals(before.Network, after.Network)
+                || !(before.Settings ?? SettingValues.Empty).Equals(after.Settings ?? SettingValues.Empty);
 
             ComponentPropertiesChanged?.Invoke(component);
             if (before.Value != after.Value && spec.IsInterfaceInput)

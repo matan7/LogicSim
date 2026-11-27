@@ -87,14 +87,15 @@ namespace LogicSim.Mcp
                     Prop("y", "number", "Y coordinate (grid units, up is positive).")),
                 MoveComponent));
             server.AddTool(new McpTool("set_component_properties", "Set component properties",
-                "Changes label, rotation (quarter turns), number of inputs (gates), clock half period (ticks) or constant value.",
-                Schema(new[] { "component" },
+                "Changes label, rotation (quarter turns) and the settings of the component's kind (see list_component_types: " +
+                "number of inputs, clock half period, constant value, screen size, ...), or neuron and network parameters.",
+                Schema(new[] { "component" }, new[]
+                {
                     Prop("component", AnyId(), "Component id or label."),
                     Prop("label", "string", "New label."),
                     Prop("rotation", "integer", "Quarter turns clockwise (0-3)."),
-                    Prop("inputs", "integer", "Number of inputs for AND/OR/NAND/NOR/XOR/XNOR (1-8)."),
-                    Prop("half_period", "integer", "Clock half period in ticks."),
-                    Prop("value", "boolean", "Value of a Constant (or initial state of a Switch)."),
+                }.Concat(SettingProps()).Concat(new[]
+                {
                     Prop("weights", ArrayOf(new JObject { ["type"] = "number" }), "Neuron weights, one per input (sets the input count)."),
                     Prop("threshold", "number", "Neuron threshold."),
                     Prop("leak", "number", "Spiking neuron: fraction of the potential kept per tick (0-1)."),
@@ -102,7 +103,8 @@ namespace LogicSim.Mcp
                     Prop("refractory", "integer", "Spiking neuron: ticks after a spike in which inputs are ignored."),
                     Prop("layers", ArrayOf(new JObject { ["type"] = "integer" }), "Neural block: neurons per layer, e.g. [3, 8, 2] (inputs, hidden..., outputs). Re-initializes the weights."),
                     Prop("activation", "string", "Neural block hidden activation: sigmoid, tanh or relu."),
-                    Prop("seed", "integer", "Neural block: random seed for new weights.")),
+                    Prop("seed", "integer", "Neural block: random seed for new weights."),
+                }).ToArray()),
                 SetProperties));
             server.AddTool(new McpTool("connect", "Connect pins",
                 "Connects an output pin to an input pin. Each input accepts one driver; set replace=true to rewire a connected input.",
@@ -258,6 +260,20 @@ namespace LogicSim.Mcp
 
         private static JObject AnyId() => new JObject { ["type"] = new JArray("integer", "string") };
 
+        /// <summary>One argument per setting name of all kinds (inputs, half_period, value, ...), from the component specs.</summary>
+        private static IEnumerable<(string, JObject)> SettingProps()
+        {
+            var uses = ComponentSpec.All.SelectMany(spec => spec.Settings.Select(setting => (spec, setting)));
+            foreach (var group in uses.GroupBy(u => u.setting.Name))
+            {
+                var first = group.First().setting;
+                string kinds = string.Join(", ", group.Select(u => u.spec.Kind.ToString()).Distinct());
+                bool sameRange = group.All(u => u.setting.Min == first.Min && u.setting.Max == first.Max);
+                string range = first.IsFlag || !sameRange ? string.Empty : $" ({first.Min}-{first.Max})";
+                yield return Prop(first.Name, first.IsFlag ? "boolean" : "integer", $"{kinds}: {first.Help}{range}.");
+            }
+        }
+
         private static JObject ComponentSchema(bool includeKey, string[] required = null)
         {
             var props = new List<(string, JObject)>();
@@ -267,9 +283,7 @@ namespace LogicSim.Mcp
             props.Add(Prop("label", "string", "Label shown on the canvas; used as pin name inside subcircuits."));
             props.Add(Prop("x", "number", "X position in grid units."));
             props.Add(Prop("y", "number", "Y position in grid units (up is positive)."));
-            props.Add(Prop("inputs", "integer", "Number of inputs for multi-input gates (1-8)."));
-            props.Add(Prop("half_period", "integer", "Clock half period in ticks."));
-            props.Add(Prop("value", "boolean", "Constant value or initial switch state."));
+            props.AddRange(SettingProps());
             props.Add(Prop("rotation", "integer", "Quarter turns clockwise."));
             props.Add(Prop("subcircuit", "string", "Definition id for type Subcircuit."));
             props.Add(Prop("weights", ArrayOf(new JObject { ["type"] = "number" }), "Neuron/SpikingNeuron weights (one per input)."));

@@ -211,18 +211,27 @@ namespace LogicSim.UI
 
             Field("Label", component.Label, text => Apply(component, p => { p.Label = text.Trim(); return p; }), "name");
 
-            if (spec.HasVariableInputs)
-                Field("Inputs", component.InputCount.ToString(Invariant), text => Apply(component, p => { p.InputCount = ParseInt(text); return p; }),
-                    $"{spec.MinInputs}-{spec.MaxInputs}");
+            // The kind's settings (inputs, half period, value, size, ...) come from its spec.
+            var properties = component.GetProperties();
+            foreach (var setting in spec.Settings)
+            {
+                if (!setting.InInspector)
+                    continue;
+                int value = setting.Get(properties);
+                var s = setting;
+                if (setting.IsFlag)
+                {
+                    Buttons(($"{setting.Label}: {value}", () => Apply(component, p => { s.Set(ref p, 1 - s.Get(p)); return p; })));
+                }
+                else
+                {
+                    Field(setting.Label, value.ToString(Invariant), text => Apply(component, p => { s.Set(ref p, ParseInt(text)); return p; }),
+                        $"{setting.Min}-{setting.Max}");
+                }
+            }
 
             switch (component.Kind)
             {
-                case ComponentKind.Clock:
-                    Field("Half period", component.ClockHalfPeriod.ToString(Invariant), text => Apply(component, p => { p.ClockHalfPeriod = ParseInt(text); return p; }), "ticks");
-                    break;
-                case ComponentKind.Constant:
-                    Buttons(("Value: " + (component.Value ? "1" : "0"), () => Apply(component, p => { p.Value = !p.Value; return p; })));
-                    break;
                 case ComponentKind.Neuron:
                 case ComponentKind.SpikingNeuron:
                     BuildNeuron(component);

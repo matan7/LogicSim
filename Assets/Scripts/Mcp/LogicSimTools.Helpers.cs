@@ -32,24 +32,18 @@ namespace LogicSim.Mcp
             }
             else
             {
-                component = ComponentFactory.Create(kind, x, y, label,
-                    inputs: spec["inputs"] != null ? (int)spec["inputs"] : (int?)null,
-                    clockHalfPeriod: spec["half_period"] != null ? (int)spec["half_period"] : (int?)null,
-                    value: spec["value"] != null ? ParseBool(spec["value"]) : (bool?)null,
-                    rotation: spec["rotation"] != null ? (int)spec["rotation"] : 0);
+                component = ComponentFactory.Create(kind, x, y, label, rotation: spec["rotation"] != null ? (int)spec["rotation"] : 0);
                 var properties = component.GetProperties();
                 try
                 {
+                    ApplySettingArguments(component, spec, ref properties);
                     ApplyNeuralArguments(component, spec, ref properties);
+                    ComponentFactory.Configure(component, properties);
                 }
                 catch (CircuitException exception)
                 {
                     throw new McpToolException(exception.Message);
                 }
-                if (properties.Neuron != null && component.IsNeuron)
-                    ComponentFactory.SetNeuron(component, properties.Neuron);
-                if (properties.Network != null && kind == ComponentKind.NeuralBlock)
-                    ComponentFactory.SetNetwork(component, properties.Network);
             }
             return component;
         }
@@ -215,10 +209,10 @@ namespace LogicSim.Mcp
                 entry["label"] = component.Label;
             if (component.Rotation != 0)
                 entry["rotation"] = component.Rotation;
-            if (component.Kind == ComponentKind.Clock)
-                entry["half_period"] = component.ClockHalfPeriod;
-            if (component.Kind == ComponentKind.Constant || component.Kind == ComponentKind.Switch || component.Kind == ComponentKind.PinIn)
-                entry["value"] = component.Value ? 1 : 0;
+            var properties = component.GetProperties();
+            foreach (var setting in component.Spec.Settings)
+                if (setting.InDescription)
+                    entry[setting.Name] = setting.Get(properties);
             if (component.Kind == ComponentKind.Subcircuit)
                 entry["subcircuit"] = component.SubcircuitId;
             if (component.IsNeuron && component.Neuron != null)
@@ -306,6 +300,27 @@ namespace LogicSim.Mcp
         private static string NameOf(CircuitComponent component)
         {
             return string.IsNullOrEmpty(component.Label) ? $"{component.Kind}#{component.Id}" : component.Label;
+        }
+
+        /// <summary>Reads the settings of the component's kind (inputs, half_period, value, ...) from the arguments.</summary>
+        private static void ApplySettingArguments(CircuitComponent component, JObject args, ref ComponentProperties properties)
+        {
+            foreach (var setting in component.Spec.Settings)
+            {
+                var token = args[setting.Name];
+                if (token == null || token.Type == JTokenType.Null)
+                    continue;
+                int value;
+                try
+                {
+                    value = setting.IsFlag ? (ParseBool(token) ? 1 : 0) : (int)token;
+                }
+                catch (Exception exception) when (exception is FormatException || exception is ArgumentException || exception is OverflowException)
+                {
+                    throw new McpToolException($"'{setting.Name}' needs {(setting.IsFlag ? "true/false" : "an integer")}");
+                }
+                setting.Set(ref properties, value);
+            }
         }
 
         private static bool ParseBool(JToken token)

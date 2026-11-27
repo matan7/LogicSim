@@ -37,6 +37,9 @@ namespace LogicSim.Simulation
         /// <summary>Network of a <see cref="ComponentKind.NeuralBlock"/>; its layers define the pins.</summary>
         public NeuralNetwork Network { get; internal set; }
 
+        /// <summary>Settings of the kind without a field of their own (see <see cref="ComponentSetting.Stored"/>).</summary>
+        public SettingValues Settings { get; internal set; } = SettingValues.Empty;
+
         public bool IsNeuron => Kind == ComponentKind.Neuron || Kind == ComponentKind.SpikingNeuron;
 
         public ComponentSpec Spec => ComponentSpec.Get(Kind);
@@ -67,8 +70,16 @@ namespace LogicSim.Simulation
                 ClockHalfPeriod = ClockHalfPeriod,
                 Value = Value,
                 Neuron = Neuron,
-                Network = Network
+                Network = Network,
+                Settings = Settings
             };
+        }
+
+        /// <summary>Value of a setting of this kind (see <see cref="ComponentSpec.Settings"/>).</summary>
+        public int GetSetting(string name)
+        {
+            var setting = Spec.FindSetting(name) ?? throw new CircuitException($"{Spec.DisplayName} has no setting '{name}'");
+            return setting.Get(GetProperties());
         }
 
         internal void ApplyProperties(ComponentProperties properties)
@@ -78,6 +89,7 @@ namespace LogicSim.Simulation
             InputCount = properties.InputCount;
             ClockHalfPeriod = Math.Max(1, properties.ClockHalfPeriod);
             Value = properties.Value;
+            Settings = properties.Settings ?? SettingValues.Empty;
             if (IsNeuron)
                 Neuron = (properties.Neuron ?? Neuron ?? NeuronParameters.Default(Kind, InputCount)).WithInputCount(InputCount);
             else if (Kind == ComponentKind.NeuralBlock)
@@ -108,7 +120,8 @@ namespace LogicSim.Simulation
                 Value = Value,
                 SubcircuitId = SubcircuitId,
                 Neuron = Neuron,
-                Network = Network
+                Network = Network,
+                Settings = Settings
             };
         }
 
@@ -129,11 +142,15 @@ namespace LogicSim.Simulation
         public NeuronParameters Neuron;
         public NeuralNetwork Network;
 
+        /// <summary>Settings of the kind without a field of their own; null means none.</summary>
+        public SettingValues Settings;
+
         public bool Equals(ComponentProperties other)
         {
             return string.Equals(Label ?? string.Empty, other.Label ?? string.Empty) && Rotation == other.Rotation
                 && InputCount == other.InputCount && ClockHalfPeriod == other.ClockHalfPeriod && Value == other.Value
-                && Equals(Neuron, other.Neuron) && Equals(Network, other.Network);
+                && Equals(Neuron, other.Neuron) && Equals(Network, other.Network)
+                && (Settings ?? SettingValues.Empty).Equals(other.Settings ?? SettingValues.Empty);
         }
 
         public override bool Equals(object obj) => obj is ComponentProperties other && Equals(other);

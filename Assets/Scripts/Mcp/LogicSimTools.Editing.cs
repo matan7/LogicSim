@@ -155,14 +155,9 @@ namespace LogicSim.Mcp
                 properties.Label = (string)args["label"];
             if (args["rotation"] != null)
                 properties.Rotation = (int)args["rotation"];
-            if (args["inputs"] != null)
-                properties.InputCount = (int)args["inputs"];
-            if (args["half_period"] != null)
-                properties.ClockHalfPeriod = (int)args["half_period"];
-            if (args["value"] != null)
-                properties.Value = ParseBool(args["value"]);
             try
             {
+                ApplySettingArguments(component, args, ref properties);
                 ApplyNeuralArguments(component, args, ref properties);
                 _workspace.Editor.Apply(new SetPropertiesEdit(Circuit, component.Id, properties));
             }

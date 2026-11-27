@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace LogicSim.Simulation
@@ -67,6 +68,10 @@ namespace LogicSim.Simulation
             public string Subcircuit;
             public NeuronDto Neuron;
             public NetworkDto Network;
+
+            /// <summary>Settings without a field above (see <see cref="ComponentSetting"/>), by their file key.</summary>
+            [JsonExtensionData]
+            public IDictionary<string, JToken> Settings;
         }
 
         private sealed class NeuronDto
@@ -253,8 +258,7 @@ namespace LogicSim.Simulation
 
         private static ComponentDto ToDto(CircuitComponent c)
         {
-            var spec = c.Spec;
-            return new ComponentDto
+            var dto = new ComponentDto
             {
                 Id = c.Id,
                 Type = c.Kind.ToString(),
@@ -262,13 +266,47 @@ namespace LogicSim.Simulation
                 Y = c.Y,
                 Rotation = c.Rotation != 0 ? c.Rotation : (int?)null,
                 Label = string.IsNullOrEmpty(c.Label) ? null : c.Label,
-                Inputs = spec.HasVariableInputs ? c.InputCount : (int?)null,
-                HalfPeriod = c.Kind == ComponentKind.Clock ? c.ClockHalfPeriod : (int?)null,
-                Value = c.Kind == ComponentKind.Switch || c.Kind == ComponentKind.Constant || c.Kind == ComponentKind.PinIn ? c.Value : (bool?)null,
                 Subcircuit = c.Kind == ComponentKind.Subcircuit ? c.SubcircuitId : null,
                 Neuron = c.IsNeuron && c.Neuron != null ? ToDto(c.Neuron, c.Kind == ComponentKind.SpikingNeuron) : null,
                 Network = c.Kind == ComponentKind.NeuralBlock && c.Network != null ? ToDto(c.Network) : null
             };
+            var properties = c.GetProperties();
+            foreach (var setting in c.Spec.Settings)
+            {
+                int value = setting.Get(properties);
+                switch (setting.JsonKey)
+                {
+                    // The settings of format version 1 keep their fields (and their place in the files).
+                    case "inputs": dto.Inputs = value; break;
+                    case "halfPeriod": dto.HalfPeriod = value; break;
+                    case "value": dto.Value = value != 0; break;
+                    default:
+                        dto.Settings = dto.Settings ?? new Dictionary<string, JToken>();
+                        dto.Settings[setting.JsonKey] = setting.IsFlag ? (JToken)(value != 0) : value;
+                        break;
+                }
+            }
+            return dto;
+        }
+
+        /// <summary>A setting from a file: null when it is missing or not a number.</summary>
+        private static int? ReadSetting(ComponentDto dto, ComponentSetting setting)
+        {
+            switch (setting.JsonKey)
+            {
+                case "inputs": return dto.Inputs;
+                case "halfPeriod": return dto.HalfPeriod;
+                case "value": return dto.Value.HasValue ? (dto.Value.Value ? 1 : 0) : (int?)null;
+            }
+            if (dto.Settings == null || !dto.Settings.TryGetValue(setting.JsonKey, out var token))
+                return null;
+            switch (token.Type)
+            {
+                case JTokenType.Integer: return (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, (long)token));
+                case JTokenType.Float: return (int)Math.Round((double)token);
+                case JTokenType.Boolean: return (bool)token ? 1 : 0;
+                default: return null;
+            }
         }
 
         private static NeuronDto ToDto(NeuronParameters neuron, bool spiking)
@@ -325,12 +363,19 @@ namespace LogicSim.Simulation
                     Id = dto.Id,
                     Rotation = (((dto.Rotation ?? 0) % 4) + 4) % 4,
                     Label = dto.Label ?? string.Empty,
-                    ClockHalfPeriod = Math.Max(1, dto.HalfPeriod ?? CircuitComponent.DefaultClockHalfPeriod),
-                    Value = dto.Value ?? false,
                     SubcircuitId = dto.Subcircuit ?? string.Empty
                 };
-                if (dto.Inputs.HasValue)
-                    component.InputCount = dto.Inputs.Value;
+                var properties = component.GetProperties();
+                foreach (var setting in component.Spec.Settings)
+                {
+                    var value = ReadSetting(dto, setting);
+                    if (!value.HasValue)
+                        continue;
+                    if (value.Value < setting.Min || value.Value > setting.Max)
+                        warnings.Add($"Component {dto.Id}: {setting.Name} {value.Value} is outside {setting.Min}..{setting.Max}; clamped");
+                    setting.SetClamped(ref properties, value.Value);
+                }
+                component.ApplyProperties(properties);
                 try
                 {
                     if (dto.Neuron != null && component.IsNeuron)

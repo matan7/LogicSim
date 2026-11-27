@@ -94,8 +94,8 @@ namespace LogicSim.Mcp
                 {
                     entry["inputs"] = new JArray(Enumerable.Range(0, spec.DefaultInputs).Select(spec.GetInputName));
                 }
-                if (spec.PropertiesHelp != null)
-                    entry["properties"] = spec.PropertiesHelp;
+                if (spec.AllPropertiesHelp != null)
+                    entry["properties"] = spec.AllPropertiesHelp;
                 if (spec.Aliases.Count > 0)
                     entry["aliases"] = new JArray(spec.Aliases);
                 if (spec.Kind == ComponentKind.NeuralBlock)

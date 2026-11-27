@@ -19,6 +19,7 @@ namespace LogicSim.Views
         private SpriteRenderer _body;
         private TextMeshPro _label;
         private TextMeshPro _caption;
+        private float _width;
         private readonly List<PinView> _inputPins = new List<PinView>();
         private readonly List<PinView> _outputPins = new List<PinView>();
         private bool? _shownValue;
@@ -61,8 +62,7 @@ namespace LogicSim.Views
 
             // Auto-sizing keeps every text inside its rect (world units), whatever the font scale.
             _label = CreateText("Label", new Vector2(width / 2, -height / 2), new Vector2(width - 1.2f, Mathf.Min(3f, height - 1f)), 30f);
-            _caption = CreateText("Caption", new Vector2(width / 2, 0.9f), new Vector2(width + 4, 1.4f), 14f);
-            _caption.color = new Color(1, 1, 1, 0.7f);
+            _width = width;
 
             CreatePins<InputPin>(_inputPins, inputs, rows, 0, circuit, component, false);
             CreatePins<OutputPin>(_outputPins, outputs, rows, width, circuit, component, true);
@@ -120,14 +120,26 @@ namespace LogicSim.Views
             return text;
         }
 
+        // Fitted font sizes by text, box and size limit: the same labels repeat on every flip-flop, pin and gate.
+        private static readonly Dictionary<(string text, Vector2 box, float max), float> FittedSizes = new Dictionary<(string, Vector2, float), float>();
+
         /// <summary>
         /// Sets the text and fits its font size once. Auto-sizing stays off afterwards: clocks and pins change their
-        /// label color with every value, and with auto-sizing on each change ran about a dozen layout passes.
+        /// label color with every value, and with auto-sizing on each change ran about a dozen layout passes. Sizes are
+        /// remembered, so that only the first of many equal labels is measured (a mesh update each, 4 ms per flip-flop).
         /// </summary>
         internal static void SetFittedText(TextMeshPro text, string value)
         {
             if (text.text == value && !text.enableAutoSizing)
                 return;
+            var key = (value ?? string.Empty, text.rectTransform.sizeDelta, text.fontSizeMax);
+            if (FittedSizes.TryGetValue(key, out float known))
+            {
+                text.enableAutoSizing = false;
+                text.fontSize = known;
+                text.text = value;
+                return;
+            }
             text.enableAutoSizing = true;
             text.text = value;
             if (!text.isActiveAndEnabled)
@@ -136,6 +148,7 @@ namespace LogicSim.Views
             float size = text.fontSize;
             text.enableAutoSizing = false;
             text.fontSize = size;
+            FittedSizes[key] = size;
         }
 
         protected override void CollectPins(List<PinView> inputs, List<PinView> outputs)
@@ -157,7 +170,17 @@ namespace LogicSim.Views
         public override void OnPropertiesChanged()
         {
             SetFittedText(_label, BodyText(null));
-            _caption.gameObject.SetActive(!string.IsNullOrEmpty(Component.Label) && Component.Kind != ComponentKind.PinIn && Component.Kind != ComponentKind.PinOut);
+            // Created on demand: most components have no label, and every text costs about 0.3 ms to create.
+            bool caption = !string.IsNullOrEmpty(Component.Label) && Component.Kind != ComponentKind.PinIn && Component.Kind != ComponentKind.PinOut;
+            if (caption && _caption == null)
+            {
+                _caption = CreateText("Caption", new Vector2(_width / 2, 0.9f), new Vector2(_width + 4, 1.4f), 14f);
+                _caption.color = new Color(1, 1, 1, 0.7f);
+                _caption.transform.rotation = Quaternion.identity;
+            }
+            if (_caption == null)
+                return;
+            _caption.gameObject.SetActive(caption);
             SetFittedText(_caption, Component.Label ?? string.Empty);
         }
 

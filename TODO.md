@@ -18,6 +18,10 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   Left, in the order of their cost:
   - Symbols not drawn by the renderer yet: gates with 3 to 8 inputs (vertical input bar), boxes for flip-flops, ICs,
     pins, displays and neurons, with the icons and markers from the atlas (`docs/SYMBOL_FORMAT.md`).
-  - Loading such a circuit creates a GameObject per component, wire and pin and takes about 9 s. The views no
+  - Loading such a circuit takes about 6.5 s (13.8 s before the grid, the font size cache and lazy captions): 5.2 s
+    for the component views and 1.2 s for the wire views. A symbol view costs about 0.34 ms (its GameObject, the pin
+    GameObjects, components added), a flip-flop drawn as a generic box 2.6 ms, of which 1.5 ms are its five
+    TextMeshPro labels (0.3 ms each to create). Next steps: boxes in the symbol renderer with the labels as glyph
+    instances (see the item below), pins as plain objects instead of GameObjects. The views no
     longer need GameObjects for picking; pins as plain objects and views pooled or drawn without GameObjects would
     remove most of them.

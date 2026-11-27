@@ -4,6 +4,10 @@ Open work on branch `claude/optimistic-noether-1l3qr9`. Items are removed from t
 Details for the Unity editor work: `docs/UNITY_SESSION.md`.
 
 ## Needs the Unity editor (see docs/UNITY_SESSION.md)
+- [ ] `Art/UI/Icons.psd` has no `comp.screen` artboard yet: the screen's palette icon
+  (`Assets/Art/UI/Icons/comp.screen.png`, a monitor outline with six pixel squares, 14 px strokes on 256 px) was drawn
+  without the icon builder. Rebuilding the icons keeps it, but add the artboard (row 4, after `comp.pinout`) so that
+  the PSD stays the source.
 - [ ] View performance for large circuits (the rest of step 5). Play mode with `BenchmarkCircuits.Random(1, 10000, 16)`
   (10,016 components, 15,197 wires) at 48k ticks/s, editor in Debug code mode, i7-5820K: median frame 66 ms, of which
   the player loop is 21 ms (126 and 77 ms with the sprite and line renderer views, measured in the same session).

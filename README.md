@@ -50,8 +50,9 @@ circuits through the built-in **MCP server**.
   a 16-byte RAM running a Fibonacci program, see `docs/8BIT_COMPUTER.md`, and a Sierpinski screen: a synchronous
   10-bit counter of T flip-flops (one clock, carries through AND gates) walks the 32 × 32 addresses of a screen and
   lights pixel (x, y) when x AND y is 0, so the triangle draws itself in about 50 s at the default speed; it works
-  with a clock half period down to 2 ticks, and CLEAR wipes it for another round).
-- **AI agents (MCP):** 36 tools to build, edit, simulate, analyse and train circuits, available inside the running app
+  with a clock half period down to 2 ticks, and CLEAR wipes it for another round), and a snake game on a 16 × 16
+  screen steered with the arrow keys, 665 gates in one chip, see `docs/SNAKE.md`.
+- **AI agents (MCP):** 37 tools to build, edit, simulate, analyse and train circuits, available inside the running app
   and as a headless server.
 
 ## Architecture
@@ -249,7 +250,7 @@ Assets/Resources/    examples, symbol set, UI icon set, NeuralLut.compute
 Assets/Tests/EditMode/   NUnit tests (Unity Test Runner and dotnet)
 Headless/            .NET solution: core library, MCP server, tests, benchmark
 docs/UNITY_SESSION.md  checklist for verifying and continuing the work inside the Unity editor
-Tools/               generate_8bit_computer.py (writes the 8-bit computer example)
+Tools/               generate_8bit_computer.py and generate_snake.py (write the 8-bit computer and snake examples)
 ```
 
 ## Building and testing

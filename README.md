@@ -43,8 +43,10 @@ circuits through the built-in **MCP server**.
   - wires are colored by their signal
 - **Analysis:** truth tables for any combinational circuit (up to 12 inputs).
 - **Files:** JSON documents with embedded IC definitions, plus bundled examples (half/full adder, SR latch,
-  4-bit counter, 4-bit adder built from IC instances, neurons, a spiking neuron, and an 8-bit computer with a CPU and
-  a 16-byte RAM running a Fibonacci program, see `docs/8BIT_COMPUTER.md`).
+  4-bit counter, 4-bit adder built from IC instances, neurons, a spiking neuron, an 8-bit computer with a CPU and
+  a 16-byte RAM running a Fibonacci program, see `docs/8BIT_COMPUTER.md`, and a Sierpinski screen: a 10-bit ripple
+  counter of T flip-flops walks the 32 × 32 addresses of a screen and lights pixel (x, y) when x AND y is 0, so the
+  triangle draws itself in about 50 s at the default speed; CLEAR wipes it for another round).
 - **AI agents (MCP):** 36 tools to build, edit, simulate, analyse and train circuits, available inside the running app
   and as a headless server.
 

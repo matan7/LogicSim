@@ -13,12 +13,11 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   values on the GPU (`CircuitView.Update` 37 -> 15 ms, camera render 1.3 -> 0.5 ms), symbols lit from the same net
   values (`CircuitView.Update` 15 -> 4.4 ms; what is left is the views without a symbol, the flip-flops here).
   Picking uses a spatial grid instead of colliders (`Views/SpatialGrid.cs`) and the selection holds ids, so the views
-  have no colliders any more and the Scene view's gizmos for them (about 33 ms in the editor) are gone; filing the
-  benchmark's 15,197 wires takes 67 ms, re-filing them 84 ms (measured outside Unity; the frame in Play mode is not
-  measured again yet).
+  have no colliders any more: median frame 54.6 -> 38.3 ms (the Scene view's gizmos 32 -> 6 ms), loading 13.8 -> 8.7 s.
+  Filing the benchmark's 15,197 wires takes 67 ms, re-filing them 84 ms.
   Left, in the order of their cost:
   - Symbols not drawn by the renderer yet: gates with 3 to 8 inputs (vertical input bar), boxes for flip-flops, ICs,
     pins, displays and neurons, with the icons and markers from the atlas (`docs/SYMBOL_FORMAT.md`).
-  - Loading such a circuit creates a GameObject per component, wire and pin and takes 10 to 15 s. The views no
+  - Loading such a circuit creates a GameObject per component, wire and pin and takes about 9 s. The views no
     longer need GameObjects for picking; pins as plain objects and views pooled or drawn without GameObjects would
     remove most of them.

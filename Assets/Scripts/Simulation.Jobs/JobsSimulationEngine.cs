@@ -38,6 +38,7 @@ namespace LogicSim.Simulation.Jobs
         private NativeArray<float> _neuronV;
         private NativeArray<int> _neuronCounter;
         private NativeArray<int> _requeue;
+        private NativeArray<byte> _pixels;
 
         private JobHandle _handle;
         private bool _running;
@@ -100,7 +101,9 @@ namespace LogicSim.Simulation.Jobs
                 NeuronCount = circuit.NeuronCount,
                 Weights = Copy(circuit.Weights),
                 NeuronParams = Copy(circuit.NeuronParams),
-                Lut = Copy(circuit.Lut)
+                Lut = Copy(circuit.Lut),
+                ScreenCount = circuit.ScreenCount,
+                ScreenInfo = Copy(circuit.ScreenInfo)
             };
 
             int gates = circuit.GateCount;
@@ -118,6 +121,7 @@ namespace LogicSim.Simulation.Jobs
             _neuronV = new NativeArray<float>(Math.Max(1, circuit.NeuronCount), Allocator.Persistent);
             _neuronCounter = new NativeArray<int>(Math.Max(1, circuit.NeuronCount), Allocator.Persistent);
             _requeue = new NativeArray<int>(Math.Max(1, gates), Allocator.Persistent);
+            _pixels = new NativeArray<byte>(Math.Max(1, circuit.PixelCount), Allocator.Persistent);
             Reset();
         }
 
@@ -129,6 +133,7 @@ namespace LogicSim.Simulation.Jobs
             Clear(_gateState);
             Clear(_neuronV);
             Clear(_neuronCounter);
+            Clear(_pixels);
             for (int i = 0; i < _circuit.InputSlotCount; i++)
                 _inputs[i] = _circuit.InitialInputs[i];
             for (int i = 0; i < _stamp.Length; i++)
@@ -190,6 +195,17 @@ namespace LogicSim.Simulation.Jobs
             if (_circuit == null || neuron < 0 || neuron >= _circuit.NeuronCount)
                 return 0;
             return _neuronV[neuron];
+        }
+
+        public void CopyScreen(int screen, byte[] destination)
+        {
+            Complete();
+            if (_circuit == null || screen < 0 || screen >= _circuit.ScreenCount)
+                return;
+            int first = _circuit.ScreenInfo[screen * 4];
+            int count = Math.Min(destination.Length, _circuit.ScreenInfo[screen * 4 + 1] * _circuit.ScreenInfo[screen * 4 + 2]);
+            fixed (byte* target = destination)
+                Buffer.MemoryCopy((byte*)_pixels.GetUnsafePtr() + first, target, destination.Length, count);
         }
 
         public void Schedule(long ticks)
@@ -279,6 +295,7 @@ namespace LogicSim.Simulation.Jobs
                 NeuronV = _neuronV,
                 NeuronCounter = _neuronCounter,
                 Requeue = _requeue,
+                Pixels = _pixels,
                 Status = _status,
                 Ticks = ticks,
                 StopWhenStable = stopWhenStable,
@@ -316,6 +333,7 @@ namespace LogicSim.Simulation.Jobs
                     Changed = _sweepChanged,
                     NeuronV = _neuronV,
                     NeuronCounter = _neuronCounter,
+                    Pixels = _pixels,
                     ChunkSize = chunkSize,
                     TickIndex = (int)k,
                     Tick = tick + k
@@ -376,6 +394,7 @@ namespace LogicSim.Simulation.Jobs
             d.NeuronV = (float*)_neuronV.GetUnsafePtr();
             d.NeuronCounter = (int*)_neuronCounter.GetUnsafePtr();
             d.Requeue = (int*)_requeue.GetUnsafePtr();
+            d.Pixels = (byte*)_pixels.GetUnsafePtr();
             return d;
         }
 
@@ -414,6 +433,8 @@ namespace LogicSim.Simulation.Jobs
             _netlist.Weights.Dispose();
             _netlist.NeuronParams.Dispose();
             _netlist.Lut.Dispose();
+            _netlist.ScreenInfo.Dispose();
+            _pixels.Dispose();
             _neuronV.Dispose();
             _neuronCounter.Dispose();
             _requeue.Dispose();

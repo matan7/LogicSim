@@ -192,6 +192,18 @@ namespace LogicSim.Simulation
 
                 new ComponentSpec(ComponentKind.Bulb, "Bulb", ComponentCategory.Output, "Lights up when its input is 1. Becomes an output pin inside a subcircuit.", 1, 1, 1, new[] { "in" }, Array.Empty<string>(), isInterfaceOutput: true).Alias("led", "lamp", "output"),
                 new ComponentSpec(ComponentKind.HexDisplay, "Hex display", ComponentCategory.Output, "Shows a 4-bit value (b0 is the least significant bit).", 4, 4, 4, new[] { "b0", "b1", "b2", "b3" }, Array.Empty<string>()).Alias("hex", "display"),
+                new ComponentSpec(ComponentKind.Screen, "Screen", ComponentCategory.Output,
+                    "Pixel display with a write port. Inputs: the x address x0.. and the y address y0.. (bit 0 first), D, WR, CLR. " +
+                    "On a rising edge of WR the pixel at (x, y) takes D; a rising edge of CLR clears the screen. Addresses outside it are ignored.",
+                    0, 0, 0, null, Array.Empty<string>()).Op(OpCode.Screen).Alias("lcd", "pixels", "pixeldisplay", "framebuffer", "monitor")
+                    .Setting(
+                        ComponentSetting.Stored(ScreenLayout.WidthSetting, "Width", "pixels across; the x address has as many bits as needed",
+                            1, ScreenLayout.MaxSize, ScreenLayout.DefaultWidth).AddsPins(),
+                        ComponentSetting.Stored(ScreenLayout.HeightSetting, "Height", "pixels down; the y address has as many bits as needed",
+                            1, ScreenLayout.MaxSize, ScreenLayout.DefaultHeight).AddsPins(),
+                        ComponentSetting.Stored(ScreenLayout.PixelSizeSetting, "Pixel size", "grid units per pixel on the canvas",
+                            1, ScreenLayout.MaxPixelSize, ScreenLayout.DefaultPixelSize))
+                    .Pins((c, _) => ScreenLayout.InputCount(c), (c, _) => 0, (c, _, pin) => ScreenLayout.InputName(c, pin)),
 
                 new ComponentSpec(ComponentKind.DFlipFlop, "D flip-flop", ComponentCategory.Sequential, "Stores D on the rising edge of CLK.", 2, 2, 2, new[] { "D", "CLK" }, new[] { "Q", "nQ" }).Op(OpCode.DFlipFlop).Alias("dff"),
                 new ComponentSpec(ComponentKind.TFlipFlop, "T flip-flop", ComponentCategory.Sequential, "Toggles on the rising edge of CLK when T is 1.", 2, 2, 2, new[] { "T", "CLK" }, new[] { "Q", "nQ" }).Op(OpCode.TFlipFlop).Alias("tff"),

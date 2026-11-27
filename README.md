@@ -10,7 +10,11 @@ circuits through the built-in **MCP server**.
 ## Features
 
 - **Components:** AND, OR, NOT, NAND, NOR, XOR, XNOR, Buffer (1–8 inputs), switch, push button, clock, constant,
-  bulb, hex display, D / T / JK flip-flops, input/output pins.
+  bulb, hex display, screen, D / T / JK flip-flops, input/output pins.
+- **Screen:** a pixel display of any size up to 256 × 256 (width, height and pixel size are set in the inspector, e.g.
+  20 × 30 with pixels 2 grid units wide). Its inputs are the x and y address (as many bits as the size needs), D, WR
+  and CLR: a rising edge of WR stores D in the pixel at (x, y), a rising edge of CLR clears the screen. When the
+  size changes, wires stay on their pins by name (x0, y0, D, ...).
 - **Custom ICs:** turn any circuit (or a selection) into a reusable component. Switches, buttons and input pins
   become its inputs; bulbs and output pins become its outputs. ICs can nest.
   - **Collapse:** replace a selection with a new IC in place; wires that cross the selection become its pins.
@@ -191,7 +195,7 @@ dotnet run --project Headless/LogicSim.McpServer -- --http 8765  # HTTP
 
 Tools include:
 - `build_circuit`: components and connections in one call, with automatic layout
-- `connect`, `set_inputs`, `run_simulation`, `read_signals`
+- `connect`, `set_inputs`, `run_simulation`, `read_signals`, `read_screen` (a screen's pixels as text rows)
 - `truth_table`, `create_subcircuit`, `collapse_to_subcircuit`, `explode_subcircuit`, `make_subcircuit_unique`
 - `open_subcircuit` / `close_subcircuit`: edit an IC in place; read the live values of the instance it was opened through
 - `train_component`: learn neuron or neural block weights from targets, rows or another IC

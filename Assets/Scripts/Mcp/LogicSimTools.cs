@@ -140,7 +140,12 @@ namespace LogicSim.Mcp
                 "Returns the values of inputs and outputs, or of specific pins (e.g. ['5.out', 'FF.Q']).",
                 Schema(Prop("pins", ArrayOf(new JObject { ["type"] = "string" }), "Pins to probe; omitted returns all inputs and outputs.")),
                 ReadSignals, readOnly: true));
-            server.AddTool(new McpTool("reset_simulation", "Reset simulation", "Clears all signals and flip-flop states.", Schema(), ResetSimulation));
+            server.AddTool(new McpTool("read_screen", "Read screen",
+                "Returns the pixels of Screen components as text rows ('#' lit, '.' dark), top row first. " +
+                "A screen writes D to the pixel at (x, y) on a rising edge of WR; a rising edge of CLR clears it.",
+                Schema(Prop("component", "string", "Id or label of the screen; omitted returns every screen of the shown level.")),
+                ReadScreen, readOnly: true));
+            server.AddTool(new McpTool("reset_simulation", "Reset simulation", "Clears all signals, flip-flop states and screens.", Schema(), ResetSimulation));
             server.AddTool(new McpTool("get_simulation_status", "Get simulation status",
                 "Returns backend, mode, tick, stability, speed and compile diagnostics.", Schema(), GetStatus, readOnly: true));
             server.AddTool(new McpTool("set_simulation_running", "Start or stop simulation",

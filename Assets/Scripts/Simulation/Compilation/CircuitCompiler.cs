@@ -40,6 +40,8 @@ namespace LogicSim.Simulation
             private readonly List<float> _weights = new List<float>();
             private readonly List<float> _neuronParams = new List<float>();
             private readonly List<ulong> _lut = new List<ulong>();
+            private readonly List<int> _screenInfo = new List<int>();
+            private int _pixelCount;
             private readonly Dictionary<NeuralNetwork, int> _lutOffsets = new Dictionary<NeuralNetwork, int>();
             private int _neuronCount;
 
@@ -165,6 +167,11 @@ namespace LogicSim.Simulation
                             param = AddNeuron(component);
                             scope.Neurons[component.Id] = param;
                         }
+                        else if (op == OpCode.Screen)
+                        {
+                            param = AddScreen(component);
+                            scope.Screens[component.Id] = param;
+                        }
                     }
                     else
                     {
@@ -200,6 +207,17 @@ namespace LogicSim.Simulation
                 _neuronParams.Add(neuron.Reset);
                 _neuronParams.Add(neuron.Refractory);
                 return _neuronCount++;
+            }
+
+            private int AddScreen(CircuitComponent component)
+            {
+                int width = ScreenLayout.Width(component), height = ScreenLayout.Height(component);
+                _screenInfo.Add(_pixelCount);
+                _screenInfo.Add(width);
+                _screenInfo.Add(height);
+                _screenInfo.Add(ScreenLayout.XBits(component));
+                _pixelCount += width * height;
+                return _screenInfo.Count / 4 - 1;
             }
 
             /// <summary>Weights are stored parallel to the input nets once the first neuron appears.</summary>
@@ -287,6 +305,9 @@ namespace LogicSim.Simulation
                 }
                 r.NeuronCount = _neuronCount;
                 r.Lut = _lut.Count > 0 ? _lut.ToArray() : new ulong[1];
+                r.ScreenInfo = _screenInfo.Count > 0 ? _screenInfo.ToArray() : new int[4];
+                r.ScreenCount = _screenInfo.Count / 4;
+                r.PixelCount = _pixelCount;
                 r.SourceVersion = _root.StructureVersion;
                 r.LibraryVersion = _root.Library.Version;
                 BuildFanout(r);

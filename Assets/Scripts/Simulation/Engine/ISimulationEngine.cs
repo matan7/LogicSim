@@ -57,6 +57,12 @@ namespace LogicSim.Simulation
         /// <summary>Membrane potential of a spiking neuron (index from the compiled circuit).</summary>
         float GetNeuronPotential(int neuron);
 
+        /// <summary>
+        /// Copies the pixels of a screen (index from the compiled circuit), row by row, 0 or 1 each, to
+        /// <paramref name="destination"/> up to its length. Waits for work started by <see cref="Schedule"/>.
+        /// </summary>
+        void CopyScreen(int screen, byte[] destination);
+
         /// <summary>Starts simulating <paramref name="ticks"/> ticks. May run asynchronously.</summary>
         void Schedule(long ticks);
 

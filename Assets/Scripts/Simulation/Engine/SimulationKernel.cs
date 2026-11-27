@@ -27,10 +27,17 @@ namespace LogicSim.Simulation
         public float* NeuronParams;
         public ulong* Lut;
 
+        // Screens (read-only): four ints each, see CompiledCircuit.ScreenInfo
+        public int ScreenCount;
+        public int* ScreenInfo;
+
         // State
         public byte* Inputs;
         public byte* GateState;
         public byte* Values;
+
+        /// <summary>Pixels of all screens, written on WR and CLR edges.</summary>
+        public byte* Pixels;
 
         /// <summary>Membrane potential and remaining refractory ticks of every spiking neuron.</summary>
         public float* NeuronV;
@@ -131,6 +138,10 @@ namespace LogicSim.Simulation
                 case (byte)OpCode.Spiking:
                     out0 = EvaluateSpiking(ref d, current, gate, start, end);
                     return;
+                case (byte)OpCode.Screen:
+                    EvaluateScreen(ref d, current, gate, start, end);
+                    out0 = 0;
+                    return;
                 case (byte)OpCode.Lut:
                 {
                     int index = 0;
@@ -182,6 +193,38 @@ namespace LogicSim.Simulation
 
             d.GateState[gate] = (byte)(q | (clock << 1));
             return q;
+        }
+
+        /// <summary>
+        /// Screen: the inputs are the x address bits, the y address bits, D, WR and CLR. A rising edge of CLR clears every
+        /// pixel, then a rising edge of WR stores D in the pixel at (x, y); addresses outside the screen are ignored.
+        /// State bit 0 is the WR level seen at the previous evaluation, bit 1 the CLR level.
+        /// </summary>
+        private static void EvaluateScreen(ref KernelData d, byte* current, int gate, int start, int end)
+        {
+            int* info = d.ScreenInfo + d.Param[gate] * 4;
+            int first = info[0], width = info[1], height = info[2], xBits = info[3];
+            int data = end - 3;
+            byte write = current[d.InNets[data + 1]];
+            byte clear = current[d.InNets[data + 2]];
+            byte state = d.GateState[gate];
+            if (clear == 1 && (state & 2) == 0)
+            {
+                int count = width * height;
+                for (int i = 0; i < count; i++)
+                    d.Pixels[first + i] = 0;
+            }
+            if (write == 1 && (state & 1) == 0)
+            {
+                int x = 0, y = 0;
+                for (int i = 0; i < xBits; i++)
+                    x |= current[d.InNets[start + i]] << i;
+                for (int i = start + xBits; i < data; i++)
+                    y |= current[d.InNets[i]] << (i - start - xBits);
+                if (x < width && y < height)
+                    d.Pixels[first + y * width + x] = current[d.InNets[data]];
+            }
+            d.GateState[gate] = (byte)(write | (clear << 1));
         }
 
         /// <summary>
@@ -239,7 +282,8 @@ namespace LogicSim.Simulation
 
         /// <summary>
         /// Power-on values on cleared buffers: constants hold their value, flip-flops start with Q = 0 / nQ = 1
-        /// and remember their current clock level so start-up does not produce a spurious clock edge.
+        /// and remember their current clock level, and screens their WR and CLR levels, so start-up does not produce a
+        /// spurious edge.
         /// </summary>
         public static void InitializeState(ref KernelData d)
         {
@@ -254,6 +298,12 @@ namespace LogicSim.Simulation
             for (int g = 0; g < d.GateCount; g++)
             {
                 byte op = d.Op[g];
+                if (op == (byte)OpCode.Screen)
+                {
+                    int data = d.InStart[g + 1] - 3;
+                    d.GateState[g] = (byte)(d.Values[d.InNets[data + 1]] | (d.Values[d.InNets[data + 2]] << 1));
+                    continue;
+                }
                 if (!IsFlipFlop(op))
                     continue;
                 int clockPin = op == (byte)OpCode.JKFlipFlop ? 2 : 1;

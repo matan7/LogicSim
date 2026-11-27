@@ -1,3 +1,4 @@
+using System.Linq;
 using LogicSim.Simulation;
 using LogicSim.Simulation.Jobs;
 using NUnit.Framework;
@@ -113,6 +114,67 @@ namespace LogicSim.Tests.Jobs
                 for (int net = 0; net < compiled.NetCount; net++)
                     Assert.That(jobs.GetNet(net), Is.EqualTo(reference.GetNet(net)));
             }
+        }
+
+        /// <summary>Two screens written from random switches, plus a clock on one WR: the same pixels in both engines.</summary>
+        [TestCase(SimulationMode.EventDriven, 21)]
+        [TestCase(SimulationMode.FullSweep, 22)]
+        public void JobsEngine_MatchesManagedEngine_OnScreens(SimulationMode mode, int seed)
+        {
+            var circuit = new Circuit();
+            var random = new System.Random(seed);
+            var screens = new[] { (width: 5, height: 3), (width: 8, height: 8) }.Select((size, i) =>
+            {
+                var screen = new CircuitComponent(ComponentKind.Screen, 0, -40 * i);
+                circuit.AddComponent(screen);
+                var p = screen.GetProperties();
+                screen.Spec.FindSetting("width").Set(ref p, size.width);
+                screen.Spec.FindSetting("height").Set(ref p, size.height);
+                circuit.SetProperties(screen.Id, p);
+                return screen;
+            }).ToArray();
+            foreach (var screen in screens)
+            {
+                for (int pin = 0; pin < circuit.GetInputCount(screen); pin++)
+                {
+                    var driver = new CircuitComponent(pin == ScreenLayout.WritePin(screen) && screen == screens[1] ? ComponentKind.Clock : ComponentKind.Switch, -10, -pin);
+                    circuit.AddComponent(driver);
+                    circuit.Connect(new PinRef(driver.Id, 0), new PinRef(screen.Id, pin));
+                }
+            }
+            var compiled = CircuitCompiler.Compile(circuit);
+            Assert.That(compiled.ScreenCount, Is.EqualTo(2));
+            Assert.That(compiled.PixelCount, Is.EqualTo(5 * 3 + 8 * 8));
+
+            using (var reference = new ManagedSimulationEngine { Mode = SimulationMode.EventDriven })
+            using (var jobs = new JobsSimulationEngine { Mode = mode, ParallelSweepMinGates = 1, ChunkSize = 64 })
+            {
+                reference.Load(compiled);
+                jobs.Load(compiled);
+                var expected = new byte[64];
+                var actual = new byte[64];
+                int written = 0;
+                for (int step = 0; step < 300; step++)
+                {
+                    int slot = random.Next(compiled.InputSlotCount);
+                    bool value = random.Next(2) == 1;
+                    reference.SetInput(slot, value);
+                    jobs.SetInput(slot, value);
+                    long ticks = random.Next(1, 40);
+                    reference.Run(ticks);
+                    jobs.Schedule(ticks);
+                    jobs.Complete();
+                    for (int screen = 0; screen < 2; screen++)
+                    {
+                        reference.CopyScreen(screen, expected);
+                        jobs.CopyScreen(screen, actual);
+                        Assert.That(actual, Is.EqualTo(expected), $"screen {screen} at step {step} ({jobs.ActiveMode})");
+                    }
+                    written = System.Math.Max(written, expected.Count(p => p != 0));
+                }
+                Assert.That(written, Is.GreaterThan(0), "the random inputs lit some pixels");
+            }
+            AssertNativeArraysDisposed();
         }
 
         [Test]

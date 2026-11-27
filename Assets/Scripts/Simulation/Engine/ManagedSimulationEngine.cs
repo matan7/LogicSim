@@ -23,6 +23,7 @@ namespace LogicSim.Simulation
         private float[] _neuronV;
         private int[] _neuronCounter;
         private int[] _requeue;
+        private byte[] _pixels;
 
         private readonly List<GCHandle> _handles = new List<GCHandle>();
         private KernelData _data;
@@ -63,6 +64,7 @@ namespace LogicSim.Simulation
             _neuronV = new float[Math.Max(1, circuit.NeuronCount)];
             _neuronCounter = new int[Math.Max(1, circuit.NeuronCount)];
             _requeue = new int[Math.Max(1, gates)];
+            _pixels = new byte[Math.Max(1, circuit.PixelCount)];
 
             _data = new KernelData
             {
@@ -82,6 +84,9 @@ namespace LogicSim.Simulation
                 Weights = (float*)Pin(circuit.Weights),
                 NeuronParams = (float*)Pin(circuit.NeuronParams),
                 Lut = (ulong*)Pin(circuit.Lut),
+                ScreenCount = circuit.ScreenCount,
+                ScreenInfo = (int*)Pin(circuit.ScreenInfo),
+                Pixels = (byte*)Pin(_pixels),
                 NeuronV = (float*)Pin(_neuronV),
                 NeuronCounter = (int*)Pin(_neuronCounter),
                 Requeue = (int*)Pin(_requeue),
@@ -106,6 +111,7 @@ namespace LogicSim.Simulation
             Array.Clear(_gateState, 0, _gateState.Length);
             Array.Clear(_neuronV, 0, _neuronV.Length);
             Array.Clear(_neuronCounter, 0, _neuronCounter.Length);
+            Array.Clear(_pixels, 0, _pixels.Length);
             Array.Copy(_circuit.InitialInputs, _inputs, _inputs.Length);
             for (int i = 0; i < _stamp.Length; i++)
                 _stamp[i] = -1;
@@ -154,6 +160,15 @@ namespace LogicSim.Simulation
             if (_neuronV == null || neuron < 0 || neuron >= _circuit.NeuronCount)
                 return 0;
             return _neuronV[neuron];
+        }
+
+        public void CopyScreen(int screen, byte[] destination)
+        {
+            if (_circuit == null || screen < 0 || screen >= _circuit.ScreenCount)
+                return;
+            int first = _circuit.ScreenInfo[screen * 4];
+            int count = Math.Min(destination.Length, _circuit.ScreenInfo[screen * 4 + 1] * _circuit.ScreenInfo[screen * 4 + 2]);
+            Buffer.BlockCopy(_pixels, first, destination, 0, count);
         }
 
         public void Schedule(long ticks)

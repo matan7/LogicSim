@@ -85,7 +85,7 @@ Use Play mode with screenshots. Fix what is broken, and give the user a short re
 
 **Palette and toolbar**
 - Logic gates section: D, T, JK flip-flops, Neuron (N), Spiking neuron (LIF), Neural block (NN).
-- IO section: Button, Clock, Constant, Hex display.
+- IO section: Button, Clock, Constant, Hex display, Screen.
 - Custom circuits section: Create IC, Collapse, Open IC, Explode, Make unique, Input pin, Output pin, and one entry per
   IC. Check that sections do not overlap and that the panel scrolls (`FitSection` and `MakeToolPanelScrollable` in
   `UI/AppUi.cs`).

@@ -30,6 +30,12 @@ namespace LogicSim.Simulation
         /// Spiking neuron: membrane potential. Perceptron: weighted sum of the high inputs. False for other components.
         /// </summary>
         bool TryGetNeuronPotential(CircuitComponent component, out float potential);
+
+        /// <summary>
+        /// Screen: copies its pixels (row by row from the top left, 0 or 1) to <paramref name="pixels"/>, which needs
+        /// width x height bytes. False for other components or when the netlist does not have it.
+        /// </summary>
+        bool TryGetScreen(CircuitComponent component, byte[] pixels);
     }
 
     /// <summary>Shared implementation of the derived queries.</summary>
@@ -44,6 +50,8 @@ namespace LogicSim.Simulation
 
         /// <summary>Potential of the spiking neuron with this component id, if the netlist has it.</summary>
         protected abstract bool TryGetSpikingPotential(int componentId, out float potential);
+
+        public abstract bool TryGetScreen(CircuitComponent component, byte[] pixels);
 
         public bool TryGetNeuronPotential(CircuitComponent component, out float potential)
         {
@@ -154,6 +162,15 @@ namespace LogicSim.Simulation
             if (scope == null || !scope.TryGetNeuron(componentId, out int neuron))
                 return false;
             potential = _session.Engine.GetNeuronPotential(neuron);
+            return true;
+        }
+
+        public override bool TryGetScreen(CircuitComponent component, byte[] pixels)
+        {
+            var scope = Scope;
+            if (component.Kind != ComponentKind.Screen || scope == null || !scope.TryGetScreen(component.Id, out int screen))
+                return false;
+            _session.Engine.CopyScreen(screen, pixels);
             return true;
         }
     }

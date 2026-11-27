@@ -420,6 +420,8 @@ namespace LogicSim.Views
         {
             if (SymbolComponentView.CanShow(component, _circuit, _symbols))
                 return typeof(SymbolComponentView);
+            if (component.Kind == ComponentKind.Screen)
+                return typeof(ScreenComponentView);
             var prefab = ComponentPrefabRegistry.Get(component);
             var prefabView = prefab != null ? prefab.GetComponent<ComponentView>() : null;
             return prefabView != null ? prefabView.GetType() : typeof(GenericComponentView);
@@ -437,6 +439,12 @@ namespace LogicSim.Views
                 symbol.Renderer = _symbols;
                 view = symbol;
                 _netsDirty = true;
+            }
+            else if (component.Kind == ComponentKind.Screen)
+            {
+                var go = new GameObject();
+                go.transform.SetParent(_componentRoot, false);
+                view = go.AddComponent<ScreenComponentView>();
             }
             else if (prefab != null)
             {

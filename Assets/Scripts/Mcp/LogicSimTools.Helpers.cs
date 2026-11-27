@@ -173,6 +173,7 @@ namespace LogicSim.Mcp
             var inputs = new JObject();
             var outputs = new JObject();
             var displays = new JObject();
+            var screens = new JObject();
             foreach (var component in circuit.Components.OrderByDescending(c => c.Y).ThenBy(c => c.X))
             {
                 if (component.Spec.IsInterfaceInput)
@@ -181,10 +182,19 @@ namespace LogicSim.Mcp
                     outputs[NameOf(component)] = session.GetInputPinValue(component.Id, 0) ? 1 : 0;
                 else if (component.Kind == ComponentKind.HexDisplay)
                     displays[NameOf(component)] = session.GetInputBits(component).ToString("X");
+                else if (component.Kind == ComponentKind.Screen)
+                {
+                    int width = ScreenLayout.Width(component), height = ScreenLayout.Height(component);
+                    var pixels = new byte[width * height];
+                    if (session.TryGetScreen(component, pixels))
+                        screens[NameOf(component)] = $"{pixels.Count(p => p != 0)} of {width}x{height} lit (read_screen shows them)";
+                }
             }
             var result = new JObject { ["inputs"] = inputs, ["outputs"] = outputs };
             if (displays.HasValues)
                 result["displays"] = displays;
+            if (screens.HasValues)
+                result["screens"] = screens;
             return result;
         }
 

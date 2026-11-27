@@ -51,6 +51,37 @@ namespace LogicSim.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator PlaceAScreenFromThePalette_AndSeeItsPixels()
+        {
+            yield return LoadApp();
+            var spawner = Object.FindObjectsByType<ObjectSpawner>(FindObjectsInactive.Exclude)
+                .First(s => s.TryGetKind(out var kind) && kind == ComponentKind.Screen);
+            var from = ScrollIntoView((RectTransform)spawner.transform);
+            yield return Drag(from, new Vector2(Screen.width * 0.6f, Screen.height * 0.5f));
+
+            var screen = Circuit.Components.Single();
+            Assert.That(screen.Kind, Is.EqualTo(ComponentKind.Screen));
+            Assert.That(ViewOf(screen.Id), Is.InstanceOf<ScreenComponentView>());
+
+            // A constant 1 on D and WR: the power-on edge is ignored, so the screen stays dark until WR rises.
+            var one = ComponentFactory.Create(ComponentKind.Constant, screen.X - 10, screen.Y, value: true);
+            var write = ComponentFactory.Create(ComponentKind.Switch, screen.X - 10, screen.Y - 8);
+            SystemCore.CircuitService.Editor.Apply(new AddElementsEdit(Circuit, new[] { one, write }));
+            SystemCore.CircuitService.Editor.Apply(new ConnectEdit(Circuit, new PinRef(one.Id, 0), new PinRef(screen.Id, ScreenLayout.DataPin(screen))));
+            SystemCore.CircuitService.Editor.Apply(new ConnectEdit(Circuit, new PinRef(write.Id, 0), new PinRef(screen.Id, ScreenLayout.WritePin(screen))));
+            PressAndRelease(_keyboard.f5Key);
+            yield return null;
+            Circuit.SetInputValue(write.Id, true);
+            for (int i = 0; i < 5; i++)
+                yield return null;
+
+            var pixels = new byte[ScreenLayout.Width(screen) * ScreenLayout.Height(screen)];
+            Assert.That(SystemCore.SimulationService.Session.TryGetScreen(screen, pixels), Is.True);
+            Assert.That(pixels[0], Is.EqualTo(1), "WR wrote D to pixel (0, 0)");
+            Assert.That(pixels.Count(p => p != 0), Is.EqualTo(1));
+        }
+
+        [UnityTest]
         public IEnumerator WireTwoPins()
         {
             yield return LoadApp();

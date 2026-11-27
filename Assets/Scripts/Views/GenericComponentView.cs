@@ -99,9 +99,13 @@ namespace LogicSim.Views
         }
 
         private TextMeshPro CreateText(string objectName, Vector2 position, Vector2 size, float maxFontSize)
+            => CreateText(transform, objectName, position, size, maxFontSize);
+
+        /// <summary>Upright label text under <paramref name="parent"/>, auto-sized into <paramref name="size"/> (world units).</summary>
+        internal static TextMeshPro CreateText(Transform parent, string objectName, Vector2 position, Vector2 size, float maxFontSize)
         {
             var go = new GameObject(objectName);
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(position.x, position.y, -0.05f);
             var text = go.AddComponent<TextMeshPro>();
             text.rectTransform.sizeDelta = size;

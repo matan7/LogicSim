@@ -147,6 +147,37 @@ namespace LogicSim.Tests
         }
 
         [Test]
+        public void AScreenIsBuiltWithItsSize_AndReadAsTextRows()
+        {
+            Call("build_circuit", new
+            {
+                clear = true,
+                components = new object[]
+                {
+                    new { key = "lcd", type = "Screen", label = "LCD", width = 3, height = 2 },
+                    new { type = "Switch", label = "X0" }, new { type = "Switch", label = "X1" }, new { type = "Switch", label = "Y" },
+                    new { type = "Constant", label = "One", value = true }, new { type = "Switch", label = "WR" }
+                },
+                connections = new object[]
+                {
+                    new { from = "X0", to = "lcd.x0" }, new { from = "X1", to = "lcd.x1" }, new { from = "Y", to = "lcd.y0" },
+                    new { from = "One", to = "lcd.D" }, new { from = "WR", to = "lcd.WR" }
+                }
+            });
+
+            Call("set_inputs", new { values = new JObject { ["X1"] = 1, ["Y"] = 1 } });
+            Call("run_simulation");
+            Call("set_inputs", new { values = new JObject { ["WR"] = 1 } });
+            var run = Call("run_simulation");
+            Assert.That((string)run["screens"]["LCD"], Does.StartWith("1 of 3x2 lit"));
+
+            var screen = (JObject)((JArray)Call("read_screen", new { component = "LCD" })["screens"])[0];
+            Assert.That((int)screen["width"], Is.EqualTo(3));
+            Assert.That(screen["rows"].Select(r => (string)r), Is.EqualTo(new[] { "...", "..#" }));
+            Call("read_screen", new { component = "X0" }, expectError: true);
+        }
+
+        [Test]
         public void Errors_AreReportedAsToolErrors()
         {
             Call("add_component", new { type = "Teleporter" }, expectError: true);

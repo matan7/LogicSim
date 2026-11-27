@@ -196,15 +196,35 @@ namespace LogicSim.Simulation
                     throw new CircuitException(setting.IsFlag ? $"{setting.Name} is 0 or 1" : $"{spec.DisplayName}: {setting.Name} must be {setting.Min}..{setting.Max}");
             }
 
-            // Pins the new properties remove must be free: inputs, a network's layers, a screen's size, ...
+            // The new properties may change the pins (inputs, a network's layers, a screen's size). Wires follow their
+            // pin's name, so that a pin that moves (a screen's y address when its x address grows) keeps its wire; a
+            // pin that disappears must be free.
             var probe = component.Clone();
             probe.ApplyProperties(properties);
-            for (int pin = GetInputCount(probe); pin < GetInputCount(component); pin++)
-                if (GetWireInto(id, pin) != null)
-                    throw new CircuitException($"Disconnect input {pin} of {component} before removing it");
-            for (int pin = GetOutputCount(probe); pin < GetOutputCount(component); pin++)
-                if (GetWiresFrom(id, pin).Any())
-                    throw new CircuitException($"Disconnect output {pin} of {component} before removing it");
+            var inputMap = MapPins(component, probe, input: true);
+            var outputMap = MapPins(component, probe, input: false);
+            var moved = new List<(Wire wire, PinRef from, PinRef to)>();
+            foreach (var wire in GetWiresOf(id))
+            {
+                var from = wire.From;
+                var to = wire.To;
+                if (from.ComponentId == id)
+                {
+                    int pin = outputMap[from.Pin];
+                    if (pin < 0)
+                        throw new CircuitException($"Disconnect output {GetOutputName(component, from.Pin)} of {component} before removing it");
+                    from = new PinRef(id, pin);
+                }
+                if (to.ComponentId == id)
+                {
+                    int pin = inputMap[to.Pin];
+                    if (pin < 0)
+                        throw new CircuitException($"Disconnect input {GetInputName(component, to.Pin)} of {component} before removing it");
+                    to = new PinRef(id, pin);
+                }
+                if (!from.Equals(wire.From) || !to.Equals(wire.To))
+                    moved.Add((wire, from, to));
+            }
 
             var before = component.GetProperties();
             component.ApplyProperties(properties);
@@ -212,6 +232,12 @@ namespace LogicSim.Simulation
             if (before.Equals(after))
                 return;
             ContentVersion++;
+
+            // Removed first, then added: two moved wires may swap their pins.
+            foreach (var (wire, _, _) in moved)
+                RemoveWireInternal(wire);
+            foreach (var (wire, from, to) in moved)
+                AddWire(new Wire(wire.Id, from, to));
 
             bool structural = before.InputCount != after.InputCount
                 || before.ClockHalfPeriod != after.ClockHalfPeriod
@@ -225,6 +251,43 @@ namespace LogicSim.Simulation
                 InputValueChanged?.Invoke(component);
             if (structural)
                 MarkStructureChanged();
+        }
+
+        /// <summary>
+        /// For each pin of <paramref name="before"/>, its index on <paramref name="after"/> (the same component with new
+        /// properties), or -1 when it is gone. Pins are matched by name when the names are unique on both sides, by index
+        /// otherwise.
+        /// </summary>
+        private int[] MapPins(CircuitComponent before, CircuitComponent after, bool input)
+        {
+            int oldCount = input ? GetInputCount(before) : GetOutputCount(before);
+            int newCount = input ? GetInputCount(after) : GetOutputCount(after);
+            var map = new int[oldCount];
+            var newPins = new Dictionary<string, int>();
+            bool byName = true;
+            for (int pin = 0; pin < newCount && byName; pin++)
+            {
+                string name = input ? GetInputName(after, pin) : GetOutputName(after, pin);
+                if (name == null || newPins.ContainsKey(name))
+                    byName = false;
+                else
+                    newPins.Add(name, pin);
+            }
+            var oldNames = new HashSet<string>();
+            for (int pin = 0; pin < oldCount && byName; pin++)
+            {
+                string name = input ? GetInputName(before, pin) : GetOutputName(before, pin);
+                if (name == null || !oldNames.Add(name))
+                    byName = false;
+            }
+            for (int pin = 0; pin < oldCount; pin++)
+            {
+                if (byName)
+                    map[pin] = newPins.TryGetValue(input ? GetInputName(before, pin) : GetOutputName(before, pin), out int moved) ? moved : -1;
+                else
+                    map[pin] = pin < newCount ? pin : -1;
+            }
+            return map;
         }
 
         /// <summary>Changes the state of a Switch, Button or PinIn without touching other properties.</summary>

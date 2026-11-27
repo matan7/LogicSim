@@ -27,6 +27,8 @@ namespace LogicSim.Simulation.Jobs
         [ReadOnly] public NativeArray<float> Weights;
         [ReadOnly] public NativeArray<float> NeuronParams;
         [ReadOnly] public NativeArray<ulong> Lut;
+        public int ScreenCount;
+        [ReadOnly] public NativeArray<int> ScreenInfo;
 
         internal unsafe void Fill(ref KernelData d)
         {
@@ -46,6 +48,8 @@ namespace LogicSim.Simulation.Jobs
             d.Weights = (float*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Weights);
             d.NeuronParams = (float*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(NeuronParams);
             d.Lut = (ulong*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Lut);
+            d.ScreenCount = ScreenCount;
+            d.ScreenInfo = (int*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(ScreenInfo);
         }
     }
 
@@ -71,6 +75,7 @@ namespace LogicSim.Simulation.Jobs
         public NativeArray<float> NeuronV;
         public NativeArray<int> NeuronCounter;
         public NativeArray<int> Requeue;
+        public NativeArray<byte> Pixels;
         public NativeArray<KernelStatus> Status;
         public long Ticks;
         public bool StopWhenStable;
@@ -91,6 +96,7 @@ namespace LogicSim.Simulation.Jobs
             d.NeuronV = (float*)NeuronV.GetUnsafePtr();
             d.NeuronCounter = (int*)NeuronCounter.GetUnsafePtr();
             d.Requeue = (int*)Requeue.GetUnsafePtr();
+            d.Pixels = (byte*)Pixels.GetUnsafePtr();
 
             var status = Status[0];
             if (ActivateAllFirst)
@@ -118,6 +124,8 @@ namespace LogicSim.Simulation.Jobs
         // Each neuron is written only by the work item that owns its gate.
         [NativeDisableParallelForRestriction] public NativeArray<float> NeuronV;
         [NativeDisableParallelForRestriction] public NativeArray<int> NeuronCounter;
+        // Each screen's pixels are written only by the work item that owns its gate.
+        [NativeDisableParallelForRestriction] public NativeArray<byte> Pixels;
         public int ChunkSize;
         public int TickIndex;
         public long Tick;
@@ -130,6 +138,7 @@ namespace LogicSim.Simulation.Jobs
             d.GateState = (byte*)GateState.GetUnsafePtr();
             d.NeuronV = (float*)NeuronV.GetUnsafePtr();
             d.NeuronCounter = (int*)NeuronCounter.GetUnsafePtr();
+            d.Pixels = (byte*)Pixels.GetUnsafePtr();
             byte* current = (byte*)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(Current);
             byte* next = (byte*)Next.GetUnsafePtr();
 

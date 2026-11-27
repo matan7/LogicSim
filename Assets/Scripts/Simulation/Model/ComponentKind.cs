@@ -38,7 +38,10 @@ namespace LogicSim.Simulation
         // Neurons
         Neuron,
         SpikingNeuron,
-        NeuralBlock
+        NeuralBlock,
+
+        // Outputs added later (appended: the enum values stay stable)
+        Screen
     }
 
     public enum ComponentCategory

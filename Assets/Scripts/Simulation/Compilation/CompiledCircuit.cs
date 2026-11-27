@@ -27,7 +27,10 @@ namespace LogicSim.Simulation
         Spiking = 15,
 
         /// <summary>Table lookup: the inputs form an index into <see cref="CompiledCircuit.Lut"/> (neural blocks).</summary>
-        Lut = 16
+        Lut = 16,
+
+        /// <summary>Pixel display: writes D to the addressed pixel on a rising WR edge (see <see cref="ScreenLayout"/>).</summary>
+        Screen = 17
     }
 
     public enum DiagnosticSeverity
@@ -103,6 +106,14 @@ namespace LogicSim.Simulation
 
         /// <summary>Lookup tables of neural blocks; a Lut gate's Param is its first word.</summary>
         public ulong[] Lut;
+
+        /// <summary>Four values per screen: first pixel, width, height, x address bits. A Screen gate's Param is its index.</summary>
+        public int[] ScreenInfo;
+
+        public int ScreenCount;
+
+        /// <summary>Pixels of all screens, one byte each (the engines keep them).</summary>
+        public int PixelCount;
 
         // Mapping of the top-level circuit to nets and slots.
         public readonly Dictionary<int, int[]> OutputNets = new Dictionary<int, int[]>();
@@ -203,6 +214,11 @@ namespace LogicSim.Simulation
         internal readonly Dictionary<int, int> Neurons = new Dictionary<int, int>();
 
         public bool TryGetNeuron(int componentId, out int neuron) => Neurons.TryGetValue(componentId, out neuron);
+
+        /// <summary>Screen index of each Screen in this scope.</summary>
+        internal readonly Dictionary<int, int> Screens = new Dictionary<int, int>();
+
+        public bool TryGetScreen(int componentId, out int screen) => Screens.TryGetValue(componentId, out screen);
 
         internal CompiledScope(int index, Circuit circuit, CompiledScope parent, int instanceId, SubcircuitDefinition definition)
         {

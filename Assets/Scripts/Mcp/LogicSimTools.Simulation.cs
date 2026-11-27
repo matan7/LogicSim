@@ -82,6 +82,51 @@ namespace LogicSim.Mcp
             return McpToolResult.Ok(summary);
         }
 
+        private McpToolResult ReadScreen(JObject args)
+        {
+            var signals = CurrentSignals(out var reason);
+            if (signals == null)
+                throw new McpToolException(reason);
+            var screens = args["component"] != null
+                ? new[] { ResolveComponent(args["component"]) }
+                : Circuit.Components.Where(c => c.Kind == ComponentKind.Screen).ToArray();
+            if (screens.Length == 0)
+                throw new McpToolException("There is no Screen on this level");
+            var result = new JArray();
+            foreach (var screen in screens)
+            {
+                if (screen.Kind != ComponentKind.Screen)
+                    throw new McpToolException($"{screen} is not a Screen");
+                int width = ScreenLayout.Width(screen), height = ScreenLayout.Height(screen);
+                var pixels = new byte[width * height];
+                if (!signals.TryGetScreen(screen, pixels))
+                    throw new McpToolException($"{screen} is not in the compiled circuit; run the simulation first");
+                var rows = new JArray();
+                var row = new char[width];
+                int lit = 0;
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        bool on = pixels[y * width + x] != 0;
+                        row[x] = on ? '#' : '.';
+                        if (on)
+                            lit++;
+                    }
+                    rows.Add(new string(row));
+                }
+                result.Add(new JObject
+                {
+                    ["screen"] = NameOf(screen),
+                    ["width"] = width,
+                    ["height"] = height,
+                    ["lit"] = lit,
+                    ["rows"] = rows
+                });
+            }
+            return McpToolResult.Ok(new JObject { ["screens"] = result, ["tick"] = _workspace.Session.Tick });
+        }
+
         private McpToolResult ResetSimulation(JObject args)
         {
             _workspace.Session.Reset();

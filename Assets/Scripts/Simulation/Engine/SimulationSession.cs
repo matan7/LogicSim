@@ -108,6 +108,14 @@ namespace LogicSim.Simulation
             return true;
         }
 
+        public bool TryGetScreen(CircuitComponent component, byte[] pixels)
+        {
+            if (component.Kind != ComponentKind.Screen || Compiled?.RootScope == null || !Compiled.RootScope.TryGetScreen(component.Id, out int screen))
+                return false;
+            Engine.CopyScreen(screen, pixels);
+            return true;
+        }
+
         /// <summary>Value shown by a component: input pin 0 for sinks, otherwise output pin 0.</summary>
         public bool GetDisplayValue(CircuitComponent component)
         {

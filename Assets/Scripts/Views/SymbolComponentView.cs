@@ -48,7 +48,7 @@ namespace LogicSim.Views
         private Vector2 _size;
         private uint _flags;
         private bool _selected;
-        private ISignalReader _session;
+        private readonly int[] _nets = new int[SymbolRenderer.NetSlots];
         private TextMeshPro _glyph;
         private readonly List<PinView> _inputPins = new List<PinView>();
         private readonly List<PinView> _outputPins = new List<PinView>();
@@ -133,7 +133,8 @@ namespace LogicSim.Views
                 return;
             Slot = Renderer.Add(this, _symbol, _flags | (_selected ? SymbolRenderer.SelectedFlag : 0));
             SyncTransform();
-            UpdateState();
+            Renderer.SetNets(Slot, _nets);
+            UpdateLit();
         }
 
         private void OnEnable()
@@ -182,56 +183,54 @@ namespace LogicSim.Views
                 // Dark on the lit fill, light on the dark one.
                 _glyph.color = Component.Value ? VisualStyle.BodyFill : VisualStyle.LabelColor;
             }
-            UpdateState();
+            UpdateLit();
         }
 
+        /// <summary>Values reach the renderer through the nets (<see cref="ResolveNets"/>), not per frame.</summary>
         public override void ShowValues(ISignalReader session)
         {
-            _session = session;
-            UpdateState();
         }
 
-        private void UpdateState()
+        /// <summary>
+        /// Looks up the nets of the pins and of the fill in <paramref name="signals"/> (null: none), after a recompile or
+        /// a level change. The renderer reads their values on the GPU.
+        /// </summary>
+        public void ResolveNets(ISignalReader signals)
         {
-            if (Component == null)
-                return;
-            var session = _session;
-            uint state = session != null ? SymbolRenderer.ValuesState : 0;
-            for (int i = 0; i < _inputPins.Count; i++)
+            for (int i = 0; i < _nets.Length; i++)
+                _nets[i] = -1;
+            if (signals != null && Component != null)
             {
-                bool? value = session == null ? (bool?)null : session.GetInputPinValue(ComponentId, i);
-                _inputPins[i].SetValue(value);
-                if (value == true)
-                    state |= 1u << (SymbolRenderer.InputValuesShift + _layout.InputRows[i]);
+                for (int i = 0; i < _layout.InputRows.Length; i++)
+                    _nets[_layout.InputRows[i]] = signals.GetInputNet(ComponentId, i);
+                for (int i = 0; i < _layout.OutputRows.Length; i++)
+                    _nets[SymbolRenderer.OutputNetSlot + _layout.OutputRows[i]] = signals.GetOutputNet(ComponentId, i);
+                switch (_kind)
+                {
+                    // Inputs are lit by their own state (UpdateLit), the bulb by its input, the rest by their output.
+                    case ComponentKind.Switch:
+                    case ComponentKind.Button:
+                    case ComponentKind.Constant:
+                        break;
+                    case ComponentKind.Bulb:
+                        _nets[SymbolRenderer.FillNetSlot] = signals.GetInputNet(ComponentId, 0);
+                        break;
+                    default:
+                        _nets[SymbolRenderer.FillNetSlot] = signals.GetOutputNet(ComponentId, 0);
+                        break;
+                }
             }
-            for (int i = 0; i < _outputPins.Count; i++)
-            {
-                bool? value = session == null ? (bool?)null : session.GetOutputValue(ComponentId, i);
-                _outputPins[i].SetValue(value);
-                if (value == true)
-                    state |= 1u << (SymbolRenderer.OutputValuesShift + _layout.OutputRows[i]);
-            }
-
-            bool lit;
-            switch (_kind)
-            {
-                // Inputs show the state set in the model, also outside the simulation.
-                case ComponentKind.Switch:
-                case ComponentKind.Button:
-                case ComponentKind.Constant:
-                    lit = Component.Value;
-                    break;
-                case ComponentKind.Bulb:
-                    lit = (state & (1u << (SymbolRenderer.InputValuesShift + _layout.InputRows[0]))) != 0;
-                    break;
-                default:
-                    lit = (state & (1u << (SymbolRenderer.OutputValuesShift + _layout.OutputRows[0]))) != 0;
-                    break;
-            }
-            if (lit)
-                state |= SymbolRenderer.LitState;
             if (Slot >= 0)
-                Renderer.SetState(Slot, state);
+                Renderer.SetNets(Slot, _nets);
+        }
+
+        // Switches, buttons and constants show the state set in the model, also outside the simulation.
+        private void UpdateLit()
+        {
+            if (Slot < 0 || Component == null)
+                return;
+            bool own = _kind == ComponentKind.Switch || _kind == ComponentKind.Button || _kind == ComponentKind.Constant;
+            Renderer.SetLit(Slot, own && Component.Value);
         }
 
         public void Select() => SetSelected(true);

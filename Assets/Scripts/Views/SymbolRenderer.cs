@@ -7,8 +7,9 @@ namespace LogicSim.Views
 {
     /// <summary>
     /// Draws the bodies of all <see cref="SymbolComponentView"/>s with one procedural instanced draw call: symbols from
-    /// the <see cref="SymbolSet"/> atlas, positioned by an instance buffer that changes only when components move, and
-    /// lit by a state buffer of one word per instance that is uploaded when the values change. See docs/SYMBOL_FORMAT.md.
+    /// the <see cref="SymbolSet"/> atlas, positioned by an instance buffer that changes only when components move. Each
+    /// instance knows the nets of its pins and of its fill; the shader reads their values from <see cref="NetValues"/>,
+    /// so showing values costs nothing per component on the CPU. See docs/SYMBOL_FORMAT.md.
     /// </summary>
     public sealed class SymbolRenderer : IDisposable
     {
@@ -19,14 +20,15 @@ namespace LogicSim.Views
         // Instance flags.
         public const uint RotationMask = 3;
         public const uint SelectedFlag = 4;
+        /// <summary>The fill is lit by the component's own state (switch, button, constant), also outside the simulation.</summary>
+        public const uint LitFlag = 8;
         public const int InputRowsShift = 8;
         public const int OutputRowsShift = 16;
 
-        // Instance states.
-        public const uint LitState = 1;
-        public const uint ValuesState = 2;
-        public const int InputValuesShift = 8;
-        public const int OutputValuesShift = 16;
+        // Nets per instance: input rows 0-7, output rows 8-15, the fill at 16 (-1 for none). Keep in sync with the shader.
+        public const int NetSlots = 17;
+        public const int OutputNetSlot = MaxRows;
+        public const int FillNetSlot = 2 * MaxRows;
 
         /// <summary>Half the width of the outline strokes in the art (16 px at 100 px per unit).</summary>
         private const float StrokeHalfWidth = 0.08f;
@@ -51,7 +53,7 @@ namespace LogicSim.Views
 
         private static readonly int InstancesId = Shader.PropertyToID("_Instances");
         private static readonly int SymbolsId = Shader.PropertyToID("_Symbols");
-        private static readonly int StatesId = Shader.PropertyToID("_States");
+        private static readonly int InstanceNetsId = Shader.PropertyToID("_InstanceNets");
         private static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
         private static readonly int FillOnColorId = Shader.PropertyToID("_FillOnColor");
         private static readonly int FillOffColorId = Shader.PropertyToID("_FillOffColor");
@@ -66,14 +68,14 @@ namespace LogicSim.Views
         private readonly Material _material;
         private readonly GraphicsBuffer _symbolBuffer;
         private GraphicsBuffer _instanceBuffer;
-        private GraphicsBuffer _stateBuffer;
+        private GraphicsBuffer _netBuffer;
 
         private InstanceData[] _instances = new InstanceData[256];
-        private uint[] _states = new uint[256];
+        private int[] _nets = NoNets(256);
         private SymbolComponentView[] _owners = new SymbolComponentView[256];
         private int _count;
         private bool _instancesDirty;
-        private bool _statesDirty;
+        private bool _netsDirty;
         private Bounds _bounds;
 
         public SymbolSet Set => _set;
@@ -133,9 +135,9 @@ namespace LogicSim.Views
         {
             _symbolBuffer?.Release();
             _instanceBuffer?.Release();
-            _stateBuffer?.Release();
+            _netBuffer?.Release();
             _instanceBuffer = null;
-            _stateBuffer = null;
+            _netBuffer = null;
             if (_material == null)
                 return;
             if (Application.isPlaying)
@@ -156,15 +158,18 @@ namespace LogicSim.Views
             {
                 int capacity = _instances.Length * 2;
                 Array.Resize(ref _instances, capacity);
-                Array.Resize(ref _states, capacity);
+                var nets = NoNets(capacity);
+                Array.Copy(_nets, nets, _nets.Length);
+                _nets = nets;
                 Array.Resize(ref _owners, capacity);
             }
             int slot = _count++;
             _instances[slot] = new InstanceData { Symbol = (uint)symbol, Flags = flags };
-            _states[slot] = 0;
+            for (int i = 0; i < NetSlots; i++)
+                _nets[slot * NetSlots + i] = -1;
             _owners[slot] = owner;
             _instancesDirty = true;
-            _statesDirty = true;
+            _netsDirty = true;
             return slot;
         }
 
@@ -177,13 +182,13 @@ namespace LogicSim.Views
             if (slot != last)
             {
                 _instances[slot] = _instances[last];
-                _states[slot] = _states[last];
+                Array.Copy(_nets, last * NetSlots, _nets, slot * NetSlots, NetSlots);
                 _owners[slot] = _owners[last];
                 _owners[slot].Slot = slot;
             }
             _owners[last] = null;
             _instancesDirty = true;
-            _statesDirty = true;
+            _netsDirty = true;
         }
 
         internal void SetTransform(int slot, Vector2 position, int quarterTurns)
@@ -207,24 +212,51 @@ namespace LogicSim.Views
             _instancesDirty = true;
         }
 
-        internal void SetState(int slot, uint state)
+        internal void SetLit(int slot, bool lit)
         {
-            if (_states[slot] == state)
+            ref var instance = ref _instances[slot];
+            uint flags = lit ? instance.Flags | LitFlag : instance.Flags & ~LitFlag;
+            if (instance.Flags == flags)
                 return;
-            _states[slot] = state;
-            _statesDirty = true;
+            instance.Flags = flags;
+            _instancesDirty = true;
+        }
+
+        /// <summary>The nets of an instance: <see cref="NetSlots"/> values, -1 where there is none.</summary>
+        internal void SetNets(int slot, int[] nets)
+        {
+            int start = slot * NetSlots;
+            bool changed = false;
+            for (int i = 0; i < NetSlots; i++)
+            {
+                if (_nets[start + i] == nets[i])
+                    continue;
+                _nets[start + i] = nets[i];
+                changed = true;
+            }
+            if (changed)
+                _netsDirty = true;
+        }
+
+        private static int[] NoNets(int instances)
+        {
+            var nets = new int[instances * NetSlots];
+            for (int i = 0; i < nets.Length; i++)
+                nets[i] = -1;
+            return nets;
         }
 
         #endregion
 
         #region Drawing
 
-        /// <summary>Uploads what changed and submits the draw call for this frame's cameras.</summary>
-        public void Render()
+        /// <summary>Uploads what changed and submits the draw call for this frame's cameras, lit by <paramref name="values"/>.</summary>
+        public void Render(NetValues values)
         {
             if (_count == 0)
                 return;
             Upload();
+            values.Bind(_material);
             ApplyColors();
             var parameters = new RenderParams(_material)
             {
@@ -242,13 +274,13 @@ namespace LogicSim.Views
             if (_instanceBuffer == null || _instanceBuffer.count < _count)
             {
                 _instanceBuffer?.Release();
-                _stateBuffer?.Release();
+                _netBuffer?.Release();
                 _instanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _instances.Length, Marshal.SizeOf<InstanceData>());
-                _stateBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _instances.Length, sizeof(uint));
+                _netBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _instances.Length * NetSlots, sizeof(int));
                 _material.SetBuffer(InstancesId, _instanceBuffer);
-                _material.SetBuffer(StatesId, _stateBuffer);
+                _material.SetBuffer(InstanceNetsId, _netBuffer);
                 _instancesDirty = true;
-                _statesDirty = true;
+                _netsDirty = true;
             }
             if (_instancesDirty)
             {
@@ -256,10 +288,10 @@ namespace LogicSim.Views
                 _bounds = ComputeBounds();
                 _instancesDirty = false;
             }
-            if (_statesDirty)
+            if (_netsDirty)
             {
-                _stateBuffer.SetData(_states, 0, 0, _count);
-                _statesDirty = false;
+                _netBuffer.SetData(_nets, 0, 0, _count * NetSlots);
+                _netsDirty = false;
             }
         }
 

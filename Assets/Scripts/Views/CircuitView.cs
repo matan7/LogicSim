@@ -52,10 +52,11 @@ namespace LogicSim.Views
         private bool _valuesDirty;
         private SymbolRenderer _symbols;
         private WireRenderer _wireRenderer;
-        // Nets of the wires are resolved for one netlist and one level reader.
-        private CompiledCircuit _wireNetsCompiled;
-        private ISignalReader _wireNetsReader;
-        private bool _wireNetsDirty = true;
+        private NetValues _netValues;
+        // Nets of the wires and symbols are resolved for one netlist and one level reader.
+        private CompiledCircuit _netsCompiled;
+        private ISignalReader _netsReader;
+        private bool _netsDirty = true;
         private readonly List<Rect> _obstacles = new List<Rect>(2);
 
         private void Awake()
@@ -71,6 +72,8 @@ namespace LogicSim.Views
             _wireRenderer = WireRenderer.TryCreate();
             if (_wireRenderer == null)
                 Debug.LogWarning("[LogicSim] Wire rendering is not available (no wire shader or no GPU support); drawing line renderers.");
+            if (_wireRenderer != null || _symbols != null)
+                _netValues = new NetValues();
 
             SystemCore.SimulationService.ValuesUpdated += OnValuesUpdated;
             SystemCore.AppStateService.StateChanged += OnStateChanged;
@@ -87,6 +90,8 @@ namespace LogicSim.Views
             _symbols = null;
             _wireRenderer?.Dispose();
             _wireRenderer = null;
+            _netValues?.Dispose();
+            _netValues = null;
             if (SystemCore.SimulationService != null)
                 SystemCore.SimulationService.ValuesUpdated -= OnValuesUpdated;
             if (SystemCore.AppStateService != null)
@@ -307,6 +312,7 @@ namespace LogicSim.Views
                 var symbol = go.AddComponent<SymbolComponentView>();
                 symbol.Renderer = _symbols;
                 view = symbol;
+                _netsDirty = true;
             }
             else if (prefab != null)
             {
@@ -360,7 +366,7 @@ namespace LogicSim.Views
         {
             var view = WireView.Create(_wireRoot, wire.Id, _wireRenderer);
             _wires[wire.Id] = view;
-            _wireNetsDirty = true;
+            _netsDirty = true;
             RouteWire(wire, view);
         }
 
@@ -396,8 +402,11 @@ namespace LogicSim.Views
                         RouteWire(wire, view);
                 _dirtyWires.Clear();
             }
-            _wireRenderer?.Render();
-            _symbols?.Render();
+            if (_netValues != null)
+            {
+                _wireRenderer?.Render(_netValues);
+                _symbols?.Render(_netValues);
+            }
         }
 
         private void OnValuesUpdated() => _valuesDirty = true;
@@ -416,13 +425,14 @@ namespace LogicSim.Views
                 session = SystemCore.CircuitService.GetLevelSignals(simulation.Session);
             }
 
+            // Symbols and drawn wires read their values on the GPU; the other views are updated here.
             foreach (var view in _components.Values)
-                view.ShowValues(session);
+                if (!(view is SymbolComponentView))
+                    view.ShowValues(session);
+            if (_netValues != null)
+                ShowNetValues(session);
             if (_wireRenderer != null)
-            {
-                ShowWireValues(session);
                 return;
-            }
             foreach (var pair in _wires)
             {
                 if (session == null || !_circuit.TryGetWire(pair.Key, out var wire))
@@ -433,26 +443,29 @@ namespace LogicSim.Views
         }
 
         /// <summary>
-        /// The wire renderer colors wires from the engine's net values on the GPU: the nets of the wires are looked up
-        /// once per netlist and level, after that each frame only copies the net values.
+        /// Wires and symbols are colored from the engine's net values on the GPU: their nets are looked up once per
+        /// netlist and level, after that each frame only copies the net values.
         /// </summary>
-        private void ShowWireValues(ISignalReader session)
+        private void ShowNetValues(ISignalReader session)
         {
             var simulation = SystemCore.SimulationService.Session;
             var compiled = simulation.Compiled;
             if (session == null || compiled == null)
             {
-                _wireRenderer.HideValues();
+                _netValues.Hide();
                 return;
             }
-            if (_wireNetsDirty || !ReferenceEquals(compiled, _wireNetsCompiled) || !ReferenceEquals(session, _wireNetsReader))
+            if (_netsDirty || !ReferenceEquals(compiled, _netsCompiled) || !ReferenceEquals(session, _netsReader))
             {
-                _wireRenderer.ResolveNets(session, _circuit);
-                _wireNetsCompiled = compiled;
-                _wireNetsReader = session;
-                _wireNetsDirty = false;
+                _wireRenderer?.ResolveNets(session, _circuit);
+                foreach (var view in _components.Values)
+                    if (view is SymbolComponentView symbol)
+                        symbol.ResolveNets(session);
+                _netsCompiled = compiled;
+                _netsReader = session;
+                _netsDirty = false;
             }
-            _wireRenderer.ShowValues(simulation.Engine, compiled.NetCount);
+            _netValues.Show(simulation.Engine, compiled.NetCount);
         }
 
         #endregion

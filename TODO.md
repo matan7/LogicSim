@@ -13,11 +13,10 @@ Details for the Unity editor work: `docs/UNITY_SESSION.md`.
   Done: no per-frame transform scan (was 9.5 ms), labels fitted once (TMP layout passes 5,300 -> 460 per frame),
   component bodies drawn by the instanced symbol renderer (9,057 of the 10,016 components; the clock labels no longer
   change color, canvas/TMP update 33 -> 4 ms), wires drawn by the instanced wire renderer and colored from the net
-  values on the GPU (`CircuitView.Update` 37 -> 15 ms, camera render 1.3 -> 0.5 ms).
+  values on the GPU (`CircuitView.Update` 37 -> 15 ms, camera render 1.3 -> 0.5 ms), symbols lit from the same net
+  values (`CircuitView.Update` 15 -> 4.4 ms; what is left is the views without a symbol, the flip-flops here).
   Left, in the order of their cost:
   - Editor only: the Scene view's gizmos for 25k colliders take about 33 ms; close the Scene view when profiling.
-  - `CircuitView.Update` (`ApplyValues`): about 15 ms, nearly all of it the symbol states (value lookups per pin).
-    Give the symbol instances net indices and read the same net buffer as the wires (`docs/SYMBOL_FORMAT.md`).
   - Picking: every wire and component still has a GameObject with a collider. A spatial index for pointer hit tests
     and selection by id (see the selection item above) would remove them.
   - Symbols not drawn by the renderer yet: gates with 3 to 8 inputs (vertical input bar), boxes for flip-flops, ICs,

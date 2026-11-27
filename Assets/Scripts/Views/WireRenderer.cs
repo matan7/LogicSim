@@ -8,8 +8,8 @@ namespace LogicSim.Views
 {
     /// <summary>
     /// Draws all wires with one procedural instanced draw call: one quad per straight segment. Each wire knows the net
-    /// that drives it; the simulation's net values are copied to the GPU once per frame, so coloring the wires costs no
-    /// per-wire work on the CPU. Segments change only when wires are added, removed or re-routed.
+    /// that drives it and the shader reads its value from <see cref="NetValues"/>, so coloring the wires costs no per-wire
+    /// work on the CPU. Segments change only when wires are added, removed or re-routed.
     /// </summary>
     public sealed class WireRenderer : IDisposable
     {
@@ -38,8 +38,6 @@ namespace LogicSim.Views
 
         private static readonly int SegmentsId = Shader.PropertyToID("_Segments");
         private static readonly int WiresId = Shader.PropertyToID("_Wires");
-        private static readonly int NetsId = Shader.PropertyToID("_Nets");
-        private static readonly int ShowValuesId = Shader.PropertyToID("_ShowValues");
         private static readonly int WireColorId = Shader.PropertyToID("_WireColor");
         private static readonly int HighColorId = Shader.PropertyToID("_HighColor");
         private static readonly int LowColorId = Shader.PropertyToID("_LowColor");
@@ -48,7 +46,6 @@ namespace LogicSim.Views
         private readonly Material _material;
         private GraphicsBuffer _segmentBuffer;
         private GraphicsBuffer _wireBuffer;
-        private GraphicsBuffer _netBuffer;
 
         private SegmentData[] _segments = new SegmentData[256 * SegmentsPerWire];
         private WireData[] _wires = new WireData[256];
@@ -57,10 +54,6 @@ namespace LogicSim.Views
         private bool _segmentsDirty;
         private bool _wiresDirty;
         private Bounds _bounds;
-
-        private byte[] _netBytes = new byte[0];
-        private uint[] _netWords = new uint[1];
-        private bool _showValues;
 
         /// <summary>Number of wires drawn.</summary>
         public int Count => _count;
@@ -81,16 +74,13 @@ namespace LogicSim.Views
             _material = new Material(shader) { name = "LogicSim Wires", hideFlags = HideFlags.HideAndDontSave };
             _material.SetFloat("_HalfWidth", WireView.LineWidth / 2);
             _material.SetFloat("_SelectedHalfWidth", WireView.LineWidth * 1.6f / 2);
-            _netBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 1, sizeof(uint));
-            _material.SetBuffer(NetsId, _netBuffer);
         }
 
         public void Dispose()
         {
             _segmentBuffer?.Release();
             _wireBuffer?.Release();
-            _netBuffer?.Release();
-            _segmentBuffer = _wireBuffer = _netBuffer = null;
+            _segmentBuffer = _wireBuffer = null;
             if (_material == null)
                 return;
             if (Application.isPlaying)
@@ -186,42 +176,15 @@ namespace LogicSim.Views
 
         #endregion
 
-        #region Values
-
-        /// <summary>Shows the engine's current net values; call once per frame while the simulation shows values.</summary>
-        public void ShowValues(ISimulationEngine engine, int netCount)
-        {
-            if (_netBytes.Length < netCount)
-            {
-                // Whole words, so that the bytes copy into them in one block.
-                _netBytes = new byte[(netCount + 3) & ~3];
-                _netWords = new uint[Math.Max(1, _netBytes.Length / 4)];
-            }
-            engine.CopyNetValues(_netBytes);
-            Buffer.BlockCopy(_netBytes, 0, _netWords, 0, _netBytes.Length);
-            if (_netBuffer.count < _netWords.Length)
-            {
-                _netBuffer.Release();
-                _netBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _netWords.Length, sizeof(uint));
-                _material.SetBuffer(NetsId, _netBuffer);
-            }
-            _netBuffer.SetData(_netWords, 0, 0, Math.Max(1, (netCount + 3) / 4));
-            _showValues = true;
-        }
-
-        /// <summary>Outside the simulation (or without values for this level) wires have the plain wire color.</summary>
-        public void HideValues() => _showValues = false;
-
-        #endregion
-
         #region Drawing
 
-        public void Render()
+        /// <summary>Draws the wires in the colors of <paramref name="values"/> (the plain wire color while they are hidden).</summary>
+        public void Render(NetValues values)
         {
             if (_count == 0)
                 return;
             Upload();
-            _material.SetFloat(ShowValuesId, _showValues ? 1 : 0);
+            values.Bind(_material);
             _material.SetColor(WireColorId, VisualStyle.WireColor);
             _material.SetColor(HighColorId, VisualStyle.HighColor);
             _material.SetColor(LowColorId, VisualStyle.LowColor);

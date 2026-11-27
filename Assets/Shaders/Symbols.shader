@@ -29,7 +29,7 @@ Shader "LogicSim/Symbols"
             {
                 float2 position;    // world position of the component's origin (its top-left corner)
                 uint symbol;        // index into _Symbols
-                uint flags;         // bits 0-1 quarter turns, bit 2 selected, bits 8-15 input pin rows, bits 16-23 output pin rows
+                uint flags;         // bits 0-1 quarter turns, bit 2 selected, bit 3 lit by its own state, bits 8-15 input pin rows, bits 16-23 output pin rows
             };
 
             struct SymbolData
@@ -44,8 +44,11 @@ Shader "LogicSim/Symbols"
 
             StructuredBuffer<SymbolInstance> _Instances;
             StructuredBuffer<SymbolData> _Symbols;
-            // Per instance: bit 0 lit, bit 1 values shown, bits 8-15 input values by row, bits 16-23 output values by row.
-            StructuredBuffer<uint> _States;
+            // Per instance 17 nets (-1 for none): input rows 0-7, output rows 0-7, then the net that lights the fill.
+            StructuredBuffer<int> _InstanceNets;
+            // Net values, one byte per net, four nets per word (see NetValues).
+            StructuredBuffer<uint> _Nets;
+            float _ShowValues;
 
             sampler2D _MainTex;
             float _Padding;         // margin around each symbol in its atlas rect, units
@@ -71,7 +74,17 @@ Shader "LogicSim/Symbols"
                 float2 local : TEXCOORD0;   // component space, units: x right, y up, origin top-left
                 float2 uv : TEXCOORD1;
                 nointerpolation uint instance : TEXCOORD2;
+                // Bit 0 lit, bit 1 values shown, bits 8-15 input values by row, bits 16-23 output values by row.
+                nointerpolation uint state : TEXCOORD3;
             };
+
+            uint NetValue(int net)
+            {
+                if (net < 0)
+                    return 0;
+                uint word = _Nets[(uint)net >> 2];
+                return ((word >> (((uint)net & 3) * 8)) & 0xFF) != 0 ? 1 : 0;
+            }
 
             static const float2 Corners[6] = { float2(0, 0), float2(1, 0), float2(0, 1), float2(1, 0), float2(1, 1), float2(0, 1) };
 
@@ -99,6 +112,19 @@ Shader "LogicSim/Symbols"
                 o.local = local;
                 o.uv = symbol.uv.xy + corner * symbol.uv.zw;
                 o.instance = instanceId;
+
+                uint state = (instance.flags & 8) != 0 ? 1 : 0;
+                if (_ShowValues > 0.5)
+                {
+                    uint nets = instanceId * 17;
+                    state |= 2 | NetValue(_InstanceNets[nets + 16]);
+                    for (uint row = 0; row < 8; row++)
+                    {
+                        state |= NetValue(_InstanceNets[nets + row]) << (8 + row);
+                        state |= NetValue(_InstanceNets[nets + 8 + row]) << (16 + row);
+                    }
+                }
+                o.state = state;
                 return o;
             }
 
@@ -122,7 +148,7 @@ Shader "LogicSim/Symbols"
             {
                 SymbolInstance instance = _Instances[i.instance];
                 SymbolData symbol = _Symbols[instance.symbol];
-                uint state = _States[i.instance];
+                uint state = i.state;
                 float2 local = i.local;
                 float2 size = symbol.size.xy;
 

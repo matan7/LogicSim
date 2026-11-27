@@ -5,8 +5,8 @@ on/off state read from a buffer of net values on the GPU instead of updated per 
 performance" in `TODO.md` for why.
 
 Status: agreed on 2026-11-22. The source art, the atlas builder, the instanced renderer for the gates and the
-inputs/outputs with a fixed footprint, and the instanced wire renderer with the net value buffer exist (see "Renderer"
-and "Wires" at the end). Boxes, gates with more inputs, net indices for the symbols and chunk culling do not yet.
+inputs/outputs with a fixed footprint, and the instanced wire renderer exist, both lit from one buffer of net values
+(see "Renderer" and "Wires" at the end). Boxes, gates with more inputs and chunk culling do not yet.
 
 ## Geometry
 
@@ -152,7 +152,8 @@ builder again after editing either PSD; the sprites keep their GUIDs, so the sce
 
 - Per instance, updated only when the circuit changes: position, rotation (0 to 3 quarter turns), symbol index,
   footprint size, input count, the index of the net that drives the fill, and flags (selected, hovered, dimmed).
-- Net values: a `StructuredBuffer<uint>` with one bit per net, uploaded once per frame (27 KB for 220k nets).
+- Net values: a `StructuredBuffer<uint>` uploaded once per frame. It holds one byte per net, four nets per word, as
+  the engine keeps them (`ISimulationEngine.CopyNetValues`), so the copy needs no packing: 220 KB for 220k nets.
 - Drawn with `Graphics.RenderMeshInstanced` or `RenderMeshIndirect` on a quad. The world is split into chunks, and only
   chunks that intersect the camera are drawn.
 - Level of detail: below about 4 px per unit, a component is drawn as a solid rectangle in its state color.
@@ -169,12 +170,15 @@ What exists (`Views/SymbolRenderer.cs`, `Views/SymbolComponentView.cs`, `Shaders
   and, for the constant, its 0/1 text. Everything else keeps the sprite prefabs or `GenericComponentView`; so does
   everything when the GPU has no compute buffers in vertex shaders or the symbol set is missing (a warning is logged).
 - One `Graphics.RenderPrimitives` call draws all instances: 6 vertices per instance, the quad built in the vertex
-  shader from three structured buffers: symbols (UV rect, size, row edges), instances (16 bytes: position, symbol, quarter
-  turns, selected, pin rows) and states (one word per instance: lit, values shown, the value of each pin row).
-- Instances change only when components are added, removed, moved, dragged, rotated or (de)selected. States are
-  computed on the CPU from the signal reader when the values change (about 1.2 microseconds per component) and
-  uploaded as one buffer. The net-bit buffer from the contract above is the next step when this shows up in the
-  profiler.
+  shader from four structured buffers: symbols (UV rect, size, row edges), instances (16 bytes: position, symbol, quarter
+  turns, selected, lit by its own state, pin rows), instance nets (17 ints per instance: the nets of input rows 0-7, of
+  output rows 0-7 and of the fill, -1 for none) and the net values (`Views/NetValues.cs`, shared with the wires).
+- Instances change only when components are added, removed, moved, dragged, rotated, (de)selected or toggled. The nets
+  of an instance are looked up once per netlist and circuit level (`ISignalReader.GetInputNet` / `GetOutputNet`), in
+  the same pass as the wires'. The vertex shader reads the values of its 17 nets and hands the fragment shader one
+  state word, so a frame of the simulation costs nothing per component on the CPU. Switches, buttons and constants are
+  lit by their own value (`LitFlag`), also outside the simulation; a bulb by its input; everything else by its first
+  output.
 - The shader draws, back to front: the glow when lit, the pin stubs (colored like the wires, from the pin to the
   outline edge of that row), the fill (lit or off color), the outline (selection color and a little wider when
   selected), and below about 5 to 3 pixels per unit a solid rectangle that fades in.

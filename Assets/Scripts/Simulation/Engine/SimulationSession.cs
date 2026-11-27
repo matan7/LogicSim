@@ -87,6 +87,8 @@ namespace LogicSim.Simulation
 
         public int GetOutputNet(int componentId, int pin) => Compiled == null ? -1 : Compiled.GetOutputNet(componentId, pin);
 
+        public int GetInputNet(int componentId, int pin) => Compiled == null ? -1 : Compiled.GetInputNet(componentId, pin);
+
         public bool TryGetNeuronPotential(CircuitComponent component, out float potential)
         {
             potential = 0;

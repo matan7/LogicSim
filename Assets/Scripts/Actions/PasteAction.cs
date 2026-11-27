@@ -14,7 +14,7 @@ namespace Actions
 
         private void Paste(InputAction.CallbackContext context)
         {
-            if (EditCommands.IsTextInputFocused())
+            if (EditCommands.KeyboardIsTaken())
                 return;
             EditCommands.Paste();
         }

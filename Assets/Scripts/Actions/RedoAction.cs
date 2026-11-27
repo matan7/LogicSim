@@ -19,7 +19,7 @@ namespace Actions
 
         private void OnRedoShortcutPerformed(InputAction.CallbackContext context)
         {
-            if (!Core.SystemCore.AppStateService.IsEditing || EditCommands.IsTextInputFocused())
+            if (!Core.SystemCore.AppStateService.IsEditing || EditCommands.KeyboardIsTaken())
                 return;
             _commandService.RedoCommand();
         }

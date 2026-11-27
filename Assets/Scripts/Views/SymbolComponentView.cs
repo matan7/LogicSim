@@ -50,6 +50,8 @@ namespace LogicSim.Views
         private bool _selected;
         private readonly int[] _nets = new int[SymbolRenderer.NetSlots];
         private TextMeshPro _glyph;
+        // The keyboard key bound to a push button, under its body (created when the button gets one).
+        private TextMeshPro _keyText;
         private readonly List<PinView> _inputPins = new List<PinView>();
         private readonly List<PinView> _outputPins = new List<PinView>();
 
@@ -161,6 +163,35 @@ namespace LogicSim.Views
             SyncTransform();
             if (_glyph != null)
                 _glyph.transform.rotation = Quaternion.identity;
+            if (_keyText != null)
+                PlaceKeyText();
+        }
+
+        private void PlaceKeyText()
+        {
+            // Upright and under the body, whatever the rotation.
+            var body = GetBodyBounds();
+            _keyText.transform.SetPositionAndRotation(new Vector3(body.center.x, body.min.y - 0.75f, -0.05f), Quaternion.identity);
+        }
+
+        private void UpdateKeyText()
+        {
+            var setting = _kind == ComponentKind.Button ? Component.Spec.FindSetting(Actions.ButtonKeys.Setting) : null;
+            string key = setting != null ? setting.ChoiceName(setting.Get(Component)) : KeyNames.None;
+            if (key == KeyNames.None)
+            {
+                if (_keyText != null)
+                    _keyText.gameObject.SetActive(false);
+                return;
+            }
+            if (_keyText == null)
+            {
+                _keyText = GenericComponentView.CreateText(transform, "Key", Vector2.zero, new Vector2(_size.x + 2, 1.1f), 10f);
+                _keyText.color = new Color(VisualStyle.LabelColor.r, VisualStyle.LabelColor.g, VisualStyle.LabelColor.b, 0.75f);
+            }
+            _keyText.gameObject.SetActive(true);
+            GenericComponentView.SetFittedText(_keyText, "[" + key + "]");
+            PlaceKeyText();
         }
 
         protected override Bounds GetBodyBounds()
@@ -178,6 +209,7 @@ namespace LogicSim.Views
                 // Dark on the lit fill, light on the dark one.
                 _glyph.color = Component.Value ? VisualStyle.BodyFill : VisualStyle.LabelColor;
             }
+            UpdateKeyText();
             UpdateLit();
         }
 

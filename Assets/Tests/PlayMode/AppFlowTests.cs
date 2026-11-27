@@ -231,6 +231,59 @@ namespace LogicSim.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AKeyBoundInTheInspector_HoldsTheButtonWhileSimulating()
+        {
+            yield return LoadApp();
+            var (button, bulb) = (ComponentFactory.Create(ComponentKind.Button, 0, 0), ComponentFactory.Create(ComponentKind.Bulb, 14, 0));
+            SystemCore.CircuitService.Editor.Apply(new AddElementsEdit(Circuit, new[] { button, bulb }));
+            SystemCore.CircuitService.Editor.Apply(new ConnectEdit(Circuit, new PinRef(button.Id, 0), new PinRef(bulb.Id, 0)));
+            AppCommands.FrameAll();
+            yield return null;
+            yield return Click(BodyOnScreen(button.Id));
+            yield return null;
+
+            // "Key: None" waits for the next key; P is also the pause shortcut, which must stay quiet meanwhile.
+            var inspector = Object.FindAnyObjectByType<InspectorPanel>();
+            yield return SlowClick(InspectorButton(inspector, "Key: None"));
+            yield return null;
+            Assert.That(Actions.ButtonKeys.IsCapturing, Is.True, "the inspector waits for a key");
+            PressAndRelease(_keyboard.pKey);
+            yield return null;
+            yield return null;
+            var hotkey = button.Spec.FindSetting("hotkey");
+            Assert.That(hotkey.ChoiceName(hotkey.Get(button)), Is.EqualTo("P"));
+            Assert.That(Actions.ButtonKeys.IsCapturing, Is.False);
+            Assert.That(InspectorButton(inspector, "Key: P"), Is.Not.EqualTo(Vector2.zero), "the inspector shows the key");
+
+            PressAndRelease(_keyboard.f5Key);
+            yield return null;
+            Assert.That(SystemCore.AppStateService.IsSimulating, Is.True);
+            Press(_keyboard.pKey);
+            for (int i = 0; i < 5; i++)
+                yield return null;
+            Assert.That(Circuit.GetComponent(button.Id).Value, Is.True, "P holds the button");
+            Assert.That(SystemCore.SimulationService.Session.GetInputPinValue(bulb.Id, 0), Is.True, "the bulb sees it");
+            Assert.That(SystemCore.SimulationService.Paused, Is.False, "P is the button's now, not the pause shortcut");
+            Release(_keyboard.pKey);
+            for (int i = 0; i < 5; i++)
+                yield return null;
+            Assert.That(Circuit.GetComponent(button.Id).Value, Is.False, "letting go releases it");
+        }
+
+        /// <summary>Screen position of the inspector button whose text starts with <paramref name="text"/> (zero if none).</summary>
+        private static Vector2 InspectorButton(InspectorPanel inspector, string text)
+        {
+            // The panel may have been rebuilt in this frame's Update, before the canvas laid it out.
+            Canvas.ForceUpdateCanvases();
+            var button = inspector.Panel.GetComponentsInChildren<UnityEngine.UI.Button>()
+                .FirstOrDefault(b => b.GetComponentInChildren<TMPro.TMP_Text>() is TMPro.TMP_Text label && label.text.StartsWith(text));
+            if (button == null)
+                return Vector2.zero;
+            var rect = (RectTransform)button.transform;
+            return RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+        }
+
+        [UnityTest]
         public IEnumerator AnInspectorFieldTakesAClickAndChangesTheComponent()
         {
             yield return LoadApp();
@@ -271,6 +324,17 @@ namespace LogicSim.Tests.PlayMode
             }
             Release(_mouse.leftButton);
             yield return null;
+            yield return null;
+        }
+
+        /// <summary>Press and release in separate frames, as a person clicks: UI buttons need both on their own.</summary>
+        private IEnumerator SlowClick(Vector2 position)
+        {
+            Move(_mouse.position, position);
+            yield return null;
+            Press(_mouse.leftButton);
+            yield return null;
+            Release(_mouse.leftButton);
             yield return null;
         }
 

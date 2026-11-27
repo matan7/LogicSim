@@ -69,7 +69,8 @@ namespace LogicSim.Simulation
     }
 
     /// <summary>
-    /// A scalar setting of a component kind: an integer in a range, or a 0/1 flag. The inspector, the MCP tools
+    /// A scalar setting of a component kind: an integer in a range, a 0/1 flag, or one of named choices (stored as the
+    /// choice's index, written as its name). The inspector, the MCP tools
     /// (describe, add, set, list_component_types, tool schemas) and the file format all handle it from this description,
     /// so a new setting needs no code in those places.
     /// </summary>
@@ -103,6 +104,20 @@ namespace LogicSim.Simulation
         /// <summary>Written in component descriptions (an input count shows as the pin list instead).</summary>
         public bool InDescription { get; private set; } = true;
 
+        /// <summary>Kept in <see cref="ComponentProperties.Settings"/> (see <see cref="Stored"/>); files omit its default.</summary>
+        public bool IsStored { get; private set; }
+
+        /// <summary>Names of the values 0, 1, ... of a choice setting; null for numbers and flags.</summary>
+        public IReadOnlyList<string> Choices { get; private set; }
+
+        public bool IsChoice => Choices != null;
+
+        /// <summary>The choices in short, for descriptions and errors (null: all of them are listed).</summary>
+        public string ChoicesHelp { get; private set; }
+
+        /// <summary>A keyboard key (<see cref="KeyNames"/>): the inspector binds it by the next key pressed.</summary>
+        public bool IsKey { get; private set; }
+
         private readonly Func<ComponentProperties, int> _get;
         private readonly Setter _set;
 
@@ -135,7 +150,51 @@ namespace LogicSim.Simulation
                 // A default value is not stored, so that "set to the default" and "never set" compare equal.
                 (ref ComponentProperties p, int value) => p.Settings = value == @default
                     ? (p.Settings ?? SettingValues.Empty).Without(name)
-                    : (p.Settings ?? SettingValues.Empty).With(name, value));
+                    : (p.Settings ?? SettingValues.Empty).With(name, value))
+            { IsStored = true };
+
+        /// <summary>One of <paramref name="choices"/>, stored like <see cref="Stored"/>; the first one is the default.</summary>
+        public static ComponentSetting Choice(string name, string label, string help, IReadOnlyList<string> choices, string choicesHelp = null)
+        {
+            var setting = Stored(name, label, help, 0, choices.Count - 1, 0);
+            setting.Choices = choices;
+            setting.ChoicesHelp = choicesHelp;
+            return setting;
+        }
+
+        /// <summary>A keyboard key, one of <see cref="KeyNames.All"/> ("None" by default).</summary>
+        public static ComponentSetting Key(string name, string label, string help)
+        {
+            var setting = Choice(name, label, help, KeyNames.All, KeyNames.Help);
+            setting.IsKey = true;
+            return setting;
+        }
+
+        /// <summary>The name of a choice value (the number itself for other settings or values out of range).</summary>
+        public string ChoiceName(int value)
+            => IsChoice && value >= 0 && value < Choices.Count ? Choices[value] : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>A choice by its name (any case) or by its number.</summary>
+        public bool TryParseChoice(string text, out int value)
+        {
+            value = -1;
+            if (!IsChoice || text == null)
+                return false;
+            text = text.Trim();
+            for (int i = 0; i < Choices.Count; i++)
+            {
+                if (string.Equals(Choices[i], text, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = i;
+                    return true;
+                }
+            }
+            return int.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value)
+                && value >= Min && value <= Max;
+        }
+
+        /// <summary>"one of None, A-Z, ..." for errors and descriptions.</summary>
+        public string ChoicesText => ChoicesHelp ?? string.Join(", ", Choices ?? Array.Empty<string>());
 
         public ComponentSetting AddsPins()
         {
@@ -163,7 +222,7 @@ namespace LogicSim.Simulation
         public void Set(ref ComponentProperties properties, int value)
         {
             if (value < Min || value > Max)
-                throw new CircuitException(IsFlag ? $"{Name} is 0 or 1" : $"{Name} must be {Min}..{Max}");
+                throw new CircuitException(IsFlag ? $"{Name} is 0 or 1" : IsChoice ? $"{Name} must be one of {ChoicesText}" : $"{Name} must be {Min}..{Max}");
             _set(ref properties, value);
         }
 
@@ -173,7 +232,7 @@ namespace LogicSim.Simulation
         /// <summary>"half_period (1-1000000000, default 300): ticks per half period" for agents.</summary>
         public string Describe()
         {
-            string range = IsFlag ? "0/1" : $"{Min}-{Max}, default {Default}";
+            string range = IsFlag ? "0/1" : IsChoice ? $"one of {ChoicesText}, default {Choices[Default]}" : $"{Min}-{Max}, default {Default}";
             return string.IsNullOrEmpty(Help) ? $"{Name} ({range})" : $"{Name} ({range}): {Help}";
         }
 

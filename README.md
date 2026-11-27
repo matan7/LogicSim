@@ -41,6 +41,9 @@ circuits through the built-in **MCP server**.
   - unit-delay model: every gate needs one tick, so glitches, latches and ring oscillators behave like real logic
   - pause, single-step and adjustable speed (1 to 10M ticks/s)
   - wires are colored by their signal
+  - push buttons can be bound to a keyboard key: in the inspector, click *Key* and press the key (Esc for none).
+    During the simulation the key holds the button down, and its app shortcut (P pauses, for example) gives way.
+    Letters follow the keyboard layout; the key is shown under the button and saved as `"hotkey": "Space"`
 - **Analysis:** truth tables for any combinational circuit (up to 12 inputs).
 - **Files:** JSON documents with embedded IC definitions, plus bundled examples (half/full adder, SR latch,
   4-bit counter, 4-bit adder built from IC instances, neurons, a spiking neuron, an 8-bit computer with a CPU and

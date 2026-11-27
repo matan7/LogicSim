@@ -184,7 +184,8 @@ namespace LogicSim.Simulation
 
                 new ComponentSpec(ComponentKind.Switch, "Switch", ComponentCategory.Input, "Toggle input. Becomes an input pin when used inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true).Alias("toggle", "input")
                     .Setting(ValueFlag("State", "on or off; toggled by clicking it in the simulation").NotInInspector()),
-                new ComponentSpec(ComponentKind.Button, "Button", ComponentCategory.Input, "Momentary input, 1 only while pressed. Becomes an input pin inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true),
+                new ComponentSpec(ComponentKind.Button, "Button", ComponentCategory.Input, "Momentary input, 1 only while pressed. Becomes an input pin inside a subcircuit.", 0, 0, 0, null, output, isInterfaceInput: true)
+                    .Setting(ComponentSetting.Key("hotkey", "Key", "keyboard key that holds the button during the simulation")),
                 new ComponentSpec(ComponentKind.Clock, "Clock", ComponentCategory.Input, "Square wave that toggles every 'halfPeriod' ticks.", 0, 0, 0, null, output).Op(OpCode.Clock)
                     .Setting(ComponentSetting.Integer("half_period", "halfPeriod", "Half period", "ticks the output stays 0 or 1", 1, 1_000_000_000,
                         CircuitComponent.DefaultClockHalfPeriod, p => p.ClockHalfPeriod, (ref ComponentProperties p, int value) => p.ClockHalfPeriod = value)),

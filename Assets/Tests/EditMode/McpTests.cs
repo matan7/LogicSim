@@ -147,6 +147,27 @@ namespace LogicSim.Tests
         }
 
         [Test]
+        public void AButtonGetsAKeyByName()
+        {
+            var built = Call("build_circuit", new
+            {
+                clear = true,
+                components = new object[] { new { type = "Button", label = "Fire", hotkey = "space" }, new { type = "Button", label = "Plain" } }
+            });
+            var components = (JArray)built["components"];
+            Assert.That((string)components[0]["hotkey"], Is.EqualTo("Space"));
+            Assert.That(components[1]["hotkey"], Is.Null, "a button without a key does not list one");
+
+            var changed = Call("set_component_properties", new { component = "Plain", hotkey = "Left" });
+            Assert.That((string)changed["hotkey"], Is.EqualTo("Left"));
+            var error = Call("set_component_properties", new { component = "Plain", hotkey = "Ctrl" }, expectError: true);
+            Assert.That(error.ToString(), Does.Contain("one of None, A-Z"));
+
+            var types = Call("list_component_types").ToString();
+            Assert.That(types, Does.Contain("hotkey (one of None, A-Z, 0-9"));
+        }
+
+        [Test]
         public void AScreenIsBuiltWithItsSize_AndReadAsTextRows()
         {
             Call("build_circuit", new

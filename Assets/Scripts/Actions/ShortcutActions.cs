@@ -3,6 +3,7 @@ using Core;
 using Core.Input;
 using LogicSim.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 
 namespace Actions
 {
@@ -56,10 +57,14 @@ namespace Actions
 
         private static void Bind(InputAction inputAction, Action handler)
         {
-            inputAction.performed += _ =>
+            inputAction.performed += context =>
             {
-                // Typing into a text field must not trigger editor shortcuts.
-                if (EditCommands.IsTextInputFocused())
+                // Typing into a text field (or binding a key in the inspector) must not trigger editor shortcuts.
+                if (EditCommands.KeyboardIsTaken())
+                    return;
+                // During the simulation a key bound to a push button is the button's, not the shortcut's (Ctrl+key still is).
+                bool ctrl = Keyboard.current != null && Keyboard.current.ctrlKey.isPressed;
+                if (!ctrl && context.control is KeyControl key && ButtonKeys.HoldsButton(key))
                     return;
                 handler();
             };

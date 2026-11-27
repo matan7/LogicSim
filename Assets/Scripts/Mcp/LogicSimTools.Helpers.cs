@@ -221,8 +221,21 @@ namespace LogicSim.Mcp
                 entry["rotation"] = component.Rotation;
             var properties = component.GetProperties();
             foreach (var setting in component.Spec.Settings)
-                if (setting.InDescription)
-                    entry[setting.Name] = setting.Get(properties);
+            {
+                if (!setting.InDescription)
+                    continue;
+                int value = setting.Get(properties);
+                if (setting.IsChoice)
+                {
+                    // An unset choice (a button without a key) is left out.
+                    if (value != setting.Default)
+                        entry[setting.Name] = setting.ChoiceName(value);
+                }
+                else
+                {
+                    entry[setting.Name] = value;
+                }
+            }
             if (component.Kind == ComponentKind.Subcircuit)
                 entry["subcircuit"] = component.SubcircuitId;
             if (component.IsNeuron && component.Neuron != null)
@@ -321,6 +334,13 @@ namespace LogicSim.Mcp
                 if (token == null || token.Type == JTokenType.Null)
                     continue;
                 int value;
+                if (setting.IsChoice)
+                {
+                    if (!setting.TryParseChoice((string)token, out value))
+                        throw new McpToolException($"'{setting.Name}' must be one of {setting.ChoicesText}");
+                    setting.Set(ref properties, value);
+                    continue;
+                }
                 try
                 {
                     value = setting.IsFlag ? (ParseBool(token) ? 1 : 0) : (int)token;

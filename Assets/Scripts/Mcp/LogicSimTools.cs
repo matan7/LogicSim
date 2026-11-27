@@ -274,6 +274,12 @@ namespace LogicSim.Mcp
                 var first = group.First().setting;
                 string kinds = string.Join(", ", group.Select(u => u.spec.Kind.ToString()).Distinct());
                 bool sameRange = group.All(u => u.setting.Min == first.Min && u.setting.Max == first.Max);
+                if (first.IsChoice)
+                {
+                    yield return Prop(first.Name, new JObject { ["type"] = "string", ["enum"] = new JArray(first.Choices) },
+                        $"{kinds}: {first.Help} (one of {first.ChoicesText}).");
+                    continue;
+                }
                 string range = first.IsFlag || !sameRange ? string.Empty : $" ({first.Min}-{first.Max})";
                 yield return Prop(first.Name, first.IsFlag ? "boolean" : "integer", $"{kinds}: {first.Help}{range}.");
             }

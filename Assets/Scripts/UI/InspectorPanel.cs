@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Actions;
 using Core;
 using LogicSim.Simulation;
 using TMPro;
@@ -204,6 +205,51 @@ namespace LogicSim.UI
 
         #endregion
 
+        #region Key binding
+
+        // The component whose key the inspector waits for (0: none).
+        private int _capturingId;
+
+        /// <summary>"Key: Space" binds the next key pressed; Clear removes the binding.</summary>
+        private void KeyField(CircuitComponent component, ComponentSetting setting, int value)
+        {
+            bool capturing = _capturingId == component.Id && ButtonKeys.IsCapturing;
+            var s = setting;
+            if (capturing)
+            {
+                Buttons(($"{setting.Label}: press a key...", () => ButtonKeys.Instance?.EndCapture()));
+                Note("Press the key for this button (Esc: none). Click to cancel.");
+                return;
+            }
+            if (value == setting.Default)
+            {
+                Buttons(($"{setting.Label}: {setting.ChoiceName(value)}", () => StartCapture(component, s)));
+                return;
+            }
+            Buttons(($"{setting.Label}: {setting.ChoiceName(value)}", () => StartCapture(component, s)),
+                ("Clear", () => Apply(component, p => { s.Set(ref p, s.Default); return p; })));
+        }
+
+        private void StartCapture(CircuitComponent component, ComponentSetting setting)
+        {
+            var keys = ButtonKeys.Instance;
+            if (keys == null)
+                return;
+            int id = component.Id;
+            _capturingId = id;
+            keys.BeginCapture(name =>
+            {
+                if (Circuit.TryGetComponent(id, out var target) && setting.TryParseChoice(name, out int choice))
+                    Run(() => Apply(target, p => { setting.Set(ref p, choice); return p; }));
+            }, () =>
+            {
+                _capturingId = 0;
+                _dirty = true;
+            });
+        }
+
+        #endregion
+
         private void Build(CircuitComponent component)
         {
             var spec = component.Spec;
@@ -219,7 +265,21 @@ namespace LogicSim.UI
                     continue;
                 int value = setting.Get(properties);
                 var s = setting;
-                if (setting.IsFlag)
+                if (setting.IsKey)
+                {
+                    KeyField(component, setting, value);
+                }
+                else if (setting.IsChoice)
+                {
+                    Field(setting.Label, setting.ChoiceName(value), text => Apply(component, p =>
+                    {
+                        if (!s.TryParseChoice(text, out int choice))
+                            throw new CircuitException($"{s.Label} must be one of {s.ChoicesText}");
+                        s.Set(ref p, choice);
+                        return p;
+                    }), s.ChoicesText);
+                }
+                else if (setting.IsFlag)
                 {
                     Buttons(($"{setting.Label}: {value}", () => Apply(component, p => { s.Set(ref p, 1 - s.Get(p)); return p; })));
                 }

@@ -28,6 +28,7 @@ namespace Actions
             new CopyAction(input);
             new PasteAction(input);
             new ShortcutActions(input, wireAction);
+            new ButtonKeys(this);
         }
 
         private void Update()

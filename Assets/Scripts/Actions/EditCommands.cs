@@ -19,6 +19,12 @@ namespace Actions
 
         public static bool CanEdit => SystemCore.AppStateService.IsEditing;
 
+        /// <summary>
+        /// The keyboard belongs to something else than the editor's shortcuts: a text field, or the inspector waiting for
+        /// a key to bind.
+        /// </summary>
+        public static bool KeyboardIsTaken() => IsTextInputFocused() || ButtonKeys.IsCapturing;
+
         public static bool IsTextInputFocused()
         {
             var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;

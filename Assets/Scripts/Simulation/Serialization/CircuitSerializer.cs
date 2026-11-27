@@ -281,16 +281,21 @@ namespace LogicSim.Simulation
                     case "halfPeriod": dto.HalfPeriod = value; break;
                     case "value": dto.Value = value != 0; break;
                     default:
+                        // Newer settings are written only when set, so that files without them stay as they were.
+                        if (setting.IsStored && value == setting.Default)
+                            break;
                         dto.Settings = dto.Settings ?? new Dictionary<string, JToken>();
-                        dto.Settings[setting.JsonKey] = setting.IsFlag ? (JToken)(value != 0) : value;
+                        dto.Settings[setting.JsonKey] = setting.IsFlag ? (JToken)(value != 0)
+                            : setting.IsChoice ? (JToken)setting.ChoiceName(value)
+                            : value;
                         break;
                 }
             }
             return dto;
         }
 
-        /// <summary>A setting from a file: null when it is missing or not a number.</summary>
-        private static int? ReadSetting(ComponentDto dto, ComponentSetting setting)
+        /// <summary>A setting from a file: null when it is missing or not a number (or an unknown choice, with a warning).</summary>
+        private static int? ReadSetting(ComponentDto dto, ComponentSetting setting, List<string> warnings)
         {
             switch (setting.JsonKey)
             {
@@ -305,6 +310,11 @@ namespace LogicSim.Simulation
                 case JTokenType.Integer: return (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, (long)token));
                 case JTokenType.Float: return (int)Math.Round((double)token);
                 case JTokenType.Boolean: return (bool)token ? 1 : 0;
+                case JTokenType.String when setting.IsChoice:
+                    if (setting.TryParseChoice((string)token, out int choice))
+                        return choice;
+                    warnings.Add($"Component {dto.Id}: unknown {setting.Name} '{(string)token}' (one of {setting.ChoicesText}); ignored");
+                    return null;
                 default: return null;
             }
         }
@@ -368,7 +378,7 @@ namespace LogicSim.Simulation
                 var properties = component.GetProperties();
                 foreach (var setting in component.Spec.Settings)
                 {
-                    var value = ReadSetting(dto, setting);
+                    var value = ReadSetting(dto, setting, warnings);
                     if (!value.HasValue)
                         continue;
                     if (value.Value < setting.Min || value.Value > setting.Max)
